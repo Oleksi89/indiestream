@@ -4,6 +4,21 @@ server:
 spring:
   application:
     name: indiestream
+  datasource:
+    url: jdbc:postgresql://localhost:5432/indiestream_db
+    username: indiestream
+    password: indiestream_password
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
 
 management:
   endpoints:
