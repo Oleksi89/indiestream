@@ -57,6 +57,16 @@ public class JwtService {
         return extractExpiration(token).before(new Date());
     }
 
+    /**
+     * Calculates the remaining time before the token expires.
+     * Used primarily for setting precise TTLs in the Redis blacklist.
+     */
+    public long getRemainingExpirationTime(String token) {
+        Date expiration = extractExpiration(token);
+        long remaining = expiration.getTime() - System.currentTimeMillis();
+        return Math.max(0, remaining);
+    }
+
     private Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);
     }
