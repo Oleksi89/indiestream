@@ -46,6 +46,8 @@ dependencies {
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.5")
 
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
+    implementation("io.minio:minio:8.6.0")
+    implementation("org.apache.commons:commons-lang3:3.19.0")
 }
 
 tasks.withType<Test> {
