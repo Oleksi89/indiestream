@@ -11,7 +11,6 @@ public class MinioConfig {
 
     /**
      * Constructs the MinioClient using the strongly-typed MinioProperties.
-     * // TODO: [Media] - Implement a startup check to automatically create the target bucket if it doesn't exist.
      */
     @Bean
     public MinioClient minioClient(MinioProperties properties) {

@@ -19,6 +19,11 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 55MB
+      # TODO: [Media] - Implement async FFmpeg transcoding pipeline for large lossless formats (WAV) to optimize network delivery
 
 management:
   endpoints:
