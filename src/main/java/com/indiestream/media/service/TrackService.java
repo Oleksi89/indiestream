@@ -39,6 +39,17 @@ public class TrackService {
         return mapToDto(savedTrack);
     }
 
+    /**
+     * Finds a track by its UUID.
+     * // TODO: [Media] - Add custom exception TrackNotFoundException mapped to RFC 7807 404
+     */
+    @Transactional(readOnly = true)
+    public TrackDto getTrackById(UUID trackId) {
+        return trackRepository.findById(trackId)
+                .map(this::mapToDto)
+                .orElseThrow(() -> new IllegalArgumentException("Track not found"));
+    }
+
     private TrackDto mapToDto(Track track) {
         return new TrackDto(
                 track.getId(),

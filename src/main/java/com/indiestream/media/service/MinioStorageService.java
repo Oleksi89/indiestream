@@ -1,10 +1,7 @@
 package com.indiestream.media.service;
 
 import com.indiestream.media.config.MinioProperties;
-import io.minio.BucketExistsArgs;
-import io.minio.MakeBucketArgs;
-import io.minio.MinioClient;
-import io.minio.PutObjectArgs;
+import io.minio.*;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -85,6 +82,43 @@ public class MinioStorageService {
             log.error("Failed to upload file to MinIO", e);
             // TODO: [Media] - Create generic StorageException mapped to RFC 7807 500 Internal Server Error
             throw new RuntimeException("Failed to store media file.", e);
+        }
+    }
+
+    /**
+     * Retrieves the metadata of an object, crucially its total size (Content-Length).
+     */
+    public StatObjectResponse getObjectMetadata(String objectName) {
+        try {
+            return minioClient.statObject(
+                    StatObjectArgs.builder()
+                            .bucket(minioProperties.bucket())
+                            .object(objectName)
+                            .build()
+            );
+        } catch (Exception e) {
+            log.error("Failed to get object metadata for: {}", objectName, e);
+            throw new RuntimeException("Media not found or inaccessible.");
+        }
+    }
+
+    /**
+     * Fetches a specific byte range of a file from MinIO.
+     * Essential for HTTP 206 Partial Content video/audio streaming.
+     */
+    public InputStream getObjectStream(String objectName, long offset, long length) {
+        try {
+            return minioClient.getObject(
+                    GetObjectArgs.builder()
+                            .bucket(minioProperties.bucket())
+                            .object(objectName)
+                            .offset(offset)
+                            .length(length)
+                            .build()
+            );
+        } catch (Exception e) {
+            log.error("Failed to stream object: {}", objectName, e);
+            throw new RuntimeException("Failed to stream media.");
         }
     }
 }
