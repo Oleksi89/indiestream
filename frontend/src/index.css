@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+/* * Global resets and base layer customizations.
+ * We rely on Tailwind's utility classes for specific component styling.
+ */
+@layer base {
+  body {
+    @apply bg-gray-950 text-gray-50 antialiased;
+  }
+}
