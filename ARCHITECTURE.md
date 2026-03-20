@@ -15,7 +15,7 @@ At this stage, the backend foundation is still small. The primary implemented co
 * **Backend:** Java 21, Spring Boot 3.5.13, Spring Security (JWT-based)
 * **Data Layer:** PostgreSQL (Relational Data), Flyway (Migrations), pgvector for vector search
 * **Storage & Caching:** MinIO (S3-compatible) for binary media storage, Redis for caching and token revocation support
-* **Frontend:** React, TypeScript, Vite, Tailwind CSS
+* **Frontend:** React, TypeScript, Vite, Tailwind CSS, Zustand
 
 ## 4. Infrastructure & Security Protocols
 * **JWT-based authentication:** The backend uses JWTs for authentication. To support logout and token invalidation without introducing traditional server sessions, revoked active tokens are tracked in Redis with a TTL aligned to the token’s remaining lifetime.

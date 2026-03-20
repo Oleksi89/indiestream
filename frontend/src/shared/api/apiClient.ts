@@ -1,0 +1,35 @@
+import axios, {InternalAxiosRequestConfig} from 'axios';
+import { useAuthStore } from '../store/authStore';
+
+export const apiClient = axios.create({
+    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1',
+    headers: {
+        'Content-Type': 'application/json',
+    },
+});
+
+// Request Interceptor: Inject JWT and Trace ID
+apiClient.interceptors.request.use(
+    (config: InternalAxiosRequestConfig) => {
+        const token = useAuthStore.getState().token;
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        // Trace ID for observability
+        config.headers.set('X-Trace-Id', crypto.randomUUID());
+        return config;
+    },
+    (error) => Promise.reject(error)
+);
+
+// Response Interceptor: Global error handling
+apiClient.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response?.status === 401) {
+            // In case if token rejected
+            useAuthStore.getState().logout();
+        }
+        return Promise.reject(error);
+    }
+);
