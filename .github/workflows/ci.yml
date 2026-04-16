@@ -18,9 +18,9 @@ jobs:
       postgres:
         image: pgvector/pgvector:pg16
         env:
-          POSTGRES_USER: indiestream
-          POSTGRES_PASSWORD: indiestream_password
-          POSTGRES_DB: indiestream_db
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
         ports:
           - 5432:5432
         # Wait until PostgreSQL is ready to accept connections
@@ -49,14 +49,21 @@ jobs:
         run: |
           docker run -d --name minio \
           -p 9000:9000 \
-          -e MINIO_ROOT_USER=indiestream_admin \
-          -e MINIO_ROOT_PASSWORD=indiestream_secret \
+          -e MINIO_ROOT_USER=${{ secrets.MINIO_ROOT_USER }} \
+          -e MINIO_ROOT_PASSWORD=${{ secrets.MINIO_ROOT_PASSWORD }} \
           minio/minio:RELEASE.2025-09-07T16-13-09Z server /data
 
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
       - name: Build and Test
+        env:
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          MINIO_ROOT_USER: ${{ secrets.MINIO_ROOT_USER }}
+          MINIO_ROOT_PASSWORD: ${{ secrets.MINIO_ROOT_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: ./gradlew build
 
       # Saving generated architectural diagrams

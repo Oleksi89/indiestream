@@ -41,6 +41,7 @@ public class Track {
     private String minioBucketPath;
 
     // Native Hibernate 6 support for PostgreSQL JSONB
+    @Builder.Default
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "stems_metadata", nullable = false)
     private Map<String, String> stemsMetadata = new HashMap<>();

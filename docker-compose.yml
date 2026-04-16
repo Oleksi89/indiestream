@@ -3,9 +3,9 @@ services:
     image: pgvector/pgvector:pg16
     container_name: indiestream-postgres
     environment:
-      POSTGRES_USER: indiestream
-      POSTGRES_PASSWORD: indiestream_password
-      POSTGRES_DB: indiestream_db
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
@@ -26,8 +26,8 @@ services:
       - "9000:9000"
       - "9001:9001"
     environment:
-      MINIO_ROOT_USER: indiestream_admin
-      MINIO_ROOT_PASSWORD: indiestream_secret
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     volumes:
       - minio_data:/data
     command: server /data --console-address ":9001"
