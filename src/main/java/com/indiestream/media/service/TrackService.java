@@ -1,9 +1,11 @@
 package com.indiestream.media.service;
 
+import com.indiestream.media.TrackUploadedEvent;
 import com.indiestream.media.domain.Track;
 import com.indiestream.media.dto.TrackDto;
 import com.indiestream.media.repository.TrackRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -17,6 +19,16 @@ public class TrackService {
 
     private final TrackRepository trackRepository;
     private final MinioStorageService minioStorageService;
+
+    private final ApplicationEventPublisher events;
+
+
+    public void saveTrack() {
+        // Saving logic into db and Minio
+
+        // Publishing event for other modules
+        events.publishEvent(new TrackUploadedEvent(1L, "Synthwave"));
+    }
 
     /**
      * Orchestrates the upload of a master track file to blob storage

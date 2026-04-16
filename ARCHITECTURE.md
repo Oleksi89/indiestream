@@ -34,5 +34,11 @@ At this stage, the backend foundation is still small. The primary implemented co
 * **Event buffering:** High-frequency user interactions such as likes, skips, and listen time are expected to be buffered in Redis and processed in batches.
 * **Preference aggregation:** The recommendation profile for a user may be maintained through an incremental weighted centroid or similar aggregation strategy to reduce unnecessary write pressure and keep updates efficient.
 
+## 7. Architectural Governance & Cross-Module Communication
+To prevent architectural erosion and maintain the Modular Monolith structure as the project grows, we enforce strict domain boundaries through code:
+
+* **Automated Verification:** Direct access to internal components of other modules is strictly prohibited. The CI pipeline will automatically reject any pull request that violates these architectural boundaries.
+* **Event-Driven Communication:** Modules do not communicate via direct service/bean calls. Instead, we use Spring's `@EventListener` and `@Async` to publish and consume Domain Events. For example, the Media module publishes a `TrackUploadedEvent`, which the Recommendation module listens to independently.
+* **Living Documentation:** C4 architectural diagrams (PlantUML) are automatically generated from the source code during the test phase, to ensure our architecture documentation always reflects the actual implementation.
 
 *(Note: This document is meant to describe the current architectural direction, not a frozen specification. Specific implementation details around media delivery, caching, recommendation logic, and API design will be refined as the project matures.)*

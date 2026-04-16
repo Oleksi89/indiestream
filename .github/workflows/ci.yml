@@ -59,6 +59,15 @@ jobs:
       - name: Build and Test
         run: ./gradlew build
 
+      # Saving generated architectural diagrams
+      - name: Upload Architecture Diagrams
+        uses: actions/upload-artifact@v4
+        if: always() # Keep even if other tests fail
+        with:
+          name: spring-modulith-diagrams
+          path: build/spring-modulith-docs/
+          retention-days: 14
+
       - name: Build Backend Docker Image
         run: docker build -t indiestream-backend:latest .
 
