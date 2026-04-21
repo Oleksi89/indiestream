@@ -6,6 +6,7 @@ import {ProtectedRoute} from "@/shared/components/ProtectedRoute";
 import {AuthenticatedLayout} from "@/shared/layouts/AuthenticatedLayout";
 import {DashboardPage} from "@/pages/dashboard/DashboardPage";
 import {GuestRoute} from "@/shared/components/GuestRoute";
+import {ArtistDashboardPage} from "@/pages/artist/ArtistDashboardPage";
 
 const routes = [
     // Guest Only Routes
@@ -33,7 +34,10 @@ const routes = [
                         path: '/',
                         element: <DashboardPage/>,
                     },
-                    // Additional private routes like /profile will go here
+                    {
+                        path: '/artist/dashboard',
+                        element: <ArtistDashboardPage/>, // Artist upload hub
+                    },
                 ],
             },
         ],
