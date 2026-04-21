@@ -27,5 +27,6 @@ export interface AuthResponse {
 export interface UserDto {
     id: string | number;
     email: string;
-    // TODO: [Auth] - Add missing fields
+    role: 'USER' | 'ARTIST' | 'ADMIN';
+    createdAt?: string;
 }
