@@ -40,7 +40,7 @@ export const Navbar = () => {
                 <div className="flex items-center gap-8">
                     <Link to="/" className="flex items-center gap-2">
                         <div
-                            className="h-8 w-8 rounded-lg bg-gradient-to-br from-violet-500 to-slate-600 shadow-lg shadow-violet-500/20"/>
+                            className="h-8 w-8 rounded-lg bg-slate-900/50 shadow-lg shadow-violet-500/20"/>
                         <span className="text-xl font-bold tracking-tight text-white">IndieStream</span>
                     </Link>
                 </div>
