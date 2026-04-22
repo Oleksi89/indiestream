@@ -1,7 +1,44 @@
 import {useQuery} from '@tanstack/react-query';
 import {mediaApi} from '../api/media.api';
 import {useAuthStore} from '@/shared/store/authStore';
-import {Disc3, Clock} from 'lucide-react';
+import {Disc3, Clock, Image as ImageIcon} from 'lucide-react';
+/**
+ * A sub-component dedicated to securely fetching and displaying a track cover.
+ * It uses TanStack Query to cache the generated Blob URL and avoid redundant network requests.
+ */
+const SecureTrackCover = ({trackId}: { trackId: string }) => {
+    const {data: imageUrl, isLoading, isError} = useQuery({
+        queryKey: ['trackCover', trackId],
+        queryFn: () => mediaApi.getTrackCoverUrl(trackId),
+        staleTime: Infinity, // Covers rarely change, cache indefinitely during the session
+        gcTime: 1000 * 60 * 30, // Keep in garbage collection for 30 minutes
+    });
+
+    if (isLoading) {
+        return (
+            <div className="w-full h-full flex items-center justify-center bg-slate-800 animate-pulse">
+                <ImageIcon size={32} className="text-slate-600"/>
+            </div>
+        );
+    }
+
+    if (isError || !imageUrl) {
+        return (
+            <div className="w-full h-full flex items-center justify-center bg-slate-800">
+                <Disc3 size={64} className="text-slate-700"/>
+            </div>
+        );
+    }
+
+    return (
+        <img
+            src={imageUrl}
+            alt="Track Cover"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+        />
+    );
+};
+
 
 export const TrackList = () => {
     const user = useAuthStore((state) => state.user);
@@ -44,12 +81,7 @@ export const TrackList = () => {
                         {/* Cover Art Wrapper */}
                         <div className="aspect-square w-full bg-slate-800 relative overflow-hidden">
                             {track.coverMinioPath ? (
-                                // TODO: [Security] Ensure API endpoint handles JWT auth correctly if images are protected
-                                <img
-                                    src={`http://localhost:8080/api/v1/tracks/${track.id}/cover`}
-                                    alt={track.title}
-                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                />
+                                <SecureTrackCover trackId={track.id} />
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center bg-slate-800">
                                     <Disc3 size={64} className="text-slate-700"/>

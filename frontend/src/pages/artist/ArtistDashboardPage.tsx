@@ -12,7 +12,7 @@ export const ArtistDashboardPage = () => {
             <div className="mb-8 border-b border-slate-800 pb-6">
                 <h1 className="text-3xl font-bold text-white tracking-tight">Artist Studio</h1>
                 <p className="text-slate-400 mt-2">
-                    Welcome back, <span className="text-violet-400 font-medium">{user?.username || 'Artist'}</span>.
+                    Welcome back, <span className="text-violet-400 font-medium">{user?.email || 'Artist'}</span>.
                     Manage your music catalog and upload new master tracks.
                 </p>
             </div>

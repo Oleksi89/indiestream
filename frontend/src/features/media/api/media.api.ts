@@ -53,5 +53,16 @@ export const mediaApi = {
             }
         );
         return data;
+    },
+
+    /**
+     * Fetches the image as a Blob securely using the JWT token interceptor.
+     * Returns a local object URL that can be used directly in an <img> src attribute.
+     */
+    getTrackCoverUrl: async (trackId: string): Promise<string> => {
+        const response = await apiClient.get(`/tracks/${trackId}/cover`, {
+            responseType: 'blob' // tells Axios to treat the response as binary data
+        });
+        return URL.createObjectURL(response.data);
     }
 };
