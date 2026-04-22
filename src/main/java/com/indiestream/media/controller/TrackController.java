@@ -6,6 +6,9 @@ import com.indiestream.media.service.TrackService;
 import io.minio.StatObjectResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.InputStreamResource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -114,11 +117,16 @@ public class TrackController {
     }
 
     /**
-     * Returns a list of tracks for the specified artist.
+     * Retrieves a paginated list of tracks for the specified artist.
+     * ?page=0&size=10 in the URL query parameters.
      * // TODO: [Security] - Check if the artistId in the request matches the ID from the JWT.
      */
     @GetMapping
-    public ResponseEntity<List<TrackDto>> getArtistTracks(@RequestParam("artistId") UUID artistId) {
-        return ResponseEntity.ok(trackService.getTracksByArtist(artistId));
+    public ResponseEntity<Page<TrackDto>> getArtistTracks(
+            @RequestParam("artistId") UUID artistId,
+            @PageableDefault(size = 10) Pageable pageable
+    ) {
+        Page<TrackDto> trackPage = trackService.getTracksByArtist(artistId, pageable);
+        return ResponseEntity.ok(trackPage);
     }
 }

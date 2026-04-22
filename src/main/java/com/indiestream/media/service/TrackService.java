@@ -6,12 +6,13 @@ import com.indiestream.media.dto.TrackDto;
 import com.indiestream.media.repository.TrackRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -63,14 +64,15 @@ public class TrackService {
     }
 
     /**
-     * Returns a list of all tracks by an artist.
+     * Retrieves a paginated page of TrackDto objects for a specific artist.
+     * * @param artistId The ID of the artist requesting their tracks
+     *
+     * @param pageable Page request metadata (size, page number)
      */
     @Transactional(readOnly = true)
-    public List<TrackDto> getTracksByArtist(UUID artistId) {
-        return trackRepository.findAllByArtistIdOrderByCreatedAtDesc(artistId)
-                .stream()
-                .map(this::mapToDto)
-                .toList();
+    public Page<TrackDto> getTracksByArtist(UUID artistId, Pageable pageable) {
+        return trackRepository.findAllByArtistIdOrderByCreatedAtDesc(artistId, pageable)
+                .map(this::mapToDto);
     }
 
     private TrackDto mapToDto(Track track) {
