@@ -40,6 +40,9 @@ public class Track {
     @Column(name = "minio_bucket_path", nullable = false)
     private String minioBucketPath;
 
+    @Column(name = "cover_minio_path")
+    private String coverMinioPath;
+
     // Native Hibernate 6 support for PostgreSQL JSONB
     @Builder.Default
     @JdbcTypeCode(SqlTypes.JSON)
