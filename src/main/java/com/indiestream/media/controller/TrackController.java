@@ -43,6 +43,24 @@ public class TrackController {
     }
 
     /**
+     * Retrieves a paginated list of tracks.
+     * If artistId is provided, filters by that artist. Otherwise, returns a global public feed.
+     */
+    @GetMapping
+    public ResponseEntity<Page<TrackDto>> getTracks(
+            @RequestParam(value = "artistId", required = false) UUID artistId,
+            @PageableDefault(size = 10) Pageable pageable
+    ) {
+        Page<TrackDto> trackPage;
+        if (artistId != null) {
+            trackPage = trackService.getTracksByArtist(artistId, pageable);
+        } else {
+            trackPage = trackService.getPublicTracks(pageable);
+        }
+        return ResponseEntity.ok(trackPage);
+    }
+
+    /**
      * Streams audio data supporting HTTP Range requests for seamless playback and seeking.
      */
     @GetMapping(value = "/{trackId}/stream")
@@ -116,17 +134,4 @@ public class TrackController {
                 .body(resource);
     }
 
-    /**
-     * Retrieves a paginated list of tracks for the specified artist.
-     * ?page=0&size=10 in the URL query parameters.
-     * // TODO: [Security] - Check if the artistId in the request matches the ID from the JWT.
-     */
-    @GetMapping
-    public ResponseEntity<Page<TrackDto>> getArtistTracks(
-            @RequestParam("artistId") UUID artistId,
-            @PageableDefault(size = 10) Pageable pageable
-    ) {
-        Page<TrackDto> trackPage = trackService.getTracksByArtist(artistId, pageable);
-        return ResponseEntity.ok(trackPage);
-    }
 }
