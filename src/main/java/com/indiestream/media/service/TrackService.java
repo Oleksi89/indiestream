@@ -19,32 +19,31 @@ public class TrackService {
 
     private final TrackRepository trackRepository;
     private final MinioStorageService minioStorageService;
-
     private final ApplicationEventPublisher events;
 
-
     public void saveTrack() {
-        // Saving logic into db and Minio
-
-        // Publishing event for other modules
         events.publishEvent(new TrackUploadedEvent(1L, "Synthwave"));
     }
 
     /**
-     * Orchestrates the upload of a master track file to blob storage
-     * and persists the metadata record in the database.
+     * Orchestrates the upload of a master track file and an optional cover image.
      */
     @Transactional
-    public TrackDto uploadMasterTrack(UUID artistId, String title, MultipartFile file) {
+    public TrackDto uploadMasterTrack(UUID artistId, String title, MultipartFile file, MultipartFile cover) {
         String bucketPath = minioStorageService.uploadTrackFile(file, artistId);
+
+        String coverPath = null;
+        if (cover != null && !cover.isEmpty()) {
+            coverPath = minioStorageService.uploadCoverFile(cover, artistId);
+        }
 
         Track track = Track.builder()
                 .artistId(artistId)
                 .title(title)
                 .minioBucketPath(bucketPath)
-                // Initialize with empty stems for the master track upload
+                .coverMinioPath(coverPath)
                 .stemsMetadata(new HashMap<>())
-                .durationSeconds(0) // TODO: [Media] - FFmpeg integration to automatically calculate durationSeconds
+                .durationSeconds(0)
                 .build();
 
         Track savedTrack = trackRepository.save(track);
@@ -68,6 +67,7 @@ public class TrackService {
                 track.getArtistId(),
                 track.getTitle(),
                 track.getMinioBucketPath(),
+                track.getCoverMinioPath(),
                 track.getStemsMetadata(),
                 track.getDurationSeconds()
         );
