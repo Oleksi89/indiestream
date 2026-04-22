@@ -1,6 +1,5 @@
 import {createBrowserRouter} from 'react-router-dom';
 import { LoginPage } from '@/pages/auth/LoginPage';
-import type { JSX } from 'react';
 import {RegisterPage} from "@/pages/auth/RegisterPage";
 import {ProtectedRoute} from "@/shared/components/ProtectedRoute";
 import {AuthenticatedLayout} from "@/shared/layouts/AuthenticatedLayout";
