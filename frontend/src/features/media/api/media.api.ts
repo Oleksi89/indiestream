@@ -45,6 +45,9 @@ export const mediaApi = {
         return data;
     },
 
+    /**
+     * Fetches the global paginated feed of all public tracks.
+     */
     getPublicTracks: async (page: number = 0, size: number = 20): Promise<PageResponse<TrackDto>> => {
         const {data} = await apiClient.get<unknown, AxiosResponse<PageResponse<TrackDto>>>(
             `/tracks`,

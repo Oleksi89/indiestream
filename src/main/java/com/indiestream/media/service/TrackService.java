@@ -75,6 +75,16 @@ public class TrackService {
                 .map(this::mapToDto);
     }
 
+
+    /**
+     * Retrieves a global paginated feed of all tracks.
+     */
+    @Transactional(readOnly = true)
+    public Page<TrackDto> getPublicTracks(Pageable pageable) {
+        return trackRepository.findAllByOrderByCreatedAtDesc(pageable)
+                .map(this::mapToDto);
+    }
+
     private TrackDto mapToDto(Track track) {
         return new TrackDto(
                 track.getId(),
