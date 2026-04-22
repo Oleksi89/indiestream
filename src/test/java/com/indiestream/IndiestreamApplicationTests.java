@@ -1,13 +1,13 @@
 package com.indiestream;
 
-import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-class IndiestreamApplicationTests {
+import org.junit.jupiter.api.Test;
+
+
+class IndiestreamApplicationTests extends IntegrationTestBase {
 
     @Test
     void contextLoads() {
+        // Automatically verified by inheriting from IntegrationTestBase
     }
-
 }

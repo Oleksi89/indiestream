@@ -1,6 +1,6 @@
 import { type SubmitHandler, useForm} from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { loginSchema, type LoginRequest } from '../types';
 import { authApi } from '../api/auth.api';
 import { useAuthStore } from '@/shared/store/authStore';
@@ -25,47 +25,63 @@ export const LoginForm = () => {
             setServerError(null);
             const response = await authApi.login(data);
             setToken(response.token);
-            navigate('/'); // Redirect to dashboard/player on success
+            navigate('/');
         } catch (error: unknown) {
             if (isAxiosError(error)) {
-                setServerError(error.response?.data?.detail || 'Invalid credentials');
+                // RFC 7807 ProblemDetail standard expects 'detail' field
+                setServerError(error.response?.data?.detail || 'Invalid email or password.');
             } else {
-                setServerError('An unexpected error occurred.');
+                setServerError('An unexpected network error occurred.');
             }
         }
     };
 
     return (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 w-full max-w-sm">
-            {serverError && <div className="text-red-500 text-sm font-medium">{serverError}</div>}
+        <div className="w-full max-w-sm space-y-6">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                {serverError && (
+                    <div className="p-3 bg-red-500/10 border border-red-500/50 rounded-md text-red-500 text-sm font-medium">
+                        {serverError}
+                    </div>
+                )}
 
-            <div>
-                <label className="block text-sm font-medium text-slate-300">Email</label>
-                <input
-                    {...register('email')}
-                    type="email"
-                    className="mt-1 block w-full rounded-md border-slate-700 bg-slate-800 text-slate-100 focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2"
-                />
-                {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
-            </div>
+                <div>
+                    <label className="block text-sm font-medium text-slate-300">Email</label>
+                    <input
+                        {...register('email')}
+                        type="email"
+                        autoComplete="email"
+                        className="mt-1 block w-full rounded-md border-slate-700 bg-slate-800 text-slate-100 focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2 outline-none transition-colors"
+                    />
+                    {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
+                </div>
 
-            <div>
-                <label className="block text-sm font-medium text-slate-300">Password</label>
-                <input
-                    {...register('password')}
-                    type="password"
-                    className="mt-1 block w-full rounded-md border-slate-700 bg-slate-800 text-slate-100 focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2"
-                />
-                {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
-            </div>
+                <div>
+                    <label className="block text-sm font-medium text-slate-300">Password</label>
+                    <input
+                        {...register('password')}
+                        type="password"
+                        autoComplete="current-password"
+                        className="mt-1 block w-full rounded-md border-slate-700 bg-slate-800 text-slate-100 focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2 outline-none transition-colors"
+                    />
+                    {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
+                </div>
 
-            <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
-            >
-                {isSubmitting ? 'Signing in...' : 'Sign In'}
-            </button>
-        </form>
+                <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 focus:ring-offset-slate-900 disabled:opacity-50 transition-colors"
+                >
+                    {isSubmitting ? 'Signing in...' : 'Sign In'}
+                </button>
+            </form>
+
+            <p className="text-center text-sm text-slate-400">
+                Don't have an account?{' '}
+                <Link to="/register" className="font-medium text-indigo-400 hover:text-indigo-300 transition-colors">
+                    Register here
+                </Link>
+            </p>
+        </div>
     );
 };
