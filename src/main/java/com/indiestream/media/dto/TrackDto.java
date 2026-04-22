@@ -8,6 +8,7 @@ public record TrackDto(
         UUID artistId,
         String title,
         String minioBucketPath,
+        String coverMinioPath,
         Map<String, String> stemsMetadata,
         Integer durationSeconds
 ) {}

@@ -6,6 +6,9 @@ import com.indiestream.media.service.TrackService;
 import io.minio.StatObjectResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.InputStreamResource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -14,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.UUID;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/tracks")
@@ -22,6 +26,7 @@ public class TrackController {
 
     private final TrackService trackService;
     private final MinioStorageService minioStorageService;
+
     /**
      * Uploads a new track. Consumes multipart/form-data
      * // TODO: [Security] - Extract artistId from JWT custom claims instead of RequestParam to prevent spoofing
@@ -30,9 +35,10 @@ public class TrackController {
     public ResponseEntity<TrackDto> uploadTrack(
             @RequestParam("artistId") UUID artistId,
             @RequestParam("title") String title,
-            @RequestParam("file") MultipartFile file
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "cover", required = false) MultipartFile cover
     ) {
-        TrackDto uploadedTrack = trackService.uploadMasterTrack(artistId, title, file);
+        TrackDto uploadedTrack = trackService.uploadMasterTrack(artistId, title, file, cover);
         return ResponseEntity.status(HttpStatus.CREATED).body(uploadedTrack);
     }
 
@@ -85,5 +91,42 @@ public class TrackController {
         return ResponseEntity.status(status)
                 .headers(headers)
                 .body(resource);
+    }
+
+    /**
+     * Proxies the cover image from MinIO to the frontend.
+     * Allows the frontend to render <img src="/api/v1/tracks/{id}/cover"> without exposing MinIO credentials or making the bucket entirely public.
+     */
+    @GetMapping(value = "/{trackId}/cover")
+    public ResponseEntity<InputStreamResource> getTrackCover(@PathVariable UUID trackId) {
+        TrackDto track = trackService.getTrackById(trackId);
+
+        if (track.coverMinioPath() == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        StatObjectResponse metadata = minioStorageService.getObjectMetadata(track.coverMinioPath());
+        InputStreamResource resource = new InputStreamResource(
+                minioStorageService.getObjectStream(track.coverMinioPath(), 0, metadata.size())
+        );
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(metadata.contentType()))
+                .contentLength(metadata.size())
+                .body(resource);
+    }
+
+    /**
+     * Retrieves a paginated list of tracks for the specified artist.
+     * ?page=0&size=10 in the URL query parameters.
+     * // TODO: [Security] - Check if the artistId in the request matches the ID from the JWT.
+     */
+    @GetMapping
+    public ResponseEntity<Page<TrackDto>> getArtistTracks(
+            @RequestParam("artistId") UUID artistId,
+            @PageableDefault(size = 10) Pageable pageable
+    ) {
+        Page<TrackDto> trackPage = trackService.getTracksByArtist(artistId, pageable);
+        return ResponseEntity.ok(trackPage);
     }
 }

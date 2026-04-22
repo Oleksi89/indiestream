@@ -41,11 +41,26 @@ public class MinioStorageService {
     }
 
     /**
+     * Uploads an audio file to MinIO.
+     */
+    public String uploadTrackFile(MultipartFile file, UUID artistId) {
+        return uploadFileInternal(file, artistId, "tracks", ".mp3");
+    }
+
+    /**
+     * Uploads an image cover file to MinIO.
+     * Why: Separated from audio to enforce different folder structure and default extensions.
+     */
+    public String uploadCoverFile(MultipartFile file, UUID artistId) {
+        return uploadFileInternal(file, artistId, "covers", ".jpg");
+    }
+
+    /**
      * Uploads a file to MinIO and returns the generated object path
      * Generates a unique filename to prevent collisions
      * Implements fail-fast validation for file integrity
      */
-    public String uploadTrackFile(MultipartFile file, UUID artistId) {
+    private String uploadFileInternal(MultipartFile file, UUID artistId, String folder, String defaultExt) {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("Cannot upload an empty or null file.");
         }
@@ -54,10 +69,10 @@ public class MinioStorageService {
             String originalFilename = file.getOriginalFilename();
             String extension = originalFilename != null && originalFilename.contains(".")
                     ? originalFilename.substring(originalFilename.lastIndexOf("."))
-                    : ".mp3";
+                    : defaultExt;
 
-            String objectName = String.format("artists/%s/tracks/%s%s",
-                    artistId.toString(), UUID.randomUUID().toString(), extension);
+            String objectName = String.format("artists/%s/%s/%s%s",
+                    artistId.toString(), folder, UUID.randomUUID().toString(), extension);
 
             // Guard against null content type from poorly constructed HTTP clients
             String contentType = file.getContentType();
@@ -72,7 +87,7 @@ public class MinioStorageService {
                                 .bucket(minioProperties.bucket())
                                 .object(objectName)
                                 .stream(inputStream, file.getSize(), -1)
-                                .contentType(file.getContentType())
+                                .contentType(contentType)
                                 .build()
                 );
             }
