@@ -7,6 +7,8 @@ import {AuthenticatedLayout} from "@/shared/layouts/AuthenticatedLayout";
 import {DashboardPage} from "@/pages/dashboard/DashboardPage";
 import {GuestRoute} from "@/shared/components/GuestRoute";
 import {ArtistDashboardPage} from "@/pages/artist/ArtistDashboardPage";
+import {RoleRoute} from "@/shared/components/RoleRoute";
+import {NotFoundPage} from "@/pages/error/NotFoundPage";
 
 const routes = [
     // Guest Only Routes
@@ -34,13 +36,23 @@ const routes = [
                         path: '/',
                         element: <DashboardPage/>,
                     },
+                    // Role-Protected Routes
                     {
-                        path: '/artist/dashboard',
-                        element: <ArtistDashboardPage/>, // Artist upload hub
+                        element: <RoleRoute allowedRoles={['ARTIST', 'ADMIN']}/>,
+                        children: [
+                            {
+                                path: '/artist/dashboard',
+                                element: <ArtistDashboardPage/>, // Artist upload hub
+                            },
+                        ],
                     },
                 ],
             },
         ],
+    },
+    {
+        path: '*',
+        element: <NotFoundPage/>,
     },
 ];
 
