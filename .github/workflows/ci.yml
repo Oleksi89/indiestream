@@ -108,7 +108,23 @@ jobs:
 
       - name: Build Frontend Docker Image
         run: docker build -t indiestream-frontend:latest .
+  sync:
+    name: Mirror to GitLab
+    # only run if the backend and frontend are assembled without errors
+    needs: [ backend, frontend ]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
 
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the entire commit history for a correct push
+
+      - name: Push to GitLab Repository
+        run: |
+          git remote add gitlab https://oauth2:${{ secrets.GITLAB_TOKEN }}@git.ztu.edu.ua/ipz/2022-2026/ipz-22-3/vasyanovych-oleksandr/diploma-project.git
+          git push gitlab HEAD:${{ github.ref_name }}
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true

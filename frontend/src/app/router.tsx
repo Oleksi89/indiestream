@@ -1,16 +1,57 @@
 import {createBrowserRouter} from 'react-router-dom';
 import { LoginPage } from '@/pages/auth/LoginPage';
-import App from '../App';
-import type { JSX } from 'react';
+import {RegisterPage} from "@/pages/auth/RegisterPage";
+import {ProtectedRoute} from "@/shared/components/ProtectedRoute";
+import {AuthenticatedLayout} from "@/shared/layouts/AuthenticatedLayout";
+import {DashboardPage} from "@/pages/dashboard/DashboardPage";
+import {GuestRoute} from "@/shared/components/GuestRoute";
+import {ArtistDashboardPage} from "@/pages/artist/ArtistDashboardPage";
+import {RoleRoute} from "@/shared/components/RoleRoute";
+import {NotFoundPage} from "@/pages/error/NotFoundPage";
 
-const routes: ({ path: string; element: JSX.Element })[] = [
+const routes = [
+    // Guest Only Routes
     {
-        path: '/',
-        element: <App />,
+        element: <GuestRoute/>,
+        children: [
+            {
+                path: '/login',
+                element: <LoginPage/>,
+            },
+            {
+                path: '/register',
+                element: <RegisterPage/>,
+            },
+        ],
+    },
+    // Private Routes wrapped in ProtectedRoute and AuthenticatedLayout
+    {
+        element: <ProtectedRoute/>,
+        children: [
+            {
+                element: <AuthenticatedLayout/>,
+                children: [
+                    {
+                        path: '/',
+                        element: <DashboardPage/>,
+                    },
+                    // Role-Protected Routes
+                    {
+                        element: <RoleRoute allowedRoles={['ARTIST', 'ADMIN']}/>,
+                        children: [
+                            {
+                                path: '/artist/dashboard',
+                                element: <ArtistDashboardPage/>, // Artist upload hub
+                            },
+                        ],
+                    },
+                ],
+            },
+        ],
     },
     {
-        path: '/login',
-        element: <LoginPage />,
+        path: '*',
+        element: <NotFoundPage/>,
     },
 ];
 

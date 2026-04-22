@@ -1,10 +1,12 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type {UserDto} from "@/features/auth/types";
 
 interface AuthState {
     token: string | null;
-    isAuthenticated: boolean;
+    user: UserDto | null;
     setToken: (token: string) => void;
+    setUser: (user: UserDto | null) => void;
     logout: () => void;
 }
 
@@ -12,9 +14,10 @@ export const useAuthStore = create<AuthState>()(
     persist(
         (set) => ({
             token: null,
-            isAuthenticated: false,
-            setToken: (token: string) => set({ token, isAuthenticated: true }),
-            logout: () => set({ token: null, isAuthenticated: false }),
+            user: null,
+            setToken: (token) => set({token}),
+            setUser: (user) => set({user}),
+            logout: () => set({token: null, user: null}),
         }),
         {
             name: 'indiestream-auth', // Key in localStorage

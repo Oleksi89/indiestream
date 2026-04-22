@@ -51,6 +51,9 @@ dependencies {
     testImplementation("org.springframework.security:spring-security-test")
     testImplementation("com.tngtech.archunit:archunit-junit5:1.2.1")
     testImplementation("org.springframework.modulith:spring-modulith-starter-test")
+    testImplementation("org.springframework.boot:spring-boot-testcontainers")
+    testImplementation("org.testcontainers:junit-jupiter")
+    testImplementation("org.testcontainers:postgresql")
     implementation("org.springframework.modulith:spring-modulith-starter-core")
 
     implementation("io.jsonwebtoken:jjwt-api:0.12.5")

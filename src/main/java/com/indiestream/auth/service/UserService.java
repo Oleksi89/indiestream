@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.indiestream.auth.exception.EmailAlreadyInUseException;
 
 import java.util.Optional;
 
@@ -27,14 +28,15 @@ public class UserService {
 
     /**
      * Registers a new user with USER role.
-     * @param request Contains raw credentials.
+     * * @param request Contains raw credentials.
+     *
      * @return UserDto representing the persisted user.
-     * // TODO: [Auth] - Implement standardized RFC 7807 exception for email conflicts.
+     * @throws EmailAlreadyInUseException if the provided email exists in the system.
      */
     @Transactional
     public UserDto register(RegisterRequestDto request) {
         if (userRepository.existsByEmail(request.email())) {
-            throw new IllegalArgumentException("Email is already in use.");
+            throw new EmailAlreadyInUseException("Email is already in use.");
         }
 
         User user = new User();
