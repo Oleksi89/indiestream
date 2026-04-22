@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -59,6 +60,17 @@ public class TrackService {
         return trackRepository.findById(trackId)
                 .map(this::mapToDto)
                 .orElseThrow(() -> new IllegalArgumentException("Track not found"));
+    }
+
+    /**
+     * Returns a list of all tracks by an artist.
+     */
+    @Transactional(readOnly = true)
+    public List<TrackDto> getTracksByArtist(UUID artistId) {
+        return trackRepository.findAllByArtistIdOrderByCreatedAtDesc(artistId)
+                .stream()
+                .map(this::mapToDto)
+                .toList();
     }
 
     private TrackDto mapToDto(Track track) {

@@ -10,5 +10,5 @@ import java.util.UUID;
 @Repository
 public interface TrackRepository extends JpaRepository<Track, UUID> {
 
-    List<Track> findAllByArtistId(UUID artistId);
+    List<Track> findAllByArtistIdOrderByCreatedAtDesc(UUID artistId);
 }

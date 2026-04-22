@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.UUID;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/tracks")
@@ -110,5 +111,14 @@ public class TrackController {
                 .contentType(MediaType.parseMediaType(metadata.contentType()))
                 .contentLength(metadata.size())
                 .body(resource);
+    }
+
+    /**
+     * Returns a list of tracks for the specified artist.
+     * // TODO: [Security] - Check if the artistId in the request matches the ID from the JWT.
+     */
+    @GetMapping
+    public ResponseEntity<List<TrackDto>> getArtistTracks(@RequestParam("artistId") UUID artistId) {
+        return ResponseEntity.ok(trackService.getTracksByArtist(artistId));
     }
 }
