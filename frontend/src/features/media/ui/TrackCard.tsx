@@ -1,7 +1,8 @@
 import {useQuery} from '@tanstack/react-query';
 import {mediaApi} from '../api/media.api';
 import type {TrackDto} from '../types';
-import {Disc3, Clock, Image as ImageIcon} from 'lucide-react';
+import {Disc3, Clock, Image as ImageIcon, Play, Pause} from 'lucide-react';
+import {usePlayerStore} from '@/shared/store/playerStore';
 
 /**
  * Securely fetches and displays a track cover using a Blob URL.
@@ -44,9 +45,27 @@ interface TrackCardProps {
 }
 
 export const TrackCard = ({track}: TrackCardProps) => {
+    const {currentTrack, isPlaying, setTrack, togglePlay} = usePlayerStore();
+
+    const isCurrentTrack = currentTrack?.id === track.id;
+
+    const handlePlayClick = (e: React.MouseEvent) => {
+        // Prevent event bubbling in case the card itself becomes a navigation link
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (isCurrentTrack) {
+            togglePlay();
+        } else {
+            setTrack(track);
+        }
+    };
+
     return (
         <div
-            className="group relative flex flex-col bg-slate-900 border border-slate-800 rounded-xl overflow-hidden hover:border-violet-500/50 transition-colors cursor-pointer">
+            className="group relative flex flex-col bg-slate-900 border border-slate-800 rounded-xl overflow-hidden hover:border-violet-500/50 transition-colors cursor-pointer shadow-lg">
+
+            {/* Image Container with Play Overlay */}
             <div className="aspect-square w-full bg-slate-800 relative overflow-hidden">
                 {track.coverMinioPath ? (
                     <SecureTrackCover trackId={track.id}/>
@@ -55,10 +74,28 @@ export const TrackCard = ({track}: TrackCardProps) => {
                         <Disc3 size={64} className="text-slate-700"/>
                     </div>
                 )}
+
+                {/* Play Button Overlay */}
+                <div
+                    className={`absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${isCurrentTrack && isPlaying ? 'opacity-100' : ''}`}>
+                    <button
+                        onClick={handlePlayClick}
+                        className="h-14 w-14 rounded-full bg-violet-500 flex items-center justify-center text-white hover:bg-violet-400 hover:scale-105 transition-all shadow-xl"
+                    >
+                        {isCurrentTrack && isPlaying ? (
+                            <Pause size={24} fill="currentColor"/>
+                        ) : (
+                            <Play size={24} fill="currentColor" className="ml-1"/>
+                        )}
+                    </button>
+                </div>
             </div>
 
+            {/* Metadata */}
             <div className="p-4">
-                <h3 className="text-lg font-semibold text-slate-100 truncate">{track.title}</h3>
+                <h3 className={`text-lg font-semibold truncate ${isCurrentTrack ? 'text-violet-400' : 'text-slate-100'}`}>
+                    {track.title}
+                </h3>
                 <div className="flex items-center gap-2 mt-2 text-slate-400 text-sm">
                     <Clock size={14}/>
                     {/* TODO: [Media] - Extract duration formatting to a utility function */}
