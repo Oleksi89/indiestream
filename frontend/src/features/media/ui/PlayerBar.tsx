@@ -1,4 +1,4 @@
-import React, {useEffect, useRef} from 'react';
+import {useEffect, useRef} from 'react';
 import {usePlayerStore} from '@/shared/store/playerStore';
 import {mediaApi} from '../api/media.api';
 import {useSecureUrl} from '@/shared/hooks/useSecureUrl';
@@ -47,6 +47,14 @@ export const PlayerBar = () => {
         if (audioRef.current) audioRef.current.volume = volume;
     }, [volume]);
 
+    const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newTime = parseFloat(e.target.value);
+        if (audioRef.current) {
+            audioRef.current.currentTime = newTime;
+        }
+        setProgress(newTime);
+    };
+
     if (!currentTrack) return null;
 
     return (
@@ -78,25 +86,43 @@ export const PlayerBar = () => {
                 </div>
             </div>
 
-            {/* Controls (Keeping existing logic but ensuring UI consistency) */}
+            {/* Controls */}
             <div className="flex flex-col items-center gap-2 w-[40%]">
                 <div className="flex items-center gap-6">
-                    <button className="text-slate-400 hover:text-white transition-colors"><SkipForward
-                        className="rotate-180" size={20}/></button>
+                    <button className="text-slate-400 hover:text-white transition-colors">
+                        <SkipForward className="rotate-180" size={20}/>
+                    </button>
                     <button onClick={togglePlay}
                             className="h-10 w-10 rounded-full bg-white flex items-center justify-center text-black hover:scale-105 transition-transform">
                         {isPlaying ? <Pause size={20} fill="black"/> : <Play size={20} fill="black" className="ml-1"/>}
                     </button>
-                    <button className="text-slate-400 hover:text-white transition-colors"><SkipForward size={20}/>
+                    <button className="text-slate-400 hover:text-white transition-colors">
+                        <SkipForward size={20}/>
                     </button>
                 </div>
 
                 <div className="w-full flex items-center gap-3">
                     <span className="text-[10px] text-slate-500 font-mono w-10 text-right">{formatTime(progress)}</span>
-                    <div className="relative flex-1 h-1 bg-slate-800 rounded-full overflow-hidden">
-                        <div className="absolute top-0 left-0 h-full bg-violet-500"
-                             style={{width: `${(progress / duration) * 100}%`}}/>
+
+                    {/* Robust composite progress slider */}
+                    <div className="relative flex-1 h-1 bg-slate-800 rounded-full group flex items-center">
+                        {/* Visual fill */}
+                        <div
+                            className="absolute left-0 h-full bg-violet-500 rounded-full group-hover:bg-violet-400 transition-colors"
+                            style={{width: `${duration > 0 ? (progress / duration) * 100 : 0}%`}}
+                        />
+                        {/* Invisible interactive input */}
+                        <input
+                            type="range"
+                            min={0}
+                            max={duration || 100}
+                            step={0.1}
+                            value={progress}
+                            onChange={handleSeek}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        />
                     </div>
+
                     <span className="text-[10px] text-slate-500 font-mono w-10">{formatTime(duration)}</span>
                 </div>
             </div>
@@ -104,11 +130,21 @@ export const PlayerBar = () => {
             {/* Volume Section */}
             <div className="flex items-center justify-end gap-3 w-[30%]">
                 <Volume2 size={18} className="text-slate-400"/>
-                <input
-                    type="range" min="0" max="1" step="0.01" value={volume}
-                    onChange={(e) => setVolume(parseFloat(e.target.value))}
-                    className="w-24 accent-violet-500 h-1 bg-slate-800 rounded-full cursor-pointer"
-                />
+                <div className="relative w-24 h-1 bg-slate-800 rounded-full group flex items-center">
+                    <div
+                        className="absolute left-0 h-full bg-violet-500 rounded-full group-hover:bg-violet-400 transition-colors"
+                        style={{width: `${volume * 100}%`}}
+                    />
+                    <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value={volume}
+                        onChange={(e) => setVolume(parseFloat(e.target.value))}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                </div>
             </div>
         </div>
     );
