@@ -56,6 +56,16 @@ public class MinioStorageService {
     }
 
     /**
+     * Uploads an individual stem file.
+     * Stems are grouped logically in a subfolder within the artist's namespace.
+     * The stem name is sanitized to prevent path traversal or special character issues in MinIO.
+     */
+    public String uploadStemFile(MultipartFile file, UUID artistId, String stemName) {
+        String safeStemName = stemName.replaceAll("[^a-zA-Z0-9_-]", "").toLowerCase();
+        return uploadFileInternal(file, artistId, "stems/" + safeStemName, ".wav");
+    }
+
+    /**
      * Uploads a file to MinIO and returns the generated object path
      * Generates a unique filename to prevent collisions
      * Implements fail-fast validation for file integrity

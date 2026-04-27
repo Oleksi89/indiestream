@@ -28,7 +28,8 @@ public class TrackController {
     private final MinioStorageService minioStorageService;
 
     /**
-     * Uploads a new track. Consumes multipart/form-data
+     * Uploads a new track with optional stems. Consumes multipart/form-data.
+     * Uses parallel arrays for stem files and names to bypass nested multipart complexity.
      * // TODO: [Security] - Extract artistId from JWT custom claims instead of RequestParam to prevent spoofing
      */
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -36,9 +37,11 @@ public class TrackController {
             @RequestParam("artistId") UUID artistId,
             @RequestParam("title") String title,
             @RequestParam("file") MultipartFile file,
-            @RequestParam(value = "cover", required = false) MultipartFile cover
+            @RequestParam(value = "cover", required = false) MultipartFile cover,
+            @RequestParam(value = "stemFiles", required = false) MultipartFile[] stemFiles,
+            @RequestParam(value = "stemNames", required = false) List<String> stemNames
     ) {
-        TrackDto uploadedTrack = trackService.uploadMasterTrack(artistId, title, file, cover);
+        TrackDto uploadedTrack = trackService.uploadTrack(artistId, title, file, cover, stemFiles, stemNames);
         return ResponseEntity.status(HttpStatus.CREATED).body(uploadedTrack);
     }
 

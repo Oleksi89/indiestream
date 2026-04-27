@@ -23,3 +23,8 @@ export interface PageResponse<T> {
     number: number;
     empty: boolean;
 }
+
+export interface StemUploadPayload {
+    name: string;
+    file: File;
+}

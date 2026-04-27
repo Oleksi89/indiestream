@@ -13,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -23,15 +25,13 @@ public class TrackService {
     private final MinioStorageService minioStorageService;
     private final ApplicationEventPublisher events;
 
-    public void saveTrack() {
-        events.publishEvent(new TrackUploadedEvent(1L, "Synthwave"));
-    }
 
     /**
-     * Orchestrates the upload of a master track file and an optional cover image.
+     * Orchestrates the upload of a master track, optional cover, and dynamic stems.
+     * Ensures atomic database saving after all MinIO uploads succeed.
      */
     @Transactional
-    public TrackDto uploadMasterTrack(UUID artistId, String title, MultipartFile file, MultipartFile cover) {
+    public TrackDto uploadTrack(UUID artistId, String title, MultipartFile file, MultipartFile cover, MultipartFile[] stemFiles, List<String> stemNames) {
         String bucketPath = minioStorageService.uploadTrackFile(file, artistId);
 
         String coverPath = null;
@@ -39,16 +39,34 @@ public class TrackService {
             coverPath = minioStorageService.uploadCoverFile(cover, artistId);
         }
 
+        Map<String, String> stemsMetadata = new HashMap<>();
+
+        // Match stems with their provided metadata names
+        if (stemFiles != null && stemNames != null && stemFiles.length == stemNames.size()) {
+            for (int i = 0; i < stemFiles.length; i++) {
+                if (!stemFiles[i].isEmpty()) {
+                    String stemName = stemNames.get(i).trim();
+                    String stemPath = minioStorageService.uploadStemFile(stemFiles[i], artistId, stemName);
+                    stemsMetadata.put(stemName, stemPath);
+                }
+            }
+        } else if (stemFiles != null || stemNames != null) {
+            // TODO: [Media] - Throw custom RFC 7807 Bad Request exception
+            throw new IllegalArgumentException("Mismatched stem files and stem names.");
+        }
+
         Track track = Track.builder()
                 .artistId(artistId)
                 .title(title)
                 .minioBucketPath(bucketPath)
                 .coverMinioPath(coverPath)
-                .stemsMetadata(new HashMap<>())
-                .durationSeconds(0)
+                .stemsMetadata(stemsMetadata)
+                .durationSeconds(0) // TODO: [Media] - Extract duration using FFmpeg probe in future HLS worker
                 .build();
 
         Track savedTrack = trackRepository.save(track);
+        events.publishEvent(new TrackUploadedEvent(savedTrack.getId(), savedTrack.getTitle()));
+
         return mapToDto(savedTrack);
     }
 
