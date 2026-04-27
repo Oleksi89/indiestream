@@ -72,7 +72,35 @@ public class TrackController {
             @RequestHeader(value = "Range", required = false) String rangeHeader
     ) {
         TrackDto track = trackService.getTrackById(trackId);
-        StatObjectResponse metadata = minioStorageService.getObjectMetadata(track.minioBucketPath());
+        return buildStreamResponse(track.minioBucketPath(), rangeHeader);
+    }
+
+    /**
+     * Resolves and streams a specific stem belonging to a track.
+     * Range requests are supported to allow client-side buffering optimizations.
+     */
+    @GetMapping(value = "/{trackId}/stems/{stemName}")
+    public ResponseEntity<InputStreamResource> streamStem(
+            @PathVariable UUID trackId,
+            @PathVariable String stemName,
+            @RequestHeader(value = "Range", required = false) String rangeHeader
+    ) {
+        TrackDto track = trackService.getTrackById(trackId);
+        String stemPath = track.stemsMetadata().get(stemName);
+
+        if (stemPath == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        return buildStreamResponse(stemPath, rangeHeader);
+    }
+
+    /**
+     * Centralizes HTTP 206 Partial Content resolution for media objects.
+     * Ensures consistent media delivery behavior across both master tracks and dynamic stems.
+     */
+    private ResponseEntity<InputStreamResource> buildStreamResponse(String objectPath, String rangeHeader) {
+        StatObjectResponse metadata = minioStorageService.getObjectMetadata(objectPath);
         long fileSize = metadata.size();
 
         // Default to full file if no Range header is provided
@@ -98,7 +126,7 @@ public class TrackController {
 
         long contentLength = rangeEnd - rangeStart + 1;
         InputStreamResource resource = new InputStreamResource(
-                minioStorageService.getObjectStream(track.minioBucketPath(), rangeStart, contentLength)
+                minioStorageService.getObjectStream(objectPath, rangeStart, contentLength)
         );
 
         HttpHeaders headers = new HttpHeaders();

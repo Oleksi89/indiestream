@@ -81,4 +81,15 @@ export const mediaApi = {
         });
         return response.data;
     },
+
+    /**
+     * Fetches a specific stem audio file as a Blob.
+     * Required for loading into the Web Audio API ArrayBuffer.
+     */
+    getStemAudioBlob: async (trackId: string, stemName: string): Promise<Blob> => {
+        const response = await apiClient.get(`/tracks/${trackId}/stems/${stemName}`, {
+            responseType: 'blob'
+        });
+        return response.data;
+    },
 };
