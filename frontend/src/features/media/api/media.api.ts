@@ -1,12 +1,19 @@
 import {apiClient} from '@/shared/api/apiClient';
-import type {TrackDto, PageResponse} from '../types';
+import type {TrackDto, PageResponse, StemUploadPayload} from '../types';
 import type {AxiosResponse} from 'axios';
 
 export const mediaApi = {
     /**
-     * Uploads an audio file and an optional cover image to the storage layer.
+     * Uploads an audio file, cover image, and dynamic stems to the storage layer.
+     * FormData handles parallel arrays natively by appending multiple values to the same key.
      */
-    uploadTrack: async (artistId: string, title: string, file: File, cover?: File): Promise<TrackDto> => {
+    uploadTrack: async (
+        artistId: string,
+        title: string,
+        file: File,
+        cover?: File,
+        stems: StemUploadPayload[] = []
+    ): Promise<TrackDto> => {
         const formData = new FormData();
         formData.append('artistId', artistId);
         formData.append('title', title);
@@ -15,6 +22,11 @@ export const mediaApi = {
         if (cover) {
             formData.append('cover', cover);
         }
+
+        stems.forEach(stem => {
+            formData.append('stemFiles', stem.file);
+            formData.append('stemNames', stem.name);
+        });
 
         const {data} = await apiClient.post<unknown, AxiosResponse<TrackDto>>(
             '/tracks',
@@ -34,13 +46,7 @@ export const mediaApi = {
     getArtistTracks: async (artistId: string, page: number = 0, size: number = 10): Promise<PageResponse<TrackDto>> => {
         const {data} = await apiClient.get<unknown, AxiosResponse<PageResponse<TrackDto>>>(
             `/tracks`,
-            {
-                params: {
-                    artistId,
-                    page,
-                    size
-                }
-            }
+            {params: {artistId, page, size}}
         );
         return data;
     },
@@ -51,9 +57,7 @@ export const mediaApi = {
     getPublicTracks: async (page: number = 0, size: number = 20): Promise<PageResponse<TrackDto>> => {
         const {data} = await apiClient.get<unknown, AxiosResponse<PageResponse<TrackDto>>>(
             `/tracks`,
-            {
-                params: {page, size}
-            }
+            {params: {page, size}}
         );
         return data;
     },

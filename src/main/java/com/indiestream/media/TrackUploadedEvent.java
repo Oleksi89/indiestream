@@ -1,4 +1,4 @@
 package com.indiestream.media;
 
-public record TrackUploadedEvent(Long trackId, String genre) {
+public record TrackUploadedEvent(java.util.UUID trackId, String genre) {
 }
