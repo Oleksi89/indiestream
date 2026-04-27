@@ -1,13 +1,19 @@
 import {create} from 'zustand';
 import type {TrackDto} from '@/features/media/types';
 
+export type PlaybackMode = 'master' | 'stems';
+
 interface PlayerState {
     currentTrack: TrackDto | null;
     isPlaying: boolean;
-    volume: number;
+    volume: number; // Global master volume (0.0 to 1.0)
     progress: number; // In seconds
     duration: number; // In seconds
     queue: TrackDto[];
+
+    // Stems state
+    playbackMode: PlaybackMode;
+    stemVolumes: Record<string, number>; // Map of stem name to volume (0.0 to 1.0)
 
     // Actions
     setTrack: (track: TrackDto) => void;
@@ -18,6 +24,11 @@ interface PlayerState {
     setDuration: (duration: number) => void;
     addToQueue: (track: TrackDto) => void;
     nextTrack: () => void;
+
+    // Stems actions
+    setPlaybackMode: (mode: PlaybackMode) => void;
+    setStemVolume: (stemName: string, volume: number) => void;
+    initializeStems: (stemsMetadata: Record<string, string>) => void;
 }
 
 export const usePlayerStore = create<PlayerState>((set, get) => ({
@@ -28,11 +39,24 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     duration: 0,
     queue: [],
 
-    setTrack: (track) => set({
-        currentTrack: track,
-        isPlaying: true,
-        progress: 0
-    }),
+    playbackMode: 'master',
+    stemVolumes: {},
+
+    setTrack: (track) => {
+        set({
+            currentTrack: track,
+            isPlaying: true,
+            progress: 0,
+            playbackMode: 'master' // Always default to master on new track for performance
+        });
+
+        // Auto-initialize stem volumes if available
+        if (track.stemsMetadata && Object.keys(track.stemsMetadata).length > 0) {
+            get().initializeStems(track.stemsMetadata);
+        } else {
+            set({stemVolumes: {}});
+        }
+    },
 
     togglePlay: () => set((state) => ({isPlaying: !state.isPlaying})),
 
@@ -52,12 +76,26 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         const {queue} = get();
         if (queue.length > 0) {
             const next = queue[0];
-            set({
-                currentTrack: next,
-                queue: queue.slice(1),
-                isPlaying: true,
-                progress: 0
-            });
+            get().setTrack(next); // Reuse setTrack to ensure stems are initialized
+            set({queue: queue.slice(1)});
         }
+    },
+
+    setPlaybackMode: (mode) => set({playbackMode: mode}),
+
+    setStemVolume: (stemName, volume) => set((state) => ({
+        stemVolumes: {
+            ...state.stemVolumes,
+            [stemName]: volume
+        }
+    })),
+
+    initializeStems: (stemsMetadata) => {
+        const initialVolumes: Record<string, number> = {};
+        // Default all stems to 80% volume initially
+        Object.keys(stemsMetadata).forEach(stem => {
+            initialVolumes[stem] = 0.8;
+        });
+        set({stemVolumes: initialVolumes});
     }
 }));

@@ -1,6 +1,6 @@
 import {mediaApi} from '../api/media.api';
 import type {TrackDto} from '../types';
-import {Disc3, Clock, Image as ImageIcon, Play, Pause} from 'lucide-react';
+import {Disc3, Clock, Image as ImageIcon, Play, Pause, Layers} from 'lucide-react';
 import {usePlayerStore} from '@/shared/store/playerStore';
 import {useSecureUrl} from '@/shared/hooks/useSecureUrl';
 import {cn} from '@/shared/lib/utils';
@@ -19,6 +19,8 @@ export const TrackCard = ({track}: TrackCardProps) => {
         () => mediaApi.getTrackCoverBlob(track.id),
         !!track.coverMinioPath
     );
+
+    const hasStems = track.stemsMetadata && Object.keys(track.stemsMetadata).length > 0;
 
     const handlePlayClick = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -53,9 +55,18 @@ export const TrackCard = ({track}: TrackCardProps) => {
                         <Disc3 size={64} className="text-slate-700"/>
                     </div>
                 )}
+
+                {/* STEMS Badge Overlay */}
+                {hasStems && (
+                    <div
+                        className="absolute top-3 right-3 bg-slate-900/80 backdrop-blur-sm border border-violet-500/50 text-violet-300 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md flex items-center gap-1.5 shadow-xl">
+                        <Layers size={12}/>
+                        Stems
+                    </div>
+                )}
             </div>
 
-            {/* Content Part - New Design */}
+            {/* Content Part */}
             <div className="p-4 flex items-center justify-between gap-3">
                 <div className="flex flex-col min-w-0 flex-1">
                     <h3 className={cn(
