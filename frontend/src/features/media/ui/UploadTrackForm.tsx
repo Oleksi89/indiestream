@@ -5,7 +5,7 @@ import {z} from 'zod';
 import {mediaApi} from '../api/media.api';
 import {useAuthStore} from '@/shared/store/authStore';
 import {isAxiosError} from 'axios';
-import {UploadCloud, FileAudio, Image as ImageIcon, AlertCircle, CheckCircle2, Plus, X} from 'lucide-react';
+import {UploadCloud, FileAudio, Image as ImageIcon, AlertCircle, CheckCircle2, Plus, X, FolderPlus} from 'lucide-react';
 import type {StemUploadPayload} from "@/features/media/types";
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
@@ -108,6 +108,26 @@ export const UploadTrackForm = () => {
                 setStems(updatedStems);
             }
         }
+    };
+
+    const handleBulkStemUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files) return;
+
+        // Convert FileList to an array, filter valid ones, and sort
+        const files = Array.from(e.target.files)
+            .filter(validateAudioFile)
+            .sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true}));
+
+        const newStems = files.map(file => {
+            const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
+            return {name: nameWithoutExt, file};
+        });
+
+        // Add to existing stems
+        setStems(prev => [...prev, ...newStems]);
+
+        // Clear input
+        e.target.value = '';
     };
 
     const onSubmit: SubmitHandler<FormValues> = async (data) => {
@@ -236,16 +256,30 @@ export const UploadTrackForm = () => {
 
                 {/* Stems Section */}
                 <div className="pt-6 border-t border-slate-800">
-                    <div className="flex items-center justify-between mb-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
                         <div>
                             <h3 className="text-lg font-medium text-slate-200">Interactive Stems</h3>
                             <p className="text-xs text-slate-500">Add separate instrument tracks for the dynamic
                                 player.</p>
                         </div>
-                        <button type="button" onClick={addStem}
-                                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-violet-400 bg-violet-400/10 rounded-lg hover:bg-violet-400/20 transition-colors">
-                            <Plus size={16}/> Add Stem
-                        </button>
+                        <div className="flex gap-2">
+                            {/* Bulk add button */}
+                            <label
+                                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-300 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors cursor-pointer">
+                                <FolderPlus size={16}/> Bulk Add
+                                <input
+                                    type="file"
+                                    multiple
+                                    accept=".mp3,.wav,.flac"
+                                    className="hidden"
+                                    onChange={handleBulkStemUpload}
+                                />
+                            </label>
+                            <button type="button" onClick={addStem}
+                                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-violet-400 bg-violet-400/10 rounded-lg hover:bg-violet-400/20 transition-colors">
+                                <Plus size={16}/> Add Stem
+                            </button>
+                        </div>
                     </div>
 
                     <div className="space-y-3">

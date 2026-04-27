@@ -22,7 +22,7 @@ spring:
   servlet:
     multipart:
       max-file-size: 50MB
-      max-request-size: 55MB
+      max-request-size: 500MB
       # TODO: [Media] - Implement async FFmpeg transcoding pipeline for large lossless formats (WAV) to optimize network delivery
 
 management:
