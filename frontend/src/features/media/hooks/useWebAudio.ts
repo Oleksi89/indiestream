@@ -4,10 +4,11 @@ import {mediaApi} from '../api/media.api';
 import {audioEngine} from '../lib/webAudioEngine';
 
 export const useWebAudio = () => {
-    const {currentTrack, playbackMode, isPlaying, stemVolumes, volume, setPlaying} = usePlayerStore();
+    const {currentTrack, playbackMode, isPlaying, stemVolumes, volume, setPlaying, setProgress} = usePlayerStore();
     const [isStemsLoading, setIsStemsLoading] = useState(false);
     const [stemsError, setStemsError] = useState<string | null>(null);
 
+    // Bootstrap and load ArrayBuffers
     useEffect(() => {
         // Guard: Only initialize graph if stems mode is explicitly requested
         if (playbackMode !== 'stems' || !currentTrack || !currentTrack.stemsMetadata) {
@@ -69,9 +70,9 @@ export const useWebAudio = () => {
             isCancelled = true;
             audioEngine.stop();
         };
-    }, [currentTrack, playbackMode]); // Intentionally skipping isPlaying to prevent re-fetching
+    }, [currentTrack, playbackMode]);
 
-    // Sync play/pause state without rebuilding the graph
+    // Transport Control Synchronization
     useEffect(() => {
         if (playbackMode !== 'stems') return;
 
@@ -82,7 +83,28 @@ export const useWebAudio = () => {
         }
     }, [isPlaying, isStemsLoading, playbackMode]);
 
-    // Sync individual stem volumes in real-time
+    // TIMELINE SYNCHRONIZATION LOOP
+    // Mimics the native HTML5 <audio> 'timeupdate' event
+    useEffect(() => {
+        if (playbackMode !== 'stems' || !isPlaying || isStemsLoading) return;
+
+        const intervalId = setInterval(() => {
+            const time = audioEngine.getCurrentProgress();
+            const duration = usePlayerStore.getState().duration;
+
+            // Auto-stop at the end of the track
+            if (duration > 0 && time >= duration) {
+                setProgress(duration);
+                setPlaying(false);
+            } else {
+                setProgress(time);
+            }
+        }, 250); // 250ms standard tick rate for media players to balance precision and CPU load
+
+        return () => clearInterval(intervalId);
+    }, [isPlaying, playbackMode, isStemsLoading, setProgress, setPlaying]);
+
+    // Mixer Synchronization
     useEffect(() => {
         if (playbackMode !== 'stems') return;
         Object.entries(stemVolumes).forEach(([name, vol]) => {

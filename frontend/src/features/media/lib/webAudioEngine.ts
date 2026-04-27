@@ -5,11 +5,15 @@
  */
 class WebAudioEngine {
     private context: AudioContext | null = null;
-    private sources: AudioBufferSourceNode[] = [];
+    private buffers: Map<string, AudioBuffer> = new Map();
+    private activeSources: Map<string, AudioBufferSourceNode> = new Map();
     private gainNodes: Map<string, GainNode> = new Map();
     private masterGain: GainNode | null = null;
-    private startTime: number = 0;
-    private pauseTime: number = 0;
+
+    // Timeline Tracking State
+    private startTimestamp: number = 0;
+    private currentOffset: number = 0;
+    private isEnginePlaying: boolean = false;
 
     constructor() {
         const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -25,65 +29,87 @@ class WebAudioEngine {
     public async loadStems(stems: Map<string, ArrayBuffer>): Promise<void> {
         if (!this.context) return;
 
-        this.stop(); // Clear previous nodes
+        this.stop();
+        this.buffers.clear();
 
         for (const [name, data] of stems) {
             const buffer = await this.context.decodeAudioData(data);
-            const source = this.context.createBufferSource();
-            source.buffer = buffer;
+            this.buffers.set(name, buffer);
 
             const gainNode = this.context.createGain();
             this.gainNodes.set(name, gainNode);
-
-            source.connect(gainNode);
             gainNode.connect(this.masterGain!);
-            this.sources.push(source);
         }
     }
 
+    /**
+     * Initializes playback from a specific offset.
+     * Records the exact context timeline coordinate for accurate progress calculation.
+     */
     public play(offset: number = 0): void {
-        if (!this.context) return;
+        if (!this.context || this.buffers.size === 0) return;
+
+        this.stopActiveSources();
 
         if (this.context.state === 'suspended') {
             this.context.resume();
         }
 
-        // Re-create sources if they were stopped (Web Audio nodes are one-time use)
-        if (this.sources.length === 0 || this.sources[0].buffer === null) {
-            // TODO: [Media] - Implement buffer caching mechanism to avoid re-decoding on unpause
-            console.warn("Attempting to play a stopped engine without re-loading buffers.");
-            return;
-        }
+        // Initialize timeline tracking
+        this.currentOffset = offset;
+        this.startTimestamp = this.context.currentTime;
+        this.isEnginePlaying = true;
 
-        this.sources.forEach(source => {
-            // Check if node is already started to prevent InvalidStateError
-            try {
+        for (const [name, buffer] of this.buffers) {
+            const source = this.context.createBufferSource();
+            source.buffer = buffer;
+
+            const gainNode = this.gainNodes.get(name);
+            if (gainNode) {
+                source.connect(gainNode);
                 source.start(0, offset);
-            } catch (e) {
-                // Ignore if already playing
+                this.activeSources.set(name, source);
             }
-        });
-
-        this.startTime = this.context.currentTime - offset;
+        }
     }
 
     public pause(): void {
-        if (!this.context) return;
-        this.context.suspend();
-        this.pauseTime = this.context.currentTime - this.startTime;
+        this.stopActiveSources();
+        this.isEnginePlaying = false;
+        if (this.context?.state === 'running') {
+            this.context.suspend();
+        }
     }
 
     public stop(): void {
-        this.sources.forEach(source => {
+        this.stopActiveSources();
+        this.gainNodes.clear();
+        this.buffers.clear();
+        this.isEnginePlaying = false;
+        this.currentOffset = 0;
+    }
+
+    private stopActiveSources(): void {
+        for (const source of this.activeSources.values()) {
             try {
                 source.stop();
                 source.disconnect();
-            } catch (e) { /* ignore */
+            } catch (e) {
+                // Ignore if node is already disconnected
             }
-        });
-        this.sources = [];
-        this.gainNodes.clear();
-        this.pauseTime = 0;
+        }
+        this.activeSources.clear();
+    }
+
+    /**
+     * Calculates the exact current progress in seconds.
+     * Why: AudioContext.currentTime continuously increments even when suspended.
+     * We must calculate delta relative to our explicit startTimestamp.
+     */
+    public getCurrentProgress(): number {
+        if (!this.context) return 0;
+        if (!this.isEnginePlaying) return this.currentOffset;
+        return this.currentOffset + (this.context.currentTime - this.startTimestamp);
     }
 
     public setStemVolume(name: string, volume: number): void {
