@@ -7,6 +7,7 @@ import com.indiestream.media.dto.TrackDto;
 import com.indiestream.media.repository.TrackRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -120,6 +121,23 @@ public class TrackService {
     public Page<TrackDto> getPublicTracks(Pageable pageable) {
         return trackRepository.findAllByStatusOrderByCreatedAtDesc(TrackStatus.READY, pageable)
                 .map(this::mapToDto);
+    }
+
+    /**
+     * Retrieves an HLS manifest or segment from storage.
+     * Maps the virtual API path to the physical MinIO object path.
+     */
+    @Transactional(readOnly = true)
+    public InputStreamResource getHlsResource(UUID trackId, String relativePath) {
+        Track track = trackRepository.findById(trackId)
+                .orElseThrow(() -> new IllegalArgumentException("Track not found"));
+
+        // Build the base path used during processing: artists/{id}/hls/{trackId}/
+        String hlsBasePath = "artists/" + track.getArtistId() + "/hls/" + track.getId() + "/";
+        String objectPath = hlsBasePath + relativePath;
+
+        // Use MinioStorageService to get the full stream without range limits
+        return new InputStreamResource(minioStorageService.getObjectStream(objectPath, 0, -1));
     }
 
     private TrackDto mapToDto(Track track) {

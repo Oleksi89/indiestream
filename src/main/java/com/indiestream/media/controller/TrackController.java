@@ -4,8 +4,10 @@ import com.indiestream.media.dto.TrackDto;
 import com.indiestream.media.service.MinioStorageService;
 import com.indiestream.media.service.TrackService;
 import io.minio.StatObjectResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -13,9 +15,11 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.AntPathMatcher;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.security.Principal;
 import java.util.UUID;
 import java.util.List;
 
@@ -29,18 +33,18 @@ public class TrackController {
 
     /**
      * Uploads a new track with optional stems. Consumes multipart/form-data.
-     * Uses parallel arrays for stem files and names to bypass nested multipart complexity.
-     * // TODO: [Security] - Extract artistId from JWT custom claims instead of RequestParam to prevent spoofing
+     * Extracts artistId directly from the validated JWT Principal to prevent spoofing.
      */
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<TrackDto> uploadTrack(
-            @RequestParam("artistId") UUID artistId,
+            Principal principal,
             @RequestParam("title") String title,
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "cover", required = false) MultipartFile cover,
             @RequestParam(value = "stemFiles", required = false) MultipartFile[] stemFiles,
             @RequestParam(value = "stemNames", required = false) List<String> stemNames
     ) {
+        UUID artistId = UUID.fromString(principal.getName());
         TrackDto uploadedTrack = trackService.uploadTrack(artistId, title, file, cover, stemFiles, stemNames);
         return ResponseEntity.status(HttpStatus.CREATED).body(uploadedTrack);
     }
@@ -61,6 +65,28 @@ public class TrackController {
             trackPage = trackService.getPublicTracks(pageable);
         }
         return ResponseEntity.ok(trackPage);
+    }
+
+    /**
+     * Proxy for HLS resources (manifests and segments).
+     * Secures media behind JWT instead of exposing MinIO buckets.
+     */
+    @GetMapping("/{trackId}/hls/**")
+    public ResponseEntity<Resource> getHlsResource(
+            @PathVariable UUID trackId,
+            HttpServletRequest request
+    ) {
+        String path = new AntPathMatcher().extractPathWithinPattern("/{trackId}/hls/**", request.getRequestURI());
+        InputStreamResource resource = trackService.getHlsResource(trackId, path);
+
+        String contentType = path.endsWith(".m3u8") ? "application/vnd.apple.mpegurl" :
+                path.endsWith(".ts") ? "video/MP2T" : "application/octet-stream";
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_TYPE, contentType)
+                // caching for tracks, cache segments aggressively for 1 year
+                .header(HttpHeaders.CACHE_CONTROL, path.endsWith(".m3u8") ? "no-cache" : "max-age=31536000")
+                .body(resource);
     }
 
     /**
