@@ -1,5 +1,7 @@
 package com.indiestream.media.dto;
 
+import com.indiestream.media.domain.TrackStatus;
+
 import java.util.Map;
 import java.util.UUID;
 
@@ -10,5 +12,8 @@ public record TrackDto(
         String minioBucketPath,
         String coverMinioPath,
         Map<String, String> stemsMetadata,
-        Integer durationSeconds
-) {}
+        Integer durationSeconds,
+        TrackStatus status,
+        String hlsManifestPath
+) {
+}

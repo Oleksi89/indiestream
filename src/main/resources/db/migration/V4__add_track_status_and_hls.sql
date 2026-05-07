@@ -1,0 +1,7 @@
+ALTER TABLE tracks
+    ADD COLUMN status VARCHAR(20) DEFAULT 'PROCESSING' NOT NULL;
+ALTER TABLE tracks
+    ADD COLUMN hls_manifest_path VARCHAR(255);
+
+UPDATE tracks
+SET status = 'READY';

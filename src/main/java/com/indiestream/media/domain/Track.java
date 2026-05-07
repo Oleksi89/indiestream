@@ -16,6 +16,8 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 
 @Entity
 @Table(name = "tracks")
@@ -51,6 +53,14 @@ public class Track {
 
     @Column(name = "duration_seconds")
     private Integer durationSeconds;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private TrackStatus status = TrackStatus.PROCESSING;
+
+    @Column(name = "hls_manifest_path")
+    private String hlsManifestPath;
 
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;
