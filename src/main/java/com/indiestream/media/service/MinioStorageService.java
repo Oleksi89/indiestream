@@ -132,21 +132,19 @@ public class MinioStorageService {
     }
 
     /**
-     * Fetches a specific byte range of a file from MinIO.
-     * Essential for HTTP 206 Partial Content video/audio streaming.
+     * Fetches a complete file from MinIO without byte range limits.
+     * Essential for fetching HLS manifests and small segments entirely.
      */
-    public InputStream getObjectStream(String objectName, long offset, long length) {
+    public InputStream getObjectStream(String objectName) {
         try {
             return minioClient.getObject(
                     GetObjectArgs.builder()
                             .bucket(minioProperties.bucket())
                             .object(objectName)
-                            .offset(offset)
-                            .length(length)
                             .build()
             );
         } catch (Exception e) {
-            log.error("Failed to stream object: {}", objectName, e);
+            log.error("Failed to stream complete object: {}", objectName, e);
             throw new RuntimeException("Failed to stream media.");
         }
     }

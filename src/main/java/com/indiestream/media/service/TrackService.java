@@ -137,7 +137,7 @@ public class TrackService {
         String objectPath = hlsBasePath + relativePath;
 
         // Use MinioStorageService to get the full stream without range limits
-        return new InputStreamResource(minioStorageService.getObjectStream(objectPath, 0, -1));
+        return new InputStreamResource(minioStorageService.getObjectStream(objectPath));
     }
 
     private TrackDto mapToDto(Track track) {

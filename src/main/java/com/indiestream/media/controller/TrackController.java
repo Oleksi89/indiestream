@@ -76,7 +76,10 @@ public class TrackController {
             @PathVariable UUID trackId,
             HttpServletRequest request
     ) {
-        String path = new AntPathMatcher().extractPathWithinPattern("/{trackId}/hls/**", request.getRequestURI());
+        // extract the target path after "/hls/"
+        String requestUri = request.getRequestURI();
+        String path = requestUri.substring(requestUri.indexOf("/hls/") + 5);
+
         InputStreamResource resource = trackService.getHlsResource(trackId, path);
 
         String contentType = path.endsWith(".m3u8") ? "application/vnd.apple.mpegurl" :
@@ -152,7 +155,7 @@ public class TrackController {
 
         long contentLength = rangeEnd - rangeStart + 1;
         InputStreamResource resource = new InputStreamResource(
-                minioStorageService.getObjectStream(objectPath, rangeStart, contentLength)
+                minioStorageService.getObjectStream(objectPath)
         );
 
         HttpHeaders headers = new HttpHeaders();
@@ -182,7 +185,7 @@ public class TrackController {
 
         StatObjectResponse metadata = minioStorageService.getObjectMetadata(track.coverMinioPath());
         InputStreamResource resource = new InputStreamResource(
-                minioStorageService.getObjectStream(track.coverMinioPath(), 0, metadata.size())
+                minioStorageService.getObjectStream(track.coverMinioPath())
         );
 
         return ResponseEntity.ok()
