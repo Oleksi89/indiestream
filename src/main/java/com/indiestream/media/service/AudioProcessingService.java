@@ -13,6 +13,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -35,42 +36,32 @@ public class AudioProcessingService {
             TrackDto track = trackService.getTrackById(trackId);
             tempDir = Files.createTempDirectory("hls_" + trackId);
 
-            // 1. Download source file
-            Path sourceFile = tempDir.resolve("source.wav");
-            minioStorageService.downloadFile(track.minioBucketPath(), sourceFile);
-
-            // 2. Extract accurate duration via ffprobe
-            int durationSeconds = extractDuration(sourceFile);
-            log.debug("Extracted duration for track {}: {} seconds", trackId, durationSeconds);
-
-            // 3. Execute FFmpeg for HLS segmentation
-            Path manifestFile = tempDir.resolve("index.m3u8");
-            ProcessBuilder ffmpegPb = new ProcessBuilder(
-                    "ffmpeg", "-i", sourceFile.toString(),
-                    "-c:a", "aac", "-b:a", "256k",
-                    "-hls_time", "5",
-                    "-hls_list_size", "0",
-                    "-f", "hls",
-                    manifestFile.toString()
+            log.info("Process Master Track: {}", trackId);
+            // 1. Process Master Track
+            int durationSeconds = processSingleMedia(
+                    track.minioBucketPath(),
+                    "master",
+                    track,
+                    tempDir
             );
 
-            ffmpegPb.redirectErrorStream(true);
-            Process ffmpegProcess = ffmpegPb.start();
-            int exitCode = ffmpegProcess.waitFor();
-
-            if (exitCode != 0) {
-                // Read input stream to capture native FFmpeg errors for logging
-                String errorOutput = new String(ffmpegProcess.getInputStream().readAllBytes());
-                throw new RuntimeException("FFmpeg failed (Code " + exitCode + "): " + errorOutput);
+            // 2. Process all Stems
+            if (track.stemsMetadata() != null) {
+                for (Map.Entry<String, String> entry : track.stemsMetadata().entrySet()) {
+                    String stemName = entry.getKey();
+                    String stemMinioPath = entry.getValue();
+                    processSingleMedia(stemMinioPath, "stems/" + stemName, track, tempDir);
+                    log.info("Stem: {}", stemName);
+                }
+                log.info("Starting Process all Stems: {}", trackId);
             }
 
-            // 4. Bulk upload chunks to storage
-            String targetFolder = "artists/" + track.artistId() + "/hls/" + trackId;
-            String manifestMinioPath = minioStorageService.uploadDirectory(tempDir, targetFolder, "index.m3u8");
+            // Path to the master manifest is saved as the primary reference
+            String masterManifestPath = "artists/" + track.artistId() + "/hls/" + trackId + "/master/index.m3u8";
 
-            // 5. Finalize transaction boundaries
-            trackService.updateTrackStatus(trackId, TrackStatus.READY, manifestMinioPath, durationSeconds);
-            log.info("Successfully processed HLS for track ID: {}", trackId);
+            // Finalize transaction
+            trackService.updateTrackStatus(trackId, TrackStatus.READY, masterManifestPath, durationSeconds);
+            log.info("Successfully processed HLS (Master + Stems) for track ID: {}", trackId);
 
         } catch (Exception e) {
             log.error("HLS processing failed for track ID: {}", trackId, e);
@@ -78,6 +69,52 @@ public class AudioProcessingService {
         } finally {
             cleanupTempFiles(tempDir);
         }
+    }
+
+    /**
+     * Downloads, segments, and uploads a single media file (master or stem).
+     * Returns the duration in seconds (extracted only for the master track to save overhead).
+     */
+    private int processSingleMedia(String minioSourcePath, String folderStructure, TrackDto track, Path baseTempDir) throws Exception {
+        Path processingDir = baseTempDir.resolve(folderStructure);
+        Files.createDirectories(processingDir);
+
+        Path sourceFile = processingDir.resolve("source.wav");
+        minioStorageService.downloadFile(minioSourcePath, sourceFile);
+
+        // Extract duration only for the master track
+        int durationSeconds = 0;
+        if ("master".equals(folderStructure)) {
+            durationSeconds = extractDuration(sourceFile);
+            log.debug("Extracted duration for track {}: {} seconds", track.id(), durationSeconds);
+        }
+
+        Path manifestFile = processingDir.resolve("index.m3u8");
+        ProcessBuilder ffmpegPb = new ProcessBuilder(
+                "ffmpeg", "-i", sourceFile.toString(),
+                "-c:a", "aac", "-b:a", "256k",
+                "-hls_time", "5",
+                "-hls_list_size", "0",
+                "-f", "hls",
+                manifestFile.toString()
+        );
+
+        ffmpegPb.redirectErrorStream(true);
+        Process ffmpegProcess = ffmpegPb.start();
+
+        // Read the stream BEFORE waitFor() to empty the OS buffer and prevent deadlocks
+        String output = new String(ffmpegProcess.getInputStream().readAllBytes());
+
+        int exitCode = ffmpegProcess.waitFor();
+
+        if (exitCode != 0) {
+            throw new RuntimeException("FFmpeg failed for " + folderStructure + " (Code " + exitCode + "): " + output);
+        }
+
+        String targetFolder = "artists/" + track.artistId() + "/hls/" + track.id() + "/" + folderStructure;
+        minioStorageService.uploadDirectory(processingDir, targetFolder, "index.m3u8");
+
+        return durationSeconds;
     }
 
     /**
