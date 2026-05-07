@@ -9,7 +9,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 /**
  * Encapsulates all interactions with the S3-compatible blob storage.
@@ -144,6 +148,60 @@ public class MinioStorageService {
         } catch (Exception e) {
             log.error("Failed to stream object: {}", objectName, e);
             throw new RuntimeException("Failed to stream media.");
+        }
+    }
+
+    /**
+     * Downloads an object from MinIO to the local filesystem.
+     * Used by background workers to process files locally.
+     */
+    public void downloadFile(String objectName, Path destination) {
+        try (InputStream stream = minioClient.getObject(
+                GetObjectArgs.builder()
+                        .bucket(minioProperties.bucket())
+                        .object(objectName)
+                        .build())) {
+            Files.copy(stream, destination, StandardCopyOption.REPLACE_EXISTING);
+        } catch (Exception e) {
+            log.error("Failed to download object: {}", objectName, e);
+            throw new RuntimeException("Failed to download file from storage.", e);
+        }
+    }
+
+    /**
+     * Recursively uploads a local directory to a specific MinIO folder.
+     * Maps content types specifically for HLS segments and manifests.
+     * Returns the absolute path to the specified manifest file.
+     */
+    public String uploadDirectory(Path directory, String targetFolder, String manifestFileName) {
+        try (Stream<Path> paths = Files.walk(directory)) {
+            paths.filter(Files::isRegularFile).forEach(path -> {
+                try {
+                    String fileName = path.getFileName().toString();
+                    String objectName = targetFolder + "/" + fileName;
+
+                    // Specific content types for HLS compatibility
+                    String contentType = fileName.endsWith(".m3u8") ? "application/vnd.apple.mpegurl" :
+                            fileName.endsWith(".ts") ? "video/MP2T" : "application/octet-stream";
+
+                    try (InputStream is = Files.newInputStream(path)) {
+                        minioClient.putObject(
+                                PutObjectArgs.builder()
+                                        .bucket(minioProperties.bucket())
+                                        .object(objectName)
+                                        .stream(is, Files.size(path), -1)
+                                        .contentType(contentType)
+                                        .build()
+                        );
+                    }
+                } catch (Exception e) {
+                    throw new RuntimeException("Failed to upload directory segment: " + path, e);
+                }
+            });
+            return targetFolder + "/" + manifestFileName;
+        } catch (Exception e) {
+            log.error("Directory upload failed for target: {}", targetFolder, e);
+            throw new RuntimeException("Failed to bulk upload directory to storage.", e);
         }
     }
 }
