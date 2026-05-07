@@ -4,6 +4,7 @@ import com.indiestream.auth.dto.AuthResponseDto;
 import com.indiestream.auth.dto.LoginRequestDto;
 import com.indiestream.auth.dto.RegisterRequestDto;
 import com.indiestream.auth.dto.UserDto;
+import com.indiestream.auth.repository.UserRepository;
 import com.indiestream.auth.security.JwtService;
 import com.indiestream.auth.service.TokenBlacklistService;
 import com.indiestream.auth.service.UserService;
@@ -19,6 +20,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Handles public authentication and registration workflows
@@ -29,6 +32,7 @@ import java.time.Duration;
 public class AuthController {
 
     private final UserService userService;
+    private final UserRepository userRepository;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
     private final TokenBlacklistService tokenBlacklistService;
@@ -49,11 +53,22 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponseDto> login(@RequestBody LoginRequestDto request) {
+        // 1. Verify credentials
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.email(), request.password())
         );
 
-        String jwtToken = jwtService.generateToken(request.email());
+        // 2. Retrieve the authenticated user to extract the UUID
+        // Safe to unwrap because authentication guarantees the user exists
+        UserDto user = userService.getUserByEmail(request.email())
+                .orElseThrow(() -> new IllegalStateException("User disappeared after successful authentication"));
+
+        // 3. Inject cross-module boundary data into the token payload
+        Map<String, Object> extraClaims = new HashMap<>();
+        extraClaims.put("id", user.id().toString());
+
+        // 4. Generate token with custom claims
+        String jwtToken = jwtService.generateToken(extraClaims, request.email());
         return ResponseEntity.ok(new AuthResponseDto(jwtToken));
     }
 
