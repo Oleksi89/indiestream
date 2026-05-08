@@ -32,7 +32,6 @@ import java.util.Map;
 public class AuthController {
 
     private final UserService userService;
-    private final UserRepository userRepository;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
     private final TokenBlacklistService tokenBlacklistService;
@@ -59,7 +58,6 @@ public class AuthController {
         );
 
         // 2. Retrieve the authenticated user to extract the UUID
-        // Safe to unwrap because authentication guarantees the user exists
         UserDto user = userService.getUserByEmail(request.email())
                 .orElseThrow(() -> new IllegalStateException("User disappeared after successful authentication"));
 
