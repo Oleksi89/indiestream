@@ -1,95 +1,143 @@
-import {useEffect, useState} from 'react';
+import {useEffect, useState, useRef} from 'react';
+
 import {usePlayerStore} from '@/shared/store/playerStore';
+import {useAuthStore} from '@/shared/store/authStore';
 import {mediaApi} from '../api/media.api';
 import {audioEngine} from '../lib/webAudioEngine';
+import Hls from "hls.js";
+
 
 export const useWebAudio = () => {
     const {currentTrack, playbackMode, isPlaying, stemVolumes, volume, setPlaying, setProgress} = usePlayerStore();
+    const token = useAuthStore(state => state.token);
+
     const [isStemsLoading, setIsStemsLoading] = useState(false);
     const [stemsError, setStemsError] = useState<string | null>(null);
 
-    // Bootstrap and load ArrayBuffers
+    const stemElements = useRef<Map<string, HTMLAudioElement>>(new Map());
+    const hlsInstances = useRef<Map<string, Hls>>(new Map());
+
+    // Bootstrap HLS instances for multi-stem synchronization
     useEffect(() => {
-        // Guard: Only initialize graph if stems mode is explicitly requested
-        if (playbackMode !== 'stems' || !currentTrack || !currentTrack.stemsMetadata) {
-            audioEngine.stop();
+        if (playbackMode !== 'stems' || !currentTrack?.stemsMetadata) {
+            cleanupStems();
             return;
         }
 
-        let isCancelled = false;
-
-        const loadAndPlayStems = async () => {
+        const initStems = async () => {
             setIsStemsLoading(true);
             setStemsError(null);
+            cleanupStems();
 
-            try {
-                const stemNames = Object.keys(currentTrack.stemsMetadata);
+            const stemNames = Object.keys(currentTrack.stemsMetadata);
+            let loadedCount = 0;
 
-                // Fetch all raw binary files concurrently
-                const fetchPromises = stemNames.map(async (name) => {
-                    const blob = await mediaApi.getStemAudioBlob(currentTrack.id, name);
-                    const arrayBuffer = await blob.arrayBuffer();
-                    return {name, arrayBuffer};
-                });
+            const checkReady = () => {
+                loadedCount++;
+                if (loadedCount === stemNames.length) finalizeSetup();
+            };
 
-                const results = await Promise.all(fetchPromises);
-                if (isCancelled) return;
+            stemNames.forEach(name => {
+                const audioEl = new Audio();
+                audioEl.crossOrigin = 'anonymous'; // Critical for WebAudio API routing
+                audioEl.preload = 'auto';
+                stemElements.current.set(name, audioEl);
 
-                const stemsMap = new Map<string, ArrayBuffer>();
-                results.forEach(res => stemsMap.set(res.name, res.arrayBuffer));
+                const streamUrl = mediaApi.getHlsManifestUrl(currentTrack.id, 'stems', name);
 
-                await audioEngine.loadStems(stemsMap);
+                if (Hls.isSupported()) {
+                    const hls = new Hls({
+                        enableWorker: true,
+                        lowLatencyMode: true,
+                        // Secure resource fetching: bypasses standard browser CORS restrictions for JWT
+                        xhrSetup: (xhr) => {
+                            if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+                        }
+                    });
 
-                if (isCancelled) return;
+                    hls.loadSource(streamUrl);
+                    hls.attachMedia(audioEl);
+                    hlsInstances.current.set(name, hls);
 
-                // Sync initial states from Zustand
-                stemNames.forEach(name => {
-                    const vol = stemVolumes[name] ?? 0.8;
-                    audioEngine.setStemVolume(name, vol);
-                });
-                audioEngine.setMasterVolume(volume);
-
-                if (isPlaying) {
-                    audioEngine.play(usePlayerStore.getState().progress);
+                    hls.on(Hls.Events.MANIFEST_PARSED, checkReady);
+                    hls.on(Hls.Events.ERROR, (_, data) => {
+                        if (data.fatal) {
+                            console.error('HLS Fatal Error for stem:', name, data);
+                            setStemsError(`Failed to sync stem: ${name}`);
+                            setPlaying(false);
+                        }
+                    });
+                } else if (audioEl.canPlayType('application/vnd.apple.mpegurl')) {
+                    // Fallback for Safari native HLS.
+                    // TODO: [Security] - Implement signed cookies for Safari native JWT support
+                    audioEl.src = streamUrl;
+                    audioEl.addEventListener('loadedmetadata', checkReady);
                 }
-            } catch (error) {
-                if (!isCancelled) {
-                    // TODO: [Media] - Dispatch error to global toast notification system (RFC 7807 UI equivalent)
-                    console.error('Failed to load stems into Web Audio context:', error);
-                    setStemsError('Failed to synchronize stems due to a network or decoding error.');
-                    setPlaying(false);
-                }
-            } finally {
-                if (!isCancelled) setIsStemsLoading(false);
-            }
+            });
         };
 
-        loadAndPlayStems();
+        const finalizeSetup = () => {
+            audioEngine.connectStems(stemElements.current);
+            audioEngine.resumeContext();
 
-        return () => {
-            isCancelled = true;
-            audioEngine.stop();
+            stemElements.current.forEach((_, name) => {
+                audioEngine.setStemVolume(name, stemVolumes[name] ?? 0.8);
+            });
+            audioEngine.setMasterVolume(volume);
+
+            setIsStemsLoading(false);
+            if (usePlayerStore.getState().isPlaying) playAllStems();
         };
-    }, [currentTrack, playbackMode]);
 
-    // Transport Control Synchronization
+        initStems();
+
+        return () => cleanupStems();
+    }, [currentTrack, playbackMode, token]);
+
+    const cleanupStems = () => {
+        audioEngine.disconnectAll();
+        audioEngine.suspendContext();
+        hlsInstances.current.forEach(hls => hls.destroy());
+        hlsInstances.current.clear();
+        stemElements.current.forEach(el => {
+            el.pause();
+            el.removeAttribute('src');
+            el.load();
+        });
+        stemElements.current.clear();
+    };
+
+    const playAllStems = () => {
+        const offset = usePlayerStore.getState().progress;
+        stemElements.current.forEach(el => {
+            el.currentTime = offset;
+            el.play().catch(e => console.warn('Stem play interrupted:', e));
+        });
+    };
+
+    const pauseAllStems = () => {
+        stemElements.current.forEach(el => el.pause());
+    };
+
+    // Transport Synchronization
     useEffect(() => {
-        if (playbackMode !== 'stems') return;
-
-        if (isPlaying && !isStemsLoading) {
-            audioEngine.play(usePlayerStore.getState().progress);
+        if (playbackMode !== 'stems' || isStemsLoading) return;
+        if (isPlaying) {
+            playAllStems();
         } else {
-            audioEngine.pause();
+            pauseAllStems();
         }
     }, [isPlaying, isStemsLoading, playbackMode]);
 
-    // TIMELINE SYNCHRONIZATION LOOP
-    // Mimics the native HTML5 <audio> 'timeupdate' event
+    // Timeline Polling (Reads from the first available HTML5 element)
     useEffect(() => {
         if (playbackMode !== 'stems' || !isPlaying || isStemsLoading) return;
 
         const intervalId = setInterval(() => {
-            const time = audioEngine.getCurrentProgress();
+            const firstStem = Array.from(stemElements.current.values())[0];
+            if (!firstStem) return;
+
+            const time = firstStem.currentTime;
             const duration = usePlayerStore.getState().duration;
 
             // Auto-stop at the end of the track
@@ -107,17 +155,18 @@ export const useWebAudio = () => {
     // Mixer Synchronization
     useEffect(() => {
         if (playbackMode !== 'stems') return;
-        Object.entries(stemVolumes).forEach(([name, vol]) => {
-            audioEngine.setStemVolume(name, vol);
-        });
+        Object.entries(stemVolumes).forEach(([name, vol]) => audioEngine.setStemVolume(name, vol));
     }, [stemVolumes, playbackMode]);
 
-    // Sync master volume
     useEffect(() => {
-        if (playbackMode === 'stems') {
-            audioEngine.setMasterVolume(volume);
-        }
+        if (playbackMode === 'stems') audioEngine.setMasterVolume(volume);
     }, [volume, playbackMode]);
 
-    return {isStemsLoading, stemsError};
+    return {
+        isStemsLoading,
+        stemsError,
+        seekStems: (time: number) => {
+            stemElements.current.forEach(el => el.currentTime = time);
+        }
+    };
 };

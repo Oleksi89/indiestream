@@ -1,15 +1,18 @@
 import {useEffect, useRef, useState} from 'react';
 import {usePlayerStore} from '@/shared/store/playerStore';
+import {useAuthStore} from '@/shared/store/authStore';
 import {mediaApi} from '../api/media.api';
 import {useSecureUrl} from '@/shared/hooks/useSecureUrl';
 import {useWebAudio} from '../hooks/useWebAudio';
 import {Play, Pause, SkipForward, Volume2, Disc3, Settings2, Loader2} from 'lucide-react';
 import {cn} from '@/shared/lib/utils';
 import {audioEngine} from "@/features/media/lib/webAudioEngine.ts";
+import Hls from "hls.js";
 
 /**
  * Global Player Bar Component.
- * Manages dual-engine playback: HTML5 Audio for Master and Web Audio API for Stems.
+ * Manages dual-engine playback: hls.js standard streaming for Master
+ * and synchronized hls.js + Web Audio API routing for Stems.
  */
 export const PlayerBar = () => {
     const {
@@ -18,19 +21,16 @@ export const PlayerBar = () => {
         playbackMode, setPlaybackMode, stemVolumes, setStemVolume
     } = usePlayerStore();
 
+    const token = useAuthStore(state => state.token);
     const [isMixerOpen, setIsMixerOpen] = useState(false);
+
     const audioRef = useRef<HTMLAudioElement | null>(null);
+    const masterHlsRef = useRef<Hls | null>(null);
 
     // Orchestrate Web Audio API life-cycle
-    const {isStemsLoading, stemsError} = useWebAudio();
+    const {isStemsLoading, stemsError, seekStems} = useWebAudio();
 
     const hasStems = currentTrack?.stemsMetadata && Object.keys(currentTrack.stemsMetadata).length > 0;
-
-    const {url: audioUrl} = useSecureUrl(
-        `audio-${currentTrack?.id}`,
-        () => mediaApi.getTrackAudioBlob(currentTrack!.id),
-        !!currentTrack && playbackMode === 'master'
-    );
 
     // Securely fetch cover image
     const {url: coverUrl} = useSecureUrl(
@@ -38,6 +38,41 @@ export const PlayerBar = () => {
         () => mediaApi.getTrackCoverBlob(currentTrack!.id),
         !!currentTrack?.coverMinioPath
     );
+
+    // Init HLS for Master Track
+    useEffect(() => {
+        if (!audioRef.current || !currentTrack || playbackMode !== 'master') return;
+
+        if (masterHlsRef.current) {
+            masterHlsRef.current.destroy();
+            masterHlsRef.current = null;
+        }
+
+        const masterUrl = mediaApi.getHlsManifestUrl(currentTrack.id, 'master');
+
+        if (Hls.isSupported()) {
+            const hls = new Hls({
+                xhrSetup: (xhr) => {
+                    if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+                }
+            });
+            hls.loadSource(masterUrl);
+            hls.attachMedia(audioRef.current);
+            masterHlsRef.current = hls;
+
+            hls.on(Hls.Events.ERROR, (_, data) => {
+                if (data.fatal) console.error("Master HLS Error", data);
+            });
+        } else if (audioRef.current.canPlayType('application/vnd.apple.mpegurl')) {
+            audioRef.current.src = masterUrl;
+        }
+
+        return () => {
+            if (masterHlsRef.current) {
+                masterHlsRef.current.destroy();
+            }
+        };
+    }, [currentTrack, playbackMode, token]);
 
     // Sync HTML5 Audio (Master Mode)
     useEffect(() => {
@@ -50,14 +85,11 @@ export const PlayerBar = () => {
         }
 
         if (isPlaying) {
-            if (audioUrl && audioRef.current.src !== audioUrl) {
-                audioRef.current.src = audioUrl;
-            }
             audioRef.current.play().catch(() => setPlaying(false));
         } else {
             audioRef.current.pause();
         }
-    }, [isPlaying, audioUrl, playbackMode, setPlaying]);
+    }, [isPlaying, playbackMode, setPlaying]);
 
     // Volume synchronization for Master Engine
     useEffect(() => {
@@ -74,11 +106,10 @@ export const PlayerBar = () => {
 
         if (playbackMode === 'master' && audioRef.current) {
             audioRef.current.currentTime = newTime;
-        } else if (playbackMode === 'stems' && audioRef.current) {
-            audioRef.current.currentTime = newTime;
-            // Web Audio API requires explicitly restarting nodes at the new offset if actively playing
+        } else if (playbackMode === 'stems') {
+            seekStems(newTime);
             if (isPlaying) {
-                audioEngine.play(newTime);
+                audioEngine.resumeContext();
             }
         }
     };
@@ -91,6 +122,7 @@ export const PlayerBar = () => {
             {/* Master Engine (Hidden) */}
             <audio
                 ref={audioRef}
+                crossOrigin="anonymous"
                 onTimeUpdate={() => {
                     if (playbackMode === 'master' && audioRef.current) {
                         setProgress(audioRef.current.currentTime);
@@ -98,7 +130,8 @@ export const PlayerBar = () => {
                 }}
                 onLoadedMetadata={() => {
                     if (playbackMode === 'master' && audioRef.current) {
-                        setDuration(audioRef.current.duration);
+                        // Prioritize exact duration from backend over browser estimation
+                        setDuration(currentTrack.durationSeconds || audioRef.current.duration);
                     }
                 }}
                 onEnded={() => setPlaying(false)}
