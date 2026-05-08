@@ -15,6 +15,7 @@ import java.util.function.Function;
 
 /**
  * Handles JWT generation, parsing, and cryptographic validation.
+ * Extracts custom claims like 'id' to support cross-module principal identification.
  */
 @Service
 public class JwtService {
@@ -27,6 +28,13 @@ public class JwtService {
 
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
+    }
+
+    /**
+     * Extracts the custom UUID claim to be used as the Spring Security Principal.
+     */
+    public String extractUserId(String token) {
+        return extractClaim(token, claims -> claims.get("id", String.class));
     }
 
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {

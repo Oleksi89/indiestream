@@ -23,7 +23,13 @@ spring:
     multipart:
       max-file-size: 50MB
       max-request-size: 500MB
-      # TODO: [Media] - Implement async FFmpeg transcoding pipeline for large lossless formats (WAV) to optimize network delivery
+  task:
+    execution:
+      pool:
+        core-size: 2
+        max-size: 4
+        queue-capacity: 50
+      thread-name-prefix: media-worker-
 
 management:
   endpoints:

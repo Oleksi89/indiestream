@@ -2,13 +2,16 @@ package com.indiestream.media.service;
 
 import com.indiestream.media.TrackUploadedEvent;
 import com.indiestream.media.domain.Track;
+import com.indiestream.media.domain.TrackStatus;
 import com.indiestream.media.dto.TrackDto;
 import com.indiestream.media.repository.TrackRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -61,13 +64,30 @@ public class TrackService {
                 .minioBucketPath(bucketPath)
                 .coverMinioPath(coverPath)
                 .stemsMetadata(stemsMetadata)
-                .durationSeconds(0) // TODO: [Media] - Extract duration using FFmpeg probe in future HLS worker
+                .durationSeconds(0)
+                .status(TrackStatus.PROCESSING) // Default state
                 .build();
 
         Track savedTrack = trackRepository.save(track);
         events.publishEvent(new TrackUploadedEvent(savedTrack.getId(), savedTrack.getTitle()));
 
         return mapToDto(savedTrack);
+    }
+
+    /**
+     * Updates track status autonomously.
+     * Requires a new transaction to ensure status is committed even if the caller context fails.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void updateTrackStatus(UUID trackId, TrackStatus status, String hlsManifestPath, Integer durationSeconds) {
+        Track track = trackRepository.findById(trackId)
+                .orElseThrow(() -> new IllegalArgumentException("Track not found"));
+
+        track.setStatus(status);
+        if (hlsManifestPath != null) track.setHlsManifestPath(hlsManifestPath);
+        if (durationSeconds != null) track.setDurationSeconds(durationSeconds);
+
+        trackRepository.save(track);
     }
 
     /**
@@ -89,7 +109,7 @@ public class TrackService {
      */
     @Transactional(readOnly = true)
     public Page<TrackDto> getTracksByArtist(UUID artistId, Pageable pageable) {
-        return trackRepository.findAllByArtistIdOrderByCreatedAtDesc(artistId, pageable)
+        return trackRepository.findAllByArtistIdAndStatusOrderByCreatedAtDesc(artistId, TrackStatus.READY, pageable)
                 .map(this::mapToDto);
     }
 
@@ -99,8 +119,25 @@ public class TrackService {
      */
     @Transactional(readOnly = true)
     public Page<TrackDto> getPublicTracks(Pageable pageable) {
-        return trackRepository.findAllByOrderByCreatedAtDesc(pageable)
+        return trackRepository.findAllByStatusOrderByCreatedAtDesc(TrackStatus.READY, pageable)
                 .map(this::mapToDto);
+    }
+
+    /**
+     * Retrieves an HLS manifest or segment from storage.
+     * Maps the virtual API path to the physical MinIO object path.
+     */
+    @Transactional(readOnly = true)
+    public InputStreamResource getHlsResource(UUID trackId, String relativePath) {
+        Track track = trackRepository.findById(trackId)
+                .orElseThrow(() -> new IllegalArgumentException("Track not found"));
+
+        // Build the base path used during processing: artists/{id}/hls/{trackId}/
+        String hlsBasePath = "artists/" + track.getArtistId() + "/hls/" + track.getId() + "/";
+        String objectPath = hlsBasePath + relativePath;
+
+        // Use MinioStorageService to get the full stream without range limits
+        return new InputStreamResource(minioStorageService.getObjectStream(objectPath));
     }
 
     private TrackDto mapToDto(Track track) {
@@ -111,7 +148,9 @@ public class TrackService {
                 track.getMinioBucketPath(),
                 track.getCoverMinioPath(),
                 track.getStemsMetadata(),
-                track.getDurationSeconds()
+                track.getDurationSeconds(),
+                track.getStatus(),
+                track.getHlsManifestPath()
         );
     }
 }

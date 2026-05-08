@@ -5,15 +5,9 @@
  */
 class WebAudioEngine {
     private context: AudioContext | null = null;
-    private buffers: Map<string, AudioBuffer> = new Map();
-    private activeSources: Map<string, AudioBufferSourceNode> = new Map();
+    private sourceNodes: Map<string, MediaElementAudioSourceNode> = new Map();
     private gainNodes: Map<string, GainNode> = new Map();
     private masterGain: GainNode | null = null;
-
-    // Timeline Tracking State
-    private startTimestamp: number = 0;
-    private currentOffset: number = 0;
-    private isEnginePlaying: boolean = false;
 
     constructor() {
         const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -23,93 +17,57 @@ class WebAudioEngine {
     }
 
     /**
-     * Reconstructs the audio graph for a new set of stems.
-     * Memory allocation happens here via decodeAudioData.
+     * Wires multiple HTMLAudioElements into the Web Audio graph.
+     * Safely reuses MediaElementAudioSourceNodes to prevent InvalidStateError.
+     * * Why: Browsers strictly enforce a 1:1 relationship between an <audio> element
+     * and its SourceNode. Attempting to recreate it throws a DOMException.
      */
-    public async loadStems(stems: Map<string, ArrayBuffer>): Promise<void> {
+    public connectStems(elements: Map<string, HTMLAudioElement>): void {
         if (!this.context) return;
 
-        this.stop();
-        this.buffers.clear();
+        this.disconnectAll();
 
-        for (const [name, data] of stems) {
-            const buffer = await this.context.decodeAudioData(data);
-            this.buffers.set(name, buffer);
+        for (const [name, el] of elements) {
+            let source = this.sourceNodes.get(name);
+
+            if (!source || source.mediaElement !== el) {
+                // Warning: element must have crossOrigin = 'anonymous' before this call
+                source = this.context.createMediaElementSource(el);
+                this.sourceNodes.set(name, source);
+            }
 
             const gainNode = this.context.createGain();
             this.gainNodes.set(name, gainNode);
+
+            source.connect(gainNode);
             gainNode.connect(this.masterGain!);
         }
     }
 
-    /**
-     * Initializes playback from a specific offset.
-     * Records the exact context timeline coordinate for accurate progress calculation.
-     */
-    public play(offset: number = 0): void {
-        if (!this.context || this.buffers.size === 0) return;
-
-        this.stopActiveSources();
-
-        if (this.context.state === 'suspended') {
+    public resumeContext(): void {
+        if (this.context?.state === 'suspended') {
             this.context.resume();
-        }
-
-        // Initialize timeline tracking
-        this.currentOffset = offset;
-        this.startTimestamp = this.context.currentTime;
-        this.isEnginePlaying = true;
-
-        for (const [name, buffer] of this.buffers) {
-            const source = this.context.createBufferSource();
-            source.buffer = buffer;
-
-            const gainNode = this.gainNodes.get(name);
-            if (gainNode) {
-                source.connect(gainNode);
-                source.start(0, offset);
-                this.activeSources.set(name, source);
-            }
         }
     }
 
-    public pause(): void {
-        this.stopActiveSources();
-        this.isEnginePlaying = false;
+    public suspendContext(): void {
         if (this.context?.state === 'running') {
             this.context.suspend();
         }
     }
 
-    public stop(): void {
-        this.stopActiveSources();
-        this.gainNodes.clear();
-        this.buffers.clear();
-        this.isEnginePlaying = false;
-        this.currentOffset = 0;
-    }
-
-    private stopActiveSources(): void {
-        for (const source of this.activeSources.values()) {
+    public disconnectAll(): void {
+        for (const [name, source] of this.sourceNodes) {
             try {
-                source.stop();
                 source.disconnect();
+                const gain = this.gainNodes.get(name);
+                if (gain) gain.disconnect();
             } catch (e) {
-                // Ignore if node is already disconnected
+                // Ignore if already disconnected
             }
         }
-        this.activeSources.clear();
-    }
-
-    /**
-     * Calculates the exact current progress in seconds.
-     * Why: AudioContext.currentTime continuously increments even when suspended.
-     * We must calculate delta relative to our explicit startTimestamp.
-     */
-    public getCurrentProgress(): number {
-        if (!this.context) return 0;
-        if (!this.isEnginePlaying) return this.currentOffset;
-        return this.currentOffset + (this.context.currentTime - this.startTimestamp);
+        this.gainNodes.clear();
+        // Do NOT clear this.sourceNodes to allow safe reuse during playback toggles
     }
 
     public setStemVolume(name: string, volume: number): void {

@@ -44,6 +44,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // Only Auth endpoints, actuator, and errors are public
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/error").permitAll()
@@ -56,8 +57,8 @@ public class SecurityConfig {
 
     /**
      * Configures Strict CORS policy.
-     * Explicitly allows the frontend origins and required HTTP methods/headers
-     * AllowCredentials is set to true to support future HttpOnly Refresh Tokens
+     * Exposed HTTP headers are expanded to fully support HTTP 206 Partial Content
+     * and HLS byte-range seeking requirements.
      */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
@@ -66,7 +67,10 @@ public class SecurityConfig {
         // TODO: [Security] - Move allowed origins to application.yml for environment-specific configuration (e.g., prod domain).
         configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173", "http://localhost:5174"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Trace-Id"));
+
+        // Critical for hls.js streaming to bypass CORS restrictions on Range requests
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Trace-Id", "Range"));
+        configuration.setExposedHeaders(Arrays.asList("Accept-Ranges", "Content-Encoding", "Content-Length", "Content-Range"));
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
