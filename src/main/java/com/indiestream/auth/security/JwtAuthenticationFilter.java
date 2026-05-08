@@ -52,16 +52,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         userEmail = jwtService.extractUsername(jwt);
+        final String userId = jwtService.extractUserId(jwt);
 
         if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
 
             if (jwtService.isTokenValid(jwt, userDetails.getUsername())) {
+
+                // Modulith compliance: Set the UUID string as the Principal.
+                // This allows cross-module controllers to extract it via principal.getName()
+                // without relying on the Auth module's specific User entity.
+                Object principal = (userId != null) ? userId : userDetails.getUsername();
+
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        userDetails,
+                        principal,
                         null,
                         userDetails.getAuthorities()
                 );
+
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }

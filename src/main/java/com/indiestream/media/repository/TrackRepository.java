@@ -1,12 +1,12 @@
 package com.indiestream.media.repository;
 
 import com.indiestream.media.domain.Track;
+import com.indiestream.media.domain.TrackStatus;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import org.springframework.data.domain.Page;
 
-import java.util.List;
 import java.util.UUID;
 
 @Repository
@@ -20,7 +20,7 @@ public interface TrackRepository extends JpaRepository<Track, UUID> {
      * @param pageable pagination and sorting configuration
      * @return a page of tracks
      */
-    Page<Track> findAllByArtistIdOrderByCreatedAtDesc(UUID artistId, Pageable pageable);
+    Page<Track> findAllByArtistIdAndStatusOrderByCreatedAtDesc(UUID artistId, TrackStatus status, Pageable pageable);
 
 
     /**
@@ -30,5 +30,5 @@ public interface TrackRepository extends JpaRepository<Track, UUID> {
      * @param pageable pagination and sorting configuration
      * @return a page of tracks
      */
-    Page<Track> findAllByOrderByCreatedAtDesc(Pageable pageable);
+    Page<Track> findAllByStatusOrderByCreatedAtDesc(TrackStatus status,Pageable pageable);
 }

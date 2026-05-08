@@ -92,4 +92,16 @@ export const mediaApi = {
         });
         return response.data;
     },
+
+    /**
+     * Generates the absolute URL for an HLS manifest.
+     * Required because hls.js bypasses the Axios interceptor logic.
+     */
+    getHlsManifestUrl: (trackId: string, type: 'master' | 'stems', stemName?: string): string => {
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1';
+        if (type === 'master') {
+            return `${baseUrl}/tracks/${trackId}/hls/master/index.m3u8`;
+        }
+        return `${baseUrl}/tracks/${trackId}/hls/stems/${stemName}/index.m3u8`;
+    }
 };

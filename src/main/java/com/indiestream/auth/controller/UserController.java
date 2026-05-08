@@ -10,6 +10,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.security.Principal;
+import java.util.UUID;
+
 /**
  * Handles user-specific data retrieval and profile management.
  */
@@ -22,13 +25,15 @@ public class UserController {
 
     /**
      * Retrieves the profile of the currently authenticated user.
+     * Extracts the UUID directly from the Security Principal to respect Modulith boundaries.
      *
-     * @param userDetails Injected principal from SecurityContext.
+     * @param principal Injected principal from SecurityContext containing the user UUID string.
      * @return UserDto containing public profile information.
      */
     @GetMapping("/me")
-    public ResponseEntity<UserDto> getCurrentUser(@AuthenticationPrincipal UserDetails userDetails) {
-        return userService.getUserByEmail(userDetails.getUsername())
+    public ResponseEntity<UserDto> getCurrentUser(Principal principal) {
+        UUID userId = UUID.fromString(principal.getName());
+        return userService.getUserById(userId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }

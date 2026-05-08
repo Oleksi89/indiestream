@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.indiestream.auth.exception.EmailAlreadyInUseException;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -19,6 +20,16 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+
+    /**
+     * Retrieves a user by their UUID.
+     * Used primarily for fetching profiles via the Security Principal.
+     */
+    @Transactional(readOnly = true)
+    public Optional<UserDto> getUserById(UUID id) {
+        return userRepository.findById(id)
+                .map(this::mapToDto);
+    }
 
     @Transactional(readOnly = true)
     public Optional<UserDto> getUserByEmail(String email) {
