@@ -43,4 +43,25 @@ public class PlaylistController {
         UUID userId = UUID.fromString(principal.getName());
         return ResponseEntity.ok(playlistService.getUserLikedTracksPlaylist(userId));
     }
+
+    @PostMapping("/{playlistId}/tracks/{trackId}")
+    public ResponseEntity<Void> addTrackToPlaylist(
+            @PathVariable UUID playlistId,
+            @PathVariable UUID trackId,
+            Principal principal) {
+
+        UUID userId = UUID.fromString(principal.getName());
+        playlistService.addTrackToPlaylist(playlistId, trackId, userId);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @PostMapping("/{playlistId}/duplicate")
+    public ResponseEntity<PlaylistDto> duplicatePlaylist(
+            @PathVariable UUID playlistId,
+            Principal principal) {
+
+        UUID userId = UUID.fromString(principal.getName());
+        PlaylistDto clonedPlaylist = playlistService.duplicatePlaylist(playlistId, userId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(clonedPlaylist);
+    }
 }
