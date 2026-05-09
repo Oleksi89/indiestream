@@ -1,6 +1,7 @@
 package com.indiestream.config;
 
 import com.indiestream.auth.exception.EmailAlreadyInUseException;
+import com.indiestream.playlist.exception.PlaylistNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -19,7 +20,13 @@ public class GlobalExceptionHandler {
         return problemDetail;
     }
 
-    // Global fallback for other IllegalArgumentExceptions (HTTP 400)
+    @ExceptionHandler(PlaylistNotFoundException.class)
+    public ProblemDetail handlePlaylistNotFound(PlaylistNotFoundException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        problemDetail.setTitle("Playlist Not Found");
+        return problemDetail;
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ProblemDetail handleIllegalArgument(IllegalArgumentException ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
