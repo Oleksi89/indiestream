@@ -85,6 +85,77 @@ public class PlaylistService {
                 .orElseThrow(() -> new PlaylistNotFoundException(playlistId));
     }
 
+
+    /**
+     * Updates playlist metadata.
+     * Guards prevent renaming or altering the core identity of system playlists.
+     */
+    @Transactional
+    public PlaylistDto updatePlaylist(UUID playlistId, UUID userId, String name, String description, Boolean isPublic) {
+        Playlist playlist = playlistRepository.findById(playlistId)
+                .orElseThrow(() -> new PlaylistNotFoundException(playlistId));
+
+        if (!playlist.getOwnerId().equals(userId)) {
+            throw new IllegalArgumentException("Cannot update a playlist you do not own.");
+        }
+
+        // System playlists like "Liked Tracks" must remain immutable in name/publicity
+        if (playlist.getIsSystem()) {
+            throw new IllegalArgumentException("System playlists cannot be modified directly.");
+        }
+
+        if (name != null && !name.isBlank()) playlist.setName(name);
+        if (description != null) playlist.setDescription(description);
+        if (isPublic != null) playlist.setIsPublic(isPublic);
+
+        return mapToDto(playlistRepository.save(playlist));
+    }
+
+    /**
+     * Deletes a custom playlist.
+     * Cascading deletes on the DB level will automatically clear playlist_tracks.
+     */
+    @Transactional
+    public void deletePlaylist(UUID playlistId, UUID userId) {
+        Playlist playlist = playlistRepository.findById(playlistId)
+                .orElseThrow(() -> new PlaylistNotFoundException(playlistId));
+
+        if (!playlist.getOwnerId().equals(userId)) {
+            throw new IllegalArgumentException("Cannot delete a playlist you do not own.");
+        }
+        if (playlist.getIsSystem()) {
+            throw new IllegalArgumentException("System playlists cannot be deleted.");
+        }
+
+        playlistRepository.delete(playlist);
+    }
+
+    /**
+     * Removes a track and recalculates aggregates safely using PESSIMISTIC_WRITE.
+     */
+    @Transactional
+    public void removeTrackFromPlaylist(UUID playlistId, UUID trackId, UUID userId) {
+        Playlist playlist = playlistRepository.findByIdWithPessimisticWrite(playlistId)
+                .orElseThrow(() -> new PlaylistNotFoundException(playlistId));
+
+        if (!playlist.getOwnerId().equals(userId) && !playlist.getIsCollaborative()) {
+            throw new IllegalArgumentException("Cannot modify a playlist you do not own.");
+        }
+
+        PlaylistTrack link = playlistTrackRepository.findById(new PlaylistTrackId(playlistId, trackId))
+                .orElseThrow(() -> new IllegalArgumentException("Track is not in this playlist."));
+
+        // Fetch duration via public API to accurately decrement the total duration
+        TrackMetadata track = mediaModuleApi.getTrackMetadata(trackId);
+
+        playlistTrackRepository.delete(link);
+
+        // Update aggregates
+        playlist.setTrackCount(Math.max(0, playlist.getTrackCount() - 1));
+        playlist.setTotalDurationSeconds(Math.max(0, playlist.getTotalDurationSeconds() - track.durationSeconds()));
+        playlistRepository.save(playlist);
+    }
+
     /**
      * Retrieves the protected system playlist for a user.
      * Prevents UI components from needing to know the exact UUID of the "Liked Tracks" playlist.

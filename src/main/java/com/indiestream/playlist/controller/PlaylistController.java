@@ -23,6 +23,9 @@ public class PlaylistController {
     public record CreatePlaylistRequest(String name, String description, boolean isPublic, boolean isCollaborative) {
     }
 
+    public record UpdatePlaylistRequest(String name, String description, Boolean isPublic) {
+    }
+
     @PostMapping
     public ResponseEntity<PlaylistDto> createPlaylist(Principal principal, @RequestBody CreatePlaylistRequest request) {
         UUID ownerId = UUID.fromString(principal.getName());
@@ -63,5 +66,39 @@ public class PlaylistController {
         UUID userId = UUID.fromString(principal.getName());
         PlaylistDto clonedPlaylist = playlistService.duplicatePlaylist(playlistId, userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(clonedPlaylist);
+    }
+
+    @PutMapping("/{playlistId}")
+    public ResponseEntity<PlaylistDto> updatePlaylist(
+            @PathVariable UUID playlistId,
+            @RequestBody UpdatePlaylistRequest request,
+            Principal principal) {
+
+        UUID userId = UUID.fromString(principal.getName());
+        PlaylistDto updated = playlistService.updatePlaylist(
+                playlistId, userId, request.name(), request.description(), request.isPublic()
+        );
+        return ResponseEntity.ok(updated);
+    }
+
+    @DeleteMapping("/{playlistId}")
+    public ResponseEntity<Void> deletePlaylist(
+            @PathVariable UUID playlistId,
+            Principal principal) {
+
+        UUID userId = UUID.fromString(principal.getName());
+        playlistService.deletePlaylist(playlistId, userId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{playlistId}/tracks/{trackId}")
+    public ResponseEntity<Void> removeTrackFromPlaylist(
+            @PathVariable UUID playlistId,
+            @PathVariable UUID trackId,
+            Principal principal) {
+
+        UUID userId = UUID.fromString(principal.getName());
+        playlistService.removeTrackFromPlaylist(playlistId, trackId, userId);
+        return ResponseEntity.noContent().build();
     }
 }
