@@ -1,5 +1,7 @@
 package com.indiestream.media.service;
 
+import com.indiestream.media.MediaModuleApi;
+import com.indiestream.media.TrackMetadata;
 import com.indiestream.media.TrackUploadedEvent;
 import com.indiestream.media.domain.Track;
 import com.indiestream.media.domain.TrackStatus;
@@ -22,7 +24,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class TrackService {
+public class TrackService implements MediaModuleApi {
 
     private final TrackRepository trackRepository;
     private final MinioStorageService minioStorageService;
@@ -138,6 +140,17 @@ public class TrackService {
 
         // Use MinioStorageService to get the full stream without range limits
         return new InputStreamResource(minioStorageService.getObjectStream(objectPath));
+    }
+
+    /**
+     * Implementation of the public module API.
+     * Maps internal entity to a public metadata record.
+     */
+    @Override
+    public TrackMetadata getTrackMetadata(UUID trackId) {
+        return trackRepository.findById(trackId)
+                .map(t -> new TrackMetadata(t.getId(), t.getDurationSeconds()))
+                .orElseThrow(() -> new IllegalArgumentException("Track not found"));
     }
 
     private TrackDto mapToDto(Track track) {

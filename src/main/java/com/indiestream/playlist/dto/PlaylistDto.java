@@ -1,0 +1,20 @@
+package com.indiestream.playlist.dto;
+
+import java.time.Instant;
+import java.util.UUID;
+
+public record PlaylistDto(
+        UUID id,
+        UUID ownerId,
+        String name,
+        String description,
+        String coverMinioPath,
+        Boolean isPublic,
+        Boolean isSystem,
+        Boolean isCollaborative,
+        Integer trackCount,
+        Integer totalDurationSeconds,
+        Instant createdAt,
+        Instant updatedAt
+) {
+}

@@ -1,11 +1,13 @@
 package com.indiestream.auth.service;
 
+import com.indiestream.auth.UserRegisteredEvent;
 import com.indiestream.auth.domain.Role;
 import com.indiestream.auth.domain.User;
 import com.indiestream.auth.dto.RegisterRequestDto;
 import com.indiestream.auth.dto.UserDto;
 import com.indiestream.auth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +22,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ApplicationEventPublisher events;
 
     /**
      * Retrieves a user by their UUID.
@@ -56,6 +59,9 @@ public class UserService {
         user.setRole(Role.USER);
 
         User savedUser = userRepository.save(user);
+
+        events.publishEvent(new UserRegisteredEvent(savedUser.getId()));
+
         return mapToDto(savedUser);
     }
 
