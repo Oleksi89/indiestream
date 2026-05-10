@@ -6,12 +6,14 @@ import {useUserLibrary} from '../hooks/usePlaylists';
 import {LibraryItem} from './LibraryItem';
 import {cn} from '@/shared/lib/utils';
 import {Button} from '@/shared/ui/button';
+import {CreatePlaylistModal} from "@/features/playlist/ui/CreatePlaylistModal.tsx";
 
 export const LibrarySidebar = () => {
     const navigate = useNavigate();
     const {viewMode, cycleViewMode} = useLibraryStore();
     const {data: library, isLoading} = useUserLibrary(0, 50);
     const [searchQuery, setSearchQuery] = useState('');
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
     const likedTracks = library?.content.find(p => p.isSystem && p.name === 'Liked Tracks');
     const otherPlaylists = library?.content.filter(p =>
@@ -19,10 +21,6 @@ export const LibrarySidebar = () => {
         p.name.toLowerCase().includes(searchQuery.toLowerCase())
     ) || [];
 
-    const handleCreateClick = () => {
-        // TODO: [Playlist] - Open CreatePlaylistModal
-        console.log("Opening Create Playlist Modal...");
-    };
 
     const renderSkeletons = () => {
         const skeletonCount = viewMode === 'expanded' ? 6 : 8;
@@ -54,7 +52,7 @@ export const LibrarySidebar = () => {
                     <Button
                         variant="ghost"
                         size="icon"
-                        onClick={handleCreateClick}
+                        onClick={() => setIsCreateModalOpen(true)}
                         className="hover:bg-slate-800 rounded-full w-8 h-8 shrink-0"
                     >
                         <Plus className="w-5 h-5"/>
@@ -108,6 +106,10 @@ export const LibrarySidebar = () => {
                     </>
                 )}
             </div>
+            <CreatePlaylistModal
+                isOpen={isCreateModalOpen}
+                onClose={() => setIsCreateModalOpen(false)}
+            />
         </aside>
     );
 };

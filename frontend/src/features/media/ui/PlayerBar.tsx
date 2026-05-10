@@ -4,10 +4,11 @@ import {useAuthStore} from '@/shared/store/authStore';
 import {mediaApi} from '../api/media.api';
 import {useSecureUrl} from '@/shared/hooks/useSecureUrl';
 import {useWebAudio} from '../hooks/useWebAudio';
-import {Play, Pause, SkipForward, Volume2, Disc3, Settings2, Loader2} from 'lucide-react';
+import {Play, Pause, SkipForward, Volume2, Disc3, Settings2, Loader2, Heart, PlusCircle} from 'lucide-react';
 import {cn} from '@/shared/lib/utils';
 import {audioEngine} from "@/features/media/lib/webAudioEngine.ts";
 import Hls from "hls.js";
+import {useToggleLike} from "@/features/playlist/hooks/usePlaylists.ts";
 
 /**
  * Global Player Bar Component.
@@ -38,6 +39,23 @@ export const PlayerBar = () => {
         () => mediaApi.getTrackCoverBlob(currentTrack!.id),
         !!currentTrack?.coverMinioPath
     );
+
+    const toggleLike = useToggleLike();
+
+    // TODO: [Playlist] - Resolve real `isLiked` state using cache query or TrackMetadata
+    const [isLiked, setIsLiked] = useState(false);
+
+    const handleLike = () => {
+        if (!currentTrack) return;
+        toggleLike.mutate({trackId: currentTrack.id, isLiked}, {
+            onSuccess: () => setIsLiked(!isLiked)
+        });
+    };
+
+    const handleAddToPlaylist = () => {
+        // TODO: [Playlist] - Open AddToPlaylistModal
+        console.log("Open add to playlist modal");
+    };
 
     // Init HLS for Master Track
     useEffect(() => {
@@ -166,6 +184,22 @@ export const PlayerBar = () => {
                             {isStemsLoading ? 'Syncing Stems...' : playbackMode === 'stems' ? 'Multi-Stem Mode' : 'Master Track'}
                         </span>
                     </div>
+                </div>
+
+                {/* Engagement Actions injected here */}
+                <div className="flex items-center gap-1 opacity-80 hover:opacity-100 transition-opacity shrink-0">
+                    <button
+                        onClick={handleLike}
+                        className={cn("p-2 rounded-full hover:bg-slate-800 transition-colors", isLiked ? "text-violet-400" : "text-slate-400 hover:text-white")}
+                    >
+                        <Heart size={18} className={cn(isLiked && "fill-current")}/>
+                    </button>
+                    <button
+                        onClick={handleAddToPlaylist}
+                        className="p-2 rounded-full text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+                    >
+                        <PlusCircle size={18}/>
+                    </button>
                 </div>
             </div>
 
