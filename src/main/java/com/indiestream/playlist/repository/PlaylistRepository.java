@@ -2,6 +2,8 @@ package com.indiestream.playlist.repository;
 
 import com.indiestream.playlist.domain.Playlist;
 import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -25,4 +27,21 @@ public interface PlaylistRepository extends JpaRepository<Playlist, UUID> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT p FROM Playlist p WHERE p.id = :id")
     Optional<Playlist> findByIdWithPessimisticWrite(@Param("id") UUID id);
+
+
+    /**
+     * Fetches a user's library combining owned, followed, and collaborated playlists.
+     * Strictly excludes followed playlists if they have been made private (isPublic = false),
+     * UNLESS the user is an active collaborator on that private playlist.
+     */
+    @Query("""
+        SELECT DISTINCT p FROM Playlist p
+        LEFT JOIN PlaylistFollower pf ON pf.id.playlistId = p.id AND pf.id.userId = :userId
+        LEFT JOIN PlaylistCollaborator pc ON pc.id.playlistId = p.id AND pc.id.userId = :userId
+        WHERE p.ownerId = :userId
+           OR (pf.id.userId = :userId AND p.isPublic = true)
+           OR (pc.id.userId = :userId)
+        ORDER BY p.updatedAt DESC
+    """)
+    Page<Playlist> findUserLibraryWithVisibilityGuards(@Param("userId") UUID userId, Pageable pageable);
 }

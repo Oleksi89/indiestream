@@ -3,21 +3,24 @@ package com.indiestream.playlist.service;
 import com.indiestream.auth.UserRegisteredEvent;
 import com.indiestream.media.MediaModuleApi;
 import com.indiestream.media.TrackMetadata;
-import com.indiestream.media.dto.TrackDto;
-import com.indiestream.media.service.TrackService;
-import com.indiestream.playlist.domain.Playlist;
-import com.indiestream.playlist.domain.PlaylistTrack;
-import com.indiestream.playlist.domain.PlaylistTrackId;
+import com.indiestream.playlist.domain.*;
 import com.indiestream.playlist.dto.PlaylistDto;
 import com.indiestream.playlist.event.PlaylistCopiedEvent;
+import com.indiestream.playlist.event.PlaylistFollowedEvent;
 import com.indiestream.playlist.event.TrackAddedToPlaylistEvent;
+import com.indiestream.playlist.event.TrackLikedEvent;
 import com.indiestream.playlist.exception.PlaylistNotFoundException;
+import com.indiestream.playlist.repository.PlaylistCollaboratorRepository;
+import com.indiestream.playlist.repository.PlaylistFollowerRepository;
 import com.indiestream.playlist.repository.PlaylistRepository;
 import com.indiestream.playlist.repository.PlaylistTrackRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +39,8 @@ public class PlaylistService {
 
     private final PlaylistRepository playlistRepository;
     private final PlaylistTrackRepository playlistTrackRepository;
+    private final PlaylistCollaboratorRepository collaboratorRepository;
+    private final PlaylistFollowerRepository followerRepository;
 
     // Cross-module strictly defined API call
     private final MediaModuleApi mediaModuleApi;
@@ -79,12 +84,35 @@ public class PlaylistService {
     }
 
     @Transactional(readOnly = true)
-    public PlaylistDto getPlaylistById(UUID playlistId) {
-        return playlistRepository.findById(playlistId)
-                .map(this::mapToDto)
+    public PlaylistDto getPlaylistById(UUID playlistId, UUID currentUserId) {
+        Playlist playlist = playlistRepository.findById(playlistId)
                 .orElseThrow(() -> new PlaylistNotFoundException(playlistId));
+
+        if (!playlist.getIsPublic() && !playlist.getOwnerId().equals(currentUserId)) {
+            boolean isCollaborator = collaboratorRepository.existsByIdPlaylistIdAndIdUserId(playlistId, currentUserId);
+            if (!isCollaborator) {
+                throw new AccessDeniedException("Access denied to private playlist.");
+            }
+        }
+        return mapToDto(playlist);
     }
 
+    /**
+     * Retrieves the protected system playlist for a user.
+     * Prevents UI components from needing to know the exact UUID of the "Liked Tracks" playlist.
+     */
+    @Transactional(readOnly = true)
+    public PlaylistDto getUserLikedTracksPlaylist(UUID userId) {
+        return playlistRepository.findByOwnerIdAndIsSystemTrue(userId)
+                .map(this::mapToDto)
+                .orElseThrow(() -> new IllegalStateException("System playlist missing for user " + userId));
+    }
+
+    @Transactional(readOnly = true)
+    public Page<PlaylistDto> getUserLibrary(UUID userId, Pageable pageable) {
+        return playlistRepository.findUserLibraryWithVisibilityGuards(userId, pageable)
+                .map(this::mapToDto);
+    }
 
     /**
      * Updates playlist metadata.
@@ -95,9 +123,7 @@ public class PlaylistService {
         Playlist playlist = playlistRepository.findById(playlistId)
                 .orElseThrow(() -> new PlaylistNotFoundException(playlistId));
 
-        if (!playlist.getOwnerId().equals(userId)) {
-            throw new IllegalArgumentException("Cannot update a playlist you do not own.");
-        }
+        enforceOwnerAccess(playlist, userId);
 
         // System playlists like "Liked Tracks" must remain immutable in name/publicity
         if (playlist.getIsSystem()) {
@@ -120,51 +146,13 @@ public class PlaylistService {
         Playlist playlist = playlistRepository.findById(playlistId)
                 .orElseThrow(() -> new PlaylistNotFoundException(playlistId));
 
-        if (!playlist.getOwnerId().equals(userId)) {
-            throw new IllegalArgumentException("Cannot delete a playlist you do not own.");
-        }
+        enforceOwnerAccess(playlist, userId);
+
         if (playlist.getIsSystem()) {
             throw new IllegalArgumentException("System playlists cannot be deleted.");
         }
 
         playlistRepository.delete(playlist);
-    }
-
-    /**
-     * Removes a track and recalculates aggregates safely using PESSIMISTIC_WRITE.
-     */
-    @Transactional
-    public void removeTrackFromPlaylist(UUID playlistId, UUID trackId, UUID userId) {
-        Playlist playlist = playlistRepository.findByIdWithPessimisticWrite(playlistId)
-                .orElseThrow(() -> new PlaylistNotFoundException(playlistId));
-
-        if (!playlist.getOwnerId().equals(userId) && !playlist.getIsCollaborative()) {
-            throw new IllegalArgumentException("Cannot modify a playlist you do not own.");
-        }
-
-        PlaylistTrack link = playlistTrackRepository.findById(new PlaylistTrackId(playlistId, trackId))
-                .orElseThrow(() -> new IllegalArgumentException("Track is not in this playlist."));
-
-        // Fetch duration via public API to accurately decrement the total duration
-        TrackMetadata track = mediaModuleApi.getTrackMetadata(trackId);
-
-        playlistTrackRepository.delete(link);
-
-        // Update aggregates
-        playlist.setTrackCount(Math.max(0, playlist.getTrackCount() - 1));
-        playlist.setTotalDurationSeconds(Math.max(0, playlist.getTotalDurationSeconds() - track.durationSeconds()));
-        playlistRepository.save(playlist);
-    }
-
-    /**
-     * Retrieves the protected system playlist for a user.
-     * Prevents UI components from needing to know the exact UUID of the "Liked Tracks" playlist.
-     */
-    @Transactional(readOnly = true)
-    public PlaylistDto getUserLikedTracksPlaylist(UUID userId) {
-        return playlistRepository.findByOwnerIdAndIsSystemTrue(userId)
-                .map(this::mapToDto)
-                .orElseThrow(() -> new IllegalStateException("System playlist missing for user " + userId));
     }
 
     /**
@@ -176,11 +164,7 @@ public class PlaylistService {
         Playlist playlist = playlistRepository.findByIdWithPessimisticWrite(playlistId)
                 .orElseThrow(() -> new PlaylistNotFoundException(playlistId));
 
-        // Basic boundary check (Collaborator access will be expanded in branch 2)
-        if (!playlist.getOwnerId().equals(userId) && !playlist.getIsCollaborative()) {
-            // TODO: [Security] - Throw custom RFC 7807 AccessDeniedException mapped to 403
-            throw new IllegalArgumentException("Cannot modify a playlist you do not own.");
-        }
+        enforceModificationAccess(playlist, userId);
 
         // Fetch duration from Media module API
         TrackMetadata track = mediaModuleApi.getTrackMetadata(trackId);
@@ -201,19 +185,44 @@ public class PlaylistService {
         playlist.setTotalDurationSeconds(playlist.getTotalDurationSeconds() + track.durationSeconds());
         playlistRepository.save(playlist);
 
-        events.publishEvent(new TrackAddedToPlaylistEvent(userId, playlistId, trackId, Instant.now()));
+        if (playlist.getIsSystem()) {
+            events.publishEvent(new TrackLikedEvent(userId, trackId, Instant.now()));
+        } else {
+            events.publishEvent(new TrackAddedToPlaylistEvent(userId, playlistId, trackId, Instant.now()));
+        }
     }
 
     /**
-     * Executes a Deep Copy of a playlist and all its track associations.
+     * Removes a track and recalculates aggregates safely using PESSIMISTIC_WRITE.
      */
+    @Transactional
+    public void removeTrackFromPlaylist(UUID playlistId, UUID trackId, UUID userId) {
+        Playlist playlist = playlistRepository.findByIdWithPessimisticWrite(playlistId)
+                .orElseThrow(() -> new PlaylistNotFoundException(playlistId));
+
+        enforceModificationAccess(playlist, userId);
+
+        PlaylistTrack link = playlistTrackRepository.findById(new PlaylistTrackId(playlistId, trackId))
+                .orElseThrow(() -> new IllegalArgumentException("Track is not in this playlist."));
+
+        TrackMetadata track = mediaModuleApi.getTrackMetadata(trackId);
+        playlistTrackRepository.delete(link);
+
+        playlist.setTrackCount(Math.max(0, playlist.getTrackCount() - 1));
+        playlist.setTotalDurationSeconds(Math.max(0, playlist.getTotalDurationSeconds() - track.durationSeconds()));
+        playlistRepository.save(playlist);
+    }
+
     @Transactional
     public PlaylistDto duplicatePlaylist(UUID sourcePlaylistId, UUID newOwnerId) {
         Playlist source = playlistRepository.findById(sourcePlaylistId)
                 .orElseThrow(() -> new PlaylistNotFoundException(sourcePlaylistId));
 
         if (!source.getIsPublic() && !source.getOwnerId().equals(newOwnerId)) {
-            throw new IllegalArgumentException("Cannot duplicate a private playlist.");
+            boolean isCollaborator = collaboratorRepository.existsByIdPlaylistIdAndIdUserId(sourcePlaylistId, newOwnerId);
+            if (!isCollaborator) {
+                throw new AccessDeniedException("Cannot duplicate a private playlist.");
+            }
         }
 
         Playlist cloned = Playlist.builder()
@@ -245,6 +254,81 @@ public class PlaylistService {
         events.publishEvent(new PlaylistCopiedEvent(newOwnerId, sourcePlaylistId, savedClone.getId(), Instant.now()));
 
         return mapToDto(savedClone);
+    }
+
+    // --- Social Collaboration Features ---
+
+    @Transactional
+    public void addCollaborator(UUID playlistId, UUID ownerId, UUID newCollaboratorId) {
+        Playlist playlist = playlistRepository.findById(playlistId)
+                .orElseThrow(() -> new PlaylistNotFoundException(playlistId));
+
+        enforceOwnerAccess(playlist, ownerId);
+
+        if (!playlist.getIsCollaborative()) {
+            throw new IllegalArgumentException("Playlist is not marked as collaborative.");
+        }
+
+        PlaylistCollaborator collaborator = PlaylistCollaborator.builder()
+                .id(new PlaylistCollaboratorId(playlistId, newCollaboratorId))
+                .build();
+
+        collaboratorRepository.save(collaborator);
+    }
+
+    @Transactional
+    public void removeCollaborator(UUID playlistId, UUID ownerId, UUID collaboratorId) {
+        Playlist playlist = playlistRepository.findById(playlistId)
+                .orElseThrow(() -> new PlaylistNotFoundException(playlistId));
+
+        enforceOwnerAccess(playlist, ownerId);
+        collaboratorRepository.deleteById(new PlaylistCollaboratorId(playlistId, collaboratorId));
+    }
+
+    @Transactional
+    public void followPlaylist(UUID playlistId, UUID userId) {
+        Playlist playlist = playlistRepository.findById(playlistId)
+                .orElseThrow(() -> new PlaylistNotFoundException(playlistId));
+
+        if (!playlist.getIsPublic()) {
+            boolean isCollaborator = collaboratorRepository.existsByIdPlaylistIdAndIdUserId(playlistId, userId);
+            if (!isCollaborator && !playlist.getOwnerId().equals(userId)) {
+                throw new AccessDeniedException("Cannot follow a private playlist.");
+            }
+        }
+
+        PlaylistFollower follower = PlaylistFollower.builder()
+                .id(new PlaylistFollowerId(userId, playlistId))
+                .build();
+
+        followerRepository.save(follower);
+        events.publishEvent(new PlaylistFollowedEvent(userId, playlistId, Instant.now()));
+    }
+
+    @Transactional
+    public void unfollowPlaylist(UUID playlistId, UUID userId) {
+        followerRepository.deleteById(new PlaylistFollowerId(userId, playlistId));
+    }
+
+    // --- Private Guards ---
+
+    private void enforceOwnerAccess(Playlist playlist, UUID userId) {
+        if (!playlist.getOwnerId().equals(userId)) {
+            throw new AccessDeniedException("Operation restricted to playlist owner.");
+        }
+    }
+
+    private void enforceModificationAccess(Playlist playlist, UUID userId) {
+        if (playlist.getOwnerId().equals(userId)) {
+            return;
+        }
+        if (playlist.getIsCollaborative()) {
+            boolean isCollaborator = collaboratorRepository.existsByIdPlaylistIdAndIdUserId(playlist.getId(), userId);
+            if (isCollaborator) {
+                return;
+            }
+        }
+        throw new AccessDeniedException("Modification access denied. Must be owner or collaborator.");
     }
 
     private PlaylistDto mapToDto(Playlist playlist) {
