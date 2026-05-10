@@ -3,6 +3,8 @@ package com.indiestream.playlist.controller;
 import com.indiestream.playlist.dto.PlaylistDto;
 import com.indiestream.playlist.service.PlaylistService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -11,7 +13,7 @@ import java.security.Principal;
 import java.util.UUID;
 
 /**
- * REST controller for managing playlist structures.
+ * REST controller for managing playlist structures, collaboration, and library integration.
  */
 @RestController
 @RequestMapping("/api/v1/playlists")
@@ -36,15 +38,21 @@ public class PlaylistController {
     }
 
     @GetMapping("/{playlistId}")
-    public ResponseEntity<PlaylistDto> getPlaylist(@PathVariable UUID playlistId) {
-        // TODO: [Playlist] - Apply Social & Visibility Guards for private playlists
-        return ResponseEntity.ok(playlistService.getPlaylistById(playlistId));
+    public ResponseEntity<PlaylistDto> getPlaylist(@PathVariable UUID playlistId, Principal principal) {
+        UUID userId = UUID.fromString(principal.getName());
+        return ResponseEntity.ok(playlistService.getPlaylistById(playlistId, userId));
     }
 
     @GetMapping("/me/liked")
     public ResponseEntity<PlaylistDto> getMyLikedTracks(Principal principal) {
         UUID userId = UUID.fromString(principal.getName());
         return ResponseEntity.ok(playlistService.getUserLikedTracksPlaylist(userId));
+    }
+
+    @GetMapping("/library")
+    public ResponseEntity<Page<PlaylistDto>> getUserLibrary(Principal principal, Pageable pageable) {
+        UUID userId = UUID.fromString(principal.getName());
+        return ResponseEntity.ok(playlistService.getUserLibrary(userId, pageable));
     }
 
     @PostMapping("/{playlistId}/tracks/{trackId}")
@@ -56,6 +64,16 @@ public class PlaylistController {
         UUID userId = UUID.fromString(principal.getName());
         playlistService.addTrackToPlaylist(playlistId, trackId, userId);
         return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @DeleteMapping("/{playlistId}/tracks/{trackId}")
+    public ResponseEntity<Void> removeTrackFromPlaylist(
+            @PathVariable UUID playlistId,
+            @PathVariable UUID trackId,
+            Principal principal) {
+        UUID userId = UUID.fromString(principal.getName());
+        playlistService.removeTrackFromPlaylist(playlistId, trackId, userId);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{playlistId}/duplicate")
@@ -91,14 +109,43 @@ public class PlaylistController {
         return ResponseEntity.noContent().build();
     }
 
-    @DeleteMapping("/{playlistId}/tracks/{trackId}")
-    public ResponseEntity<Void> removeTrackFromPlaylist(
-            @PathVariable UUID playlistId,
-            @PathVariable UUID trackId,
-            Principal principal) {
+    // --- Collaboration & Social Endpoints ---
 
+    @PostMapping("/{playlistId}/collaborators/{collaboratorId}")
+    public ResponseEntity<Void> addCollaborator(
+            @PathVariable UUID playlistId,
+            @PathVariable UUID collaboratorId,
+            Principal principal) {
+        UUID ownerId = UUID.fromString(principal.getName());
+        playlistService.addCollaborator(playlistId, ownerId, collaboratorId);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @DeleteMapping("/{playlistId}/collaborators/{collaboratorId}")
+    public ResponseEntity<Void> removeCollaborator(
+            @PathVariable UUID playlistId,
+            @PathVariable UUID collaboratorId,
+            Principal principal) {
+        UUID ownerId = UUID.fromString(principal.getName());
+        playlistService.removeCollaborator(playlistId, ownerId, collaboratorId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{playlistId}/followers")
+    public ResponseEntity<Void> followPlaylist(
+            @PathVariable UUID playlistId,
+            Principal principal) {
         UUID userId = UUID.fromString(principal.getName());
-        playlistService.removeTrackFromPlaylist(playlistId, trackId, userId);
+        playlistService.followPlaylist(playlistId, userId);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @DeleteMapping("/{playlistId}/followers")
+    public ResponseEntity<Void> unfollowPlaylist(
+            @PathVariable UUID playlistId,
+            Principal principal) {
+        UUID userId = UUID.fromString(principal.getName());
+        playlistService.unfollowPlaylist(playlistId, userId);
         return ResponseEntity.noContent().build();
     }
 }
