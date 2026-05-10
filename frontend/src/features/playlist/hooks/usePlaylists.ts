@@ -72,6 +72,32 @@ export const useDuplicatePlaylist = () => {
     });
 };
 
+/**
+ * Hook to toggle the "Like" state of a track.
+ * Automatically resolves the user's system "Liked Tracks" playlist.
+ */
+export const useToggleLike = () => {
+    const queryClient = useQueryClient();
+    const {data: library} = useUserLibrary();
+
+    return useMutation({
+        mutationFn: async ({trackId, isLiked}: { trackId: string; isLiked: boolean }) => {
+            const likedPlaylist = library?.content.find(p => p.isSystem && p.name === 'Liked Tracks');
+            if (!likedPlaylist) throw new Error("Liked Tracks playlist not found");
+
+            if (isLiked) {
+                return playlistApi.removeTrack(likedPlaylist.id, trackId);
+            } else {
+                return playlistApi.addTrack(likedPlaylist.id, trackId);
+            }
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({queryKey: playlistKeys.library()});
+            toast.success('Library updated');
+        }
+    });
+};
+
 export const useFollowPlaylist = () => {
     const queryClient = useQueryClient();
 
