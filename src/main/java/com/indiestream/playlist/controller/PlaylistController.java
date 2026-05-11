@@ -1,12 +1,14 @@
 package com.indiestream.playlist.controller;
 
 import com.indiestream.playlist.dto.PlaylistDto;
+import com.indiestream.playlist.dto.PlaylistTrackDetailsDto;
 import com.indiestream.playlist.service.PlaylistService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
@@ -41,6 +43,15 @@ public class PlaylistController {
     public ResponseEntity<PlaylistDto> getPlaylist(@PathVariable UUID playlistId, Principal principal) {
         UUID userId = UUID.fromString(principal.getName());
         return ResponseEntity.ok(playlistService.getPlaylistById(playlistId, userId));
+    }
+
+    @GetMapping("/{playlistId}/tracks")
+    public ResponseEntity<Page<PlaylistTrackDetailsDto>> getPlaylistTracks(
+            Principal principal,
+            @PathVariable UUID playlistId,
+            Pageable pageable) {
+        UUID userId = UUID.fromString(principal.getName());
+        return ResponseEntity.ok(playlistService.getPlaylistTracks(playlistId, userId, pageable));
     }
 
     @GetMapping("/me/liked")

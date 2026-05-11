@@ -5,6 +5,7 @@ import com.indiestream.media.MediaModuleApi;
 import com.indiestream.media.TrackMetadata;
 import com.indiestream.playlist.domain.*;
 import com.indiestream.playlist.dto.PlaylistDto;
+import com.indiestream.playlist.dto.PlaylistTrackDetailsDto;
 import com.indiestream.playlist.event.PlaylistCopiedEvent;
 import com.indiestream.playlist.event.PlaylistFollowedEvent;
 import com.indiestream.playlist.event.TrackAddedToPlaylistEvent;
@@ -95,6 +96,38 @@ public class PlaylistService {
             }
         }
         return mapToDto(playlist);
+    }
+
+    /**
+     * Fetches tracks within a playlist with full security checks and metadata resolution.
+     */
+    @Transactional(readOnly = true)
+    public Page<PlaylistTrackDetailsDto> getPlaylistTracks(UUID playlistId, UUID userId, Pageable pageable) {
+        Playlist playlist = playlistRepository.findById(playlistId)
+                .orElseThrow(() -> new PlaylistNotFoundException(playlistId));
+
+        // Visibility guard
+        if (!playlist.getIsPublic() && !playlist.getOwnerId().equals(userId)) {
+            boolean isCollaborator = collaboratorRepository.existsByIdPlaylistIdAndIdUserId(playlistId, userId);
+            if (!isCollaborator) {
+                throw new AccessDeniedException("Access denied to this private playlist.");
+            }
+        }
+
+        return playlistTrackRepository.findAllByIdPlaylistIdOrderByPositionIndexAsc(playlistId, pageable)
+                .map(pt -> {
+                    // Resolve track metadata through cross-module API
+                    var metadata = mediaModuleApi.getTrackMetadata(pt.getId().getTrackId());
+                    return new PlaylistTrackDetailsDto(
+                            pt.getId().getTrackId(),
+                            metadata.title(),
+                            metadata.artistId(),
+                            metadata.durationSeconds(),
+                            metadata.coverMinioPath(),
+                            pt.getAddedById(),
+                            pt.getAddedAt()
+                    );
+                });
     }
 
     /**
