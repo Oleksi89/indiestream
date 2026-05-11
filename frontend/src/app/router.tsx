@@ -8,6 +8,7 @@ import {GuestRoute} from "@/shared/components/GuestRoute";
 import {ArtistDashboardPage} from "@/pages/artist/ArtistDashboardPage";
 import {RoleRoute} from "@/shared/components/RoleRoute";
 import {NotFoundPage} from "@/pages/error/NotFoundPage";
+import {PlaylistPage} from "@/pages/playlist/PlaylistPage.tsx";
 
 const routes = [
     // Guest Only Routes
@@ -34,6 +35,10 @@ const routes = [
                     {
                         path: '/',
                         element: <DashboardPage/>,
+                    },
+                    {
+                        path: '/playlist/:id',
+                        element: <PlaylistPage/>,
                     },
                     // Role-Protected Routes
                     {

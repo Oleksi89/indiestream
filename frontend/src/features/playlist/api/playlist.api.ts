@@ -18,6 +18,13 @@ export const playlistApi = {
         return data;
     },
 
+    getPlaylistTracks: async (playlistId: string, page: number = 0, size: number = 50): Promise<PageResponse<PlaylistTrackDto>> => {
+        const {data} = await apiClient.get<unknown, AxiosResponse<PageResponse<PlaylistTrackDto>>>(`/playlists/${playlistId}/tracks`, {
+            params: {page, size},
+        });
+        return data;
+    },
+
     getSystemLikedTracks: async (): Promise<PlaylistDto> => {
         const {data} = await apiClient.get<unknown, AxiosResponse<PlaylistDto>>('/playlists/me/liked');
         return data;

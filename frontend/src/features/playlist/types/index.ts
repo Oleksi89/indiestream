@@ -36,3 +36,13 @@ export interface PageResponse<T> {
         totalPages: number;
     };
 }
+
+export interface PlaylistTrackDto {
+    trackId: string;
+    title: string;
+    artistId: string;
+    durationSeconds: number;
+    coverMinioPath: string | null;
+    addedByUserId: string;
+    addedAt: string;
+}
