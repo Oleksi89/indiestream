@@ -1,5 +1,6 @@
 package com.indiestream.auth.service;
 
+import com.indiestream.auth.AuthModuleApi;
 import com.indiestream.auth.UserRegisteredEvent;
 import com.indiestream.auth.domain.Role;
 import com.indiestream.auth.domain.User;
@@ -18,7 +19,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class UserService {
+public class UserService implements AuthModuleApi {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -63,6 +64,14 @@ public class UserService {
         events.publishEvent(new UserRegisteredEvent(savedUser.getId()));
 
         return mapToDto(savedUser);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public String getUserEmail(UUID userId) {
+        return userRepository.findById(userId)
+                .map(User::getEmail)
+                .orElse("Unknown Artist");
     }
 
 

@@ -149,7 +149,13 @@ public class TrackService implements MediaModuleApi {
     @Override
     public TrackMetadata getTrackMetadata(UUID trackId) {
         return trackRepository.findById(trackId)
-                .map(t -> new TrackMetadata(t.getId(), t.getDurationSeconds()))
+                .map(t -> new TrackMetadata(
+                        t.getId(),
+                        t.getTitle(),
+                        t.getArtistId(),
+                        t.getDurationSeconds(),
+                        t.getCoverMinioPath()
+                ))
                 .orElseThrow(() -> new IllegalArgumentException("Track not found"));
     }
 
