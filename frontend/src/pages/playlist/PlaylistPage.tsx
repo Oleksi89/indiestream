@@ -1,4 +1,3 @@
-import React from 'react';
 import {useParams} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
 import {playlistApi} from '@/features/playlist/api/playlist.api';
@@ -95,7 +94,7 @@ export const PlaylistPage = () => {
                                     <div className="flex flex-col min-w-0">
                                         <span className="text-sm font-semibold text-white truncate">{track.title}</span>
                                         <span
-                                            className="text-xs text-slate-400 hover:underline cursor-pointer truncate">{track.artistName}</span>
+                                            className="text-xs text-slate-400 hover:underline cursor-pointer truncate">{track.artistId}</span>
                                     </div>
                                 </td>
                                 <td className="py-3 hidden md:table-cell text-xs text-slate-500">

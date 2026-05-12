@@ -48,7 +48,7 @@ export const useContextMenu = () => {
 
         // Capture clicks globally, even those stopping propagation in standard ways
         document.addEventListener('click', handleGlobalClose, {capture: true});
-        document.addEventListener('contextmenu', (e) => {
+        document.addEventListener('contextmenu', () => {
             // Close if right-clicking anywhere else
             if (useContextMenuStore.getState().activeMenuId === id) {
                 setActiveMenuId(null);

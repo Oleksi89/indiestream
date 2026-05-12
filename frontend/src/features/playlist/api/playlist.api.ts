@@ -1,6 +1,6 @@
 import {apiClient} from '@/shared/api/apiClient';
 import type {AxiosResponse} from 'axios';
-import type {PlaylistDto, CreatePlaylistPayload, UpdatePlaylistPayload, PageResponse} from '../types';
+import type {PlaylistDto, CreatePlaylistPayload, UpdatePlaylistPayload, PageResponse, PlaylistTrackDto} from '../types';
 
 export const playlistApi = {
     /**

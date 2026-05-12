@@ -8,7 +8,11 @@ import {Play, Pause, SkipForward, Volume2, Disc3, Settings2, Loader2, Heart, Plu
 import {cn} from '@/shared/lib/utils';
 import {audioEngine} from "@/features/media/lib/webAudioEngine.ts";
 import Hls from "hls.js";
-import {useToggleLike} from "@/features/playlist/hooks/usePlaylists.ts";
+import {useToggleLike, useUserLibrary} from "@/features/playlist/hooks/usePlaylists.ts";
+import {useQuery} from "@tanstack/react-query";
+import {playlistApi} from "@/features/playlist/api/playlist.api.ts";
+import type {TrackMetadataPayload} from "@/features/playlist/types";
+import {AddToPlaylistMenu} from "@/features/playlist/ui/AddToPlaylistMenu.tsx";
 
 /**
  * Global Player Bar Component.
@@ -23,50 +27,80 @@ export const PlayerBar = () => {
     } = usePlayerStore();
 
     const token = useAuthStore(state => state.token);
+
     const [isMixerOpen, setIsMixerOpen] = useState(false);
+    const [isPlaylistMenuOpen, setIsPlaylistMenuOpen] = useState(false);
+    const [menuPosition, setMenuPosition] = useState({x: 0, y: 0});
 
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const masterHlsRef = useRef<Hls | null>(null);
 
-    // Orchestrate Web Audio API life-cycle
     const {isStemsLoading, stemsError, seekStems} = useWebAudio();
 
+    const trackId = currentTrack?.id;
     const hasStems = currentTrack?.stemsMetadata && Object.keys(currentTrack.stemsMetadata).length > 0;
 
     // Securely fetch cover image
     const {url: coverUrl} = useSecureUrl(
-        `cover-player-${currentTrack?.id}`,
-        () => mediaApi.getTrackCoverBlob(currentTrack!.id),
-        !!currentTrack?.coverMinioPath
+        `cover-player-${trackId || 'idle'}`,
+        () => trackId ? mediaApi.getTrackCoverBlob(trackId) : Promise.reject('No track loaded'),
+        !!currentTrack?.coverMinioPath && !!trackId
     );
 
     const toggleLike = useToggleLike();
+    const {data: library} = useUserLibrary();
 
-    // TODO: [Playlist] - Resolve real `isLiked` state using cache query or TrackMetadata
-    const [isLiked, setIsLiked] = useState(false);
+    const likedPlaylistId = library?.content.find(p => p.isSystem && p.name === 'Liked Tracks')?.id;
+
+    const {data: likedTracksData} = useQuery({
+        queryKey: ['playlists', 'tracks', likedPlaylistId],
+        queryFn: () => playlistApi.getPlaylistTracks(likedPlaylistId as string),
+        enabled: !!likedPlaylistId && !!trackId,
+    });
+
+    const isLiked = !!trackId && (likedTracksData?.content.some(pt => pt.trackId === trackId) || false);
+
+    const trackMetadata: TrackMetadataPayload | null = currentTrack ? {
+        id: currentTrack.id,
+        title: currentTrack.title,
+        artistId: currentTrack.artistId,
+        durationSeconds: currentTrack.durationSeconds || 0,
+        coverMinioPath: currentTrack.coverMinioPath || null
+    } : null;
 
     const handleLike = () => {
-        if (!currentTrack) return;
-        toggleLike.mutate({trackId: currentTrack.id, isLiked}, {
-            onSuccess: () => setIsLiked(!isLiked)
-        });
+        if (!trackMetadata) return;
+        toggleLike.mutate({track: trackMetadata, isLiked});
     };
 
-    const handleAddToPlaylist = () => {
-        // TODO: [Playlist] - Open AddToPlaylistModal
-        console.log("Open add to playlist modal");
+    const handleMenuOpen = (e: React.MouseEvent<HTMLButtonElement>) => {
+        e.stopPropagation();
+        const rect = e.currentTarget.getBoundingClientRect();
+        setMenuPosition({x: rect.left, y: rect.top});
+        setIsPlaylistMenuOpen((prev) => !prev);
     };
+
+    useEffect(() => {
+        if (!isPlaylistMenuOpen) return;
+        const close = () => setIsPlaylistMenuOpen(false);
+        document.addEventListener('click', close);
+        window.addEventListener('scroll', close, {passive: true});
+        return () => {
+            document.removeEventListener('click', close);
+            window.removeEventListener('scroll', close);
+        };
+    }, [isPlaylistMenuOpen]);
 
     // Init HLS for Master Track
     useEffect(() => {
-        if (!audioRef.current || !currentTrack || playbackMode !== 'master') return;
+        if (!audioRef.current || !trackId || playbackMode !== 'master') return;
 
         if (masterHlsRef.current) {
             masterHlsRef.current.destroy();
             masterHlsRef.current = null;
         }
 
-        const masterUrl = mediaApi.getHlsManifestUrl(currentTrack.id, 'master');
+        const masterUrl = mediaApi.getHlsManifestUrl(trackId, 'master');
 
         if (Hls.isSupported()) {
             const hls = new Hls({
@@ -77,10 +111,6 @@ export const PlayerBar = () => {
             hls.loadSource(masterUrl);
             hls.attachMedia(audioRef.current);
             masterHlsRef.current = hls;
-
-            hls.on(Hls.Events.ERROR, (_, data) => {
-                if (data.fatal) console.error("Master HLS Error", data);
-            });
         } else if (audioRef.current.canPlayType('application/vnd.apple.mpegurl')) {
             audioRef.current.src = masterUrl;
         }
@@ -90,13 +120,11 @@ export const PlayerBar = () => {
                 masterHlsRef.current.destroy();
             }
         };
-    }, [currentTrack, playbackMode, token]);
+    }, [trackId, playbackMode, token]);
 
-    // Sync HTML5 Audio (Master Mode)
     useEffect(() => {
         if (!audioRef.current) return;
 
-        // Explicitly pause HTML5 audio if mode switches to stems
         if (playbackMode === 'stems') {
             audioRef.current.pause();
             return;
@@ -114,10 +142,6 @@ export const PlayerBar = () => {
         if (audioRef.current) audioRef.current.volume = volume;
     }, [volume]);
 
-    /**
-     * Handle seeking across both engines.
-     * Prevents desynchronization by strictly routing the seek offset to the active engine.
-     */
     const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newTime = parseFloat(e.target.value);
         setProgress(newTime);
@@ -132,7 +156,7 @@ export const PlayerBar = () => {
         }
     };
 
-    if (!currentTrack) return null;
+    if (!currentTrack || !trackId) return null;
 
     return (
         <div
@@ -177,29 +201,39 @@ export const PlayerBar = () => {
                 <div className="flex flex-col truncate">
                     <span className="text-white font-semibold truncate">{currentTrack.title}</span>
                     <div className="flex items-center gap-2">
-                         <span className={cn(
-                             "text-[10px] uppercase tracking-wider font-bold",
-                             playbackMode === 'stems' ? "text-violet-400" : "text-slate-500"
-                         )}>
+                        <span className={cn(
+                            "text-[10px] uppercase tracking-wider font-bold",
+                            playbackMode === 'stems' ? "text-violet-400" : "text-slate-500"
+                        )}>
                             {isStemsLoading ? 'Syncing Stems...' : playbackMode === 'stems' ? 'Multi-Stem Mode' : 'Master Track'}
                         </span>
                     </div>
                 </div>
 
-                {/* Engagement Actions injected here */}
                 <div className="flex items-center gap-1 opacity-80 hover:opacity-100 transition-opacity shrink-0">
                     <button
                         onClick={handleLike}
+                        disabled={toggleLike.isPending}
                         className={cn("p-2 rounded-full hover:bg-slate-800 transition-colors", isLiked ? "text-violet-400" : "text-slate-400 hover:text-white")}
                     >
-                        <Heart size={18} className={cn(isLiked && "fill-current")}/>
+                        <Heart size={18}
+                               className={cn(isLiked && "fill-current", toggleLike.isPending && "opacity-50")}/>
                     </button>
+
                     <button
-                        onClick={handleAddToPlaylist}
+                        onClick={handleMenuOpen}
                         className="p-2 rounded-full text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
                     >
                         <PlusCircle size={18}/>
                     </button>
+
+                    {isPlaylistMenuOpen && trackMetadata && (
+                        <AddToPlaylistMenu
+                            track={trackMetadata}
+                            position={menuPosition}
+                            onClose={() => setIsPlaylistMenuOpen(false)}
+                        />
+                    )}
                 </div>
             </div>
 
@@ -323,10 +357,8 @@ export const PlayerBar = () => {
                                             className="text-slate-500 font-mono">{Math.round((stemVolumes[name] || 0) * 100)}%</span>
                                     </div>
                                     <div className="relative h-1.5 bg-slate-800 rounded-full flex items-center">
-                                        <div
-                                            className="absolute h-full bg-violet-500 rounded-full"
-                                            style={{width: `${(stemVolumes[name] || 0) * 100}%`}}
-                                        />
+                                        <div className="absolute h-full bg-violet-500 rounded-full"
+                                             style={{width: `${(stemVolumes[name] || 0) * 100}%`}}/>
                                         <input
                                             type="range"
                                             min="0"

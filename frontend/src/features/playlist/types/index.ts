@@ -46,3 +46,12 @@ export interface PlaylistTrackDto {
     addedByUserId: string;
     addedAt: string;
 }
+
+
+export interface TrackMetadataPayload {
+    id: string;
+    title: string;
+    artistId: string;
+    durationSeconds: number;
+    coverMinioPath: string | null;
+}
