@@ -10,7 +10,7 @@ export const DashboardPage = () => {
             {/* Header Section */}
             <header className="border-b border-slate-800 pb-6">
                 <h1 className="text-4xl font-bold tracking-tight text-white">
-                    Good evening, <span className="text-violet-400">{user?.email || 'Listener'}</span>
+                    Good evening, <span className="text-violet-400">{user?.alias || 'Listener'}</span>
                 </h1>
                 <p className="text-slate-400 mt-2 text-lg">Discover new independent music tailored for you.</p>
             </header>
