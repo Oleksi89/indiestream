@@ -1,5 +1,6 @@
 package com.indiestream.playlist.service;
 
+import com.indiestream.auth.AuthModuleApi;
 import com.indiestream.auth.UserRegisteredEvent;
 import com.indiestream.media.MediaModuleApi;
 import com.indiestream.media.TrackMetadata;
@@ -45,6 +46,7 @@ public class PlaylistService {
 
     // Cross-module strictly defined API call
     private final MediaModuleApi mediaModuleApi;
+    private final AuthModuleApi authModuleApi;
     private final ApplicationEventPublisher events;
 
     /**
@@ -118,10 +120,12 @@ public class PlaylistService {
                 .map(pt -> {
                     // Resolve track metadata through cross-module API
                     var metadata = mediaModuleApi.getTrackMetadata(pt.getId().getTrackId());
+                    String artistEmail = authModuleApi.getUserEmail(metadata.artistId());
                     return new PlaylistTrackDetailsDto(
                             pt.getId().getTrackId(),
                             metadata.title(),
                             metadata.artistId(),
+                            artistEmail,
                             metadata.durationSeconds(),
                             metadata.coverMinioPath(),
                             pt.getAddedById(),
@@ -198,6 +202,12 @@ public class PlaylistService {
                 .orElseThrow(() -> new PlaylistNotFoundException(playlistId));
 
         enforceModificationAccess(playlist, userId);
+
+        PlaylistTrackId linkId = new PlaylistTrackId(playlistId, trackId);
+
+        if (playlistTrackRepository.existsById(linkId)) {
+            return;
+        }
 
         // Fetch duration from Media module API
         TrackMetadata track = mediaModuleApi.getTrackMetadata(trackId);

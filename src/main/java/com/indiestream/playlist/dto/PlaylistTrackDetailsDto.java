@@ -7,6 +7,7 @@ public record PlaylistTrackDetailsDto(
         UUID trackId,
         String title,
         UUID artistId,
+        String artistEmail,
         Integer durationSeconds,
         String coverMinioPath,
         UUID addedByUserId,
