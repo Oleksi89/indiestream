@@ -1,10 +1,12 @@
 package com.indiestream.playlist.service;
 
+import com.indiestream.auth.AuthModuleApi;
 import com.indiestream.auth.UserRegisteredEvent;
 import com.indiestream.media.MediaModuleApi;
 import com.indiestream.media.TrackMetadata;
 import com.indiestream.playlist.domain.*;
 import com.indiestream.playlist.dto.PlaylistDto;
+import com.indiestream.playlist.dto.PlaylistTrackDetailsDto;
 import com.indiestream.playlist.event.PlaylistCopiedEvent;
 import com.indiestream.playlist.event.PlaylistFollowedEvent;
 import com.indiestream.playlist.event.TrackAddedToPlaylistEvent;
@@ -44,6 +46,7 @@ public class PlaylistService {
 
     // Cross-module strictly defined API call
     private final MediaModuleApi mediaModuleApi;
+    private final AuthModuleApi authModuleApi;
     private final ApplicationEventPublisher events;
 
     /**
@@ -95,6 +98,40 @@ public class PlaylistService {
             }
         }
         return mapToDto(playlist);
+    }
+
+    /**
+     * Fetches tracks within a playlist with full security checks and metadata resolution.
+     */
+    @Transactional(readOnly = true)
+    public Page<PlaylistTrackDetailsDto> getPlaylistTracks(UUID playlistId, UUID userId, Pageable pageable) {
+        Playlist playlist = playlistRepository.findById(playlistId)
+                .orElseThrow(() -> new PlaylistNotFoundException(playlistId));
+
+        // Visibility guard
+        if (!playlist.getIsPublic() && !playlist.getOwnerId().equals(userId)) {
+            boolean isCollaborator = collaboratorRepository.existsByIdPlaylistIdAndIdUserId(playlistId, userId);
+            if (!isCollaborator) {
+                throw new AccessDeniedException("Access denied to this private playlist.");
+            }
+        }
+
+        return playlistTrackRepository.findAllByIdPlaylistIdOrderByPositionIndexAsc(playlistId, pageable)
+                .map(pt -> {
+                    // Resolve track metadata through cross-module API
+                    var metadata = mediaModuleApi.getTrackMetadata(pt.getId().getTrackId());
+                    String artistEmail = authModuleApi.getUserEmail(metadata.artistId());
+                    return new PlaylistTrackDetailsDto(
+                            pt.getId().getTrackId(),
+                            metadata.title(),
+                            metadata.artistId(),
+                            artistEmail,
+                            metadata.durationSeconds(),
+                            metadata.coverMinioPath(),
+                            pt.getAddedById(),
+                            pt.getAddedAt()
+                    );
+                });
     }
 
     /**
@@ -165,6 +202,12 @@ public class PlaylistService {
                 .orElseThrow(() -> new PlaylistNotFoundException(playlistId));
 
         enforceModificationAccess(playlist, userId);
+
+        PlaylistTrackId linkId = new PlaylistTrackId(playlistId, trackId);
+
+        if (playlistTrackRepository.existsById(linkId)) {
+            return;
+        }
 
         // Fetch duration from Media module API
         TrackMetadata track = mediaModuleApi.getTrackMetadata(trackId);
