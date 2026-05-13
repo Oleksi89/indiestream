@@ -1,6 +1,7 @@
 package com.indiestream.auth.service;
 
 import com.indiestream.auth.AuthModuleApi;
+import com.indiestream.auth.UserPublicProfile;
 import com.indiestream.auth.UserRegisteredEvent;
 import com.indiestream.auth.domain.Role;
 import com.indiestream.auth.domain.User;
@@ -81,10 +82,21 @@ public class UserService implements AuthModuleApi {
 
     @Override
     @Transactional(readOnly = true)
+    public Optional<UserPublicProfile> getUserPublicProfile(UUID userId) {
+        return userRepository.findById(userId)
+                .map(user -> new UserPublicProfile(
+                        user.getId(),
+                        user.getUsername(),
+                        user.getAlias()
+                ));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public String getUserEmail(UUID userId) {
         return userRepository.findById(userId)
                 .map(User::getEmail)
-                .orElse("Unknown Artist");
+                .orElse("Unknown User");
     }
 
     private UserDto mapToDto(User user) {
