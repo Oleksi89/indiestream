@@ -6,6 +6,7 @@ import java.util.UUID;
 public record PlaylistDto(
         UUID id,
         UUID ownerId,
+        String ownerAlias,
         String name,
         String description,
         String coverMinioPath,
