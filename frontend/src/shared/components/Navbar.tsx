@@ -58,8 +58,7 @@ export const Navbar = () => {
             <div className="mx-auto flex h-16 max-w-screen-2xl items-center justify-between px-6">
                 <div className="flex items-center gap-8">
                     <Link to="/" className="flex items-center gap-2">
-                        <div
-                            className="h-8 w-8 rounded-lg bg-slate-900/50 shadow-lg shadow-violet-500/20"/>
+                        <div className="h-8 w-8 rounded-lg bg-slate-900/50 shadow-lg shadow-violet-500/20"/>
                         <span className="text-xl font-bold tracking-tight text-white">IndieStream</span>
                     </Link>
                 </div>
@@ -76,8 +75,8 @@ export const Navbar = () => {
                         <div className="flex flex-col items-start leading-none">
                             <span className="text-xs font-medium text-slate-400">Account</span>
                             <span className="text-sm font-semibold text-white max-w-[120px] truncate">
-                {user?.email || 'Loading...'}
-              </span>
+                                {user?.alias || 'Loading...'}
+                            </span>
                         </div>
                         <ChevronDown size={14} className="text-slate-500"/>
                     </button>
@@ -88,14 +87,16 @@ export const Navbar = () => {
                             <div className="px-3 py-3">
                                 <div className="flex items-center gap-3">
                                     <div
-                                        className="h-10 w-10 rounded-full bg-violet-500/20 flex items-center justify-center text-violet-400 font-bold">
-                                        {user?.email?.[0].toUpperCase()}
+                                        className="h-10 w-10 rounded-full bg-violet-500/20 flex items-center justify-center text-violet-400 font-bold uppercase">
+                                        {user?.alias?.[0] || '?'}
                                     </div>
                                     <div className="flex flex-col">
-                                        <span
-                                            className="text-sm font-bold text-white truncate max-w-[150px]">{user?.email}</span>
-                                        <span
-                                            className="text-[10px] uppercase tracking-widest font-bold text-violet-500">{user?.role}</span>
+                                        <span className="text-sm font-bold text-white truncate max-w-[150px]">
+                                            {user?.alias}
+                                        </span>
+                                        <span className="text-xs text-slate-400 truncate max-w-[150px]">
+                                            @{user?.username}
+                                        </span>
                                     </div>
                                 </div>
                             </div>

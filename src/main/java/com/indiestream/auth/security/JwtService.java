@@ -46,6 +46,9 @@ public class JwtService {
         return generateToken(new HashMap<>(), username);
     }
 
+    /**
+     * Overloaded token generation to inject cross-module specific claims (e.g., username, role).
+     */
     public String generateToken(Map<String, Object> extraClaims, String username) {
         return Jwts.builder()
                 .claims(extraClaims)

@@ -1,6 +1,7 @@
 package com.indiestream.playlist.service;
 
 import com.indiestream.auth.AuthModuleApi;
+import com.indiestream.auth.UserPublicProfile;
 import com.indiestream.auth.UserRegisteredEvent;
 import com.indiestream.media.MediaModuleApi;
 import com.indiestream.media.TrackMetadata;
@@ -116,16 +117,20 @@ public class PlaylistService {
             }
         }
 
+        // TODO: [Auth/Performance] - Implement bulk profile resolution in AuthModuleApi to prevent N+1 queries.
         return playlistTrackRepository.findAllByIdPlaylistIdOrderByPositionIndexAsc(playlistId, pageable)
                 .map(pt -> {
                     // Resolve track metadata through cross-module API
                     var metadata = mediaModuleApi.getTrackMetadata(pt.getId().getTrackId());
-                    String artistEmail = authModuleApi.getUserEmail(metadata.artistId());
+                    String artistAlias = authModuleApi.getUserPublicProfile(metadata.artistId())
+                            .map(UserPublicProfile::alias)
+                            .orElse("Unknown Artist");
+
                     return new PlaylistTrackDetailsDto(
                             pt.getId().getTrackId(),
                             metadata.title(),
                             metadata.artistId(),
-                            artistEmail,
+                            artistAlias,
                             metadata.durationSeconds(),
                             metadata.coverMinioPath(),
                             pt.getAddedById(),
@@ -375,9 +380,14 @@ public class PlaylistService {
     }
 
     private PlaylistDto mapToDto(Playlist playlist) {
+        String ownerAlias = authModuleApi.getUserPublicProfile(playlist.getOwnerId())
+                .map(UserPublicProfile::alias)
+                .orElse("Unknown User");
+
         return new PlaylistDto(
                 playlist.getId(),
                 playlist.getOwnerId(),
+                ownerAlias,
                 playlist.getName(),
                 playlist.getDescription(),
                 playlist.getCoverMinioPath(),

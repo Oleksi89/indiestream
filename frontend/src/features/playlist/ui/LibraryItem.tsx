@@ -60,8 +60,8 @@ export const LibraryItem = ({playlist, viewMode, isActive, onClick}: LibraryItem
                             {playlist.isSystem && !isLikedTracks && <Lock className="w-3 h-3 opacity-60"/>}
                             {playlist.isCollaborative && <Users className="w-3 h-3 text-emerald-400"/>}
                         </h4>
-                        <p className="text-xs text-slate-500 font-medium mt-0.5">
-                            {isLikedTracks ? 'System Playlist' : 'Playlist'} • {playlist.trackCount} tracks
+                        <p className="text-xs text-slate-500 font-medium mt-0.5 truncate">
+                            {isLikedTracks ? 'System Playlist' : `Playlist • ${playlist.ownerAlias}`} • {playlist.trackCount} tracks
                         </p>
                     </div>
                 </div>
@@ -97,7 +97,7 @@ export const LibraryItem = ({playlist, viewMode, isActive, onClick}: LibraryItem
                             {playlist.isCollaborative && <Users className="w-3 h-3 text-emerald-400"/>}
                         </h4>
                         <p className="text-xs text-slate-500 font-medium truncate">
-                            {isLikedTracks ? 'System Playlist' : 'Playlist'} • {playlist.trackCount} tracks
+                            {isLikedTracks ? 'System Playlist' : 'Playlist • ${playlist.ownerAlias}'} • {playlist.trackCount} tracks
                         </p>
                     </div>
                 )}

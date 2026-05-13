@@ -1,5 +1,7 @@
 package com.indiestream.media.service;
 
+import com.indiestream.auth.AuthModuleApi;
+import com.indiestream.auth.UserPublicProfile;
 import com.indiestream.media.MediaModuleApi;
 import com.indiestream.media.TrackMetadata;
 import com.indiestream.media.TrackUploadedEvent;
@@ -30,6 +32,8 @@ public class TrackService implements MediaModuleApi {
     private final MinioStorageService minioStorageService;
     private final ApplicationEventPublisher events;
 
+    // Cross-module strict API dependency
+    private final AuthModuleApi authModuleApi;
 
     /**
      * Orchestrates the upload of a master track, optional cover, and dynamic stems.
@@ -160,9 +164,14 @@ public class TrackService implements MediaModuleApi {
     }
 
     private TrackDto mapToDto(Track track) {
+        String artistAlias = authModuleApi.getUserPublicProfile(track.getArtistId())
+                .map(UserPublicProfile::alias)
+                .orElse("Unknown Artist");
+
         return new TrackDto(
                 track.getId(),
                 track.getArtistId(),
+                artistAlias,
                 track.getTitle(),
                 track.getMinioBucketPath(),
                 track.getCoverMinioPath(),

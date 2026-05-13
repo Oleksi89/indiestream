@@ -18,6 +18,8 @@ export const RegisterForm = () => {
         resolver: zodResolver(registerSchema),
         defaultValues: {
             email: '',
+            username: '',
+            alias: '',
             password: '',
             confirmPassword: '',
         }
@@ -56,6 +58,29 @@ export const RegisterForm = () => {
                         className="mt-1 block w-full rounded-md border-slate-700 bg-slate-800 text-slate-100 focus:border-violet-500 focus:ring-violet-500 px-3 py-2 outline-none transition-all"
                     />
                     {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-slate-300">Username</label>
+                    <input
+                        {...register('username')}
+                        type="text"
+                        autoComplete="username"
+                        placeholder="john_doe"
+                        className="mt-1 block w-full rounded-md border-slate-700 bg-slate-800 text-slate-100 focus:border-violet-500 focus:ring-violet-500 px-3 py-2 outline-none transition-all"
+                    />
+                    {errors.username && <p className="text-red-500 text-xs mt-1">{errors.username.message}</p>}
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-slate-300">Display Name</label>
+                    <input
+                        {...register('alias')}
+                        type="text"
+                        placeholder="John Doe"
+                        className="mt-1 block w-full rounded-md border-slate-700 bg-slate-800 text-slate-100 focus:border-violet-500 focus:ring-violet-500 px-3 py-2 outline-none transition-all"
+                    />
+                    {errors.alias && <p className="text-red-500 text-xs mt-1">{errors.alias.message}</p>}
                 </div>
 
                 <div>
