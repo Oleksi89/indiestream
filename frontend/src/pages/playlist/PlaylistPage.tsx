@@ -42,8 +42,7 @@ export const PlaylistPage = () => {
                     <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Playlist</span>
                     <h1 className="text-7xl font-black tracking-tighter text-white mb-4">{playlist.name}</h1>
                     <div className="flex items-center gap-2 text-sm font-medium text-slate-300">
-                        <span
-                            className="text-white hover:underline cursor-pointer">User {playlist.ownerId.slice(0, 8)}</span>
+                        <span className="text-white hover:underline cursor-pointer">{playlist.ownerAlias}</span>
                         <span>•</span>
                         <span>{playlist.trackCount} tracks</span>
                         <span>•</span>
@@ -94,7 +93,7 @@ export const PlaylistPage = () => {
                                     <div className="flex flex-col min-w-0">
                                         <span className="text-sm font-semibold text-white truncate">{track.title}</span>
                                         <span
-                                            className="text-xs text-slate-400 hover:underline cursor-pointer truncate">{track.artistId}</span>
+                                            className="text-xs text-slate-400 hover:underline cursor-pointer truncate">{track.artistAlias}</span>
                                     </div>
                                 </td>
                                 <td className="py-3 hidden md:table-cell text-xs text-slate-500">

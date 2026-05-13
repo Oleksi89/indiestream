@@ -1,6 +1,7 @@
 package com.indiestream.config;
 
 import com.indiestream.auth.exception.EmailAlreadyInUseException;
+import com.indiestream.auth.exception.UsernameAlreadyInUseException;
 import com.indiestream.playlist.exception.PlaylistNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -17,6 +18,14 @@ public class GlobalExceptionHandler {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
         problemDetail.setTitle("Email Conflict");
         problemDetail.setType(URI.create("https://indiestream.com/errors/email-in-use"));
+        return problemDetail;
+    }
+
+    @ExceptionHandler(UsernameAlreadyInUseException.class)
+    public ProblemDetail handleUsernameAlreadyInUse(UsernameAlreadyInUseException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+        problemDetail.setTitle("Username Conflict");
+        problemDetail.setType(URI.create("https://indiestream.com/errors/username-in-use"));
         return problemDetail;
     }
 

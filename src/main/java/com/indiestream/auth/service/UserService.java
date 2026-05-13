@@ -1,6 +1,7 @@
 package com.indiestream.auth.service;
 
 import com.indiestream.auth.AuthModuleApi;
+import com.indiestream.auth.UserPublicProfile;
 import com.indiestream.auth.UserRegisteredEvent;
 import com.indiestream.auth.domain.Role;
 import com.indiestream.auth.domain.User;
@@ -13,6 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.indiestream.auth.exception.EmailAlreadyInUseException;
+import com.indiestream.auth.exception.UsernameAlreadyInUseException;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -43,10 +45,12 @@ public class UserService implements AuthModuleApi {
 
     /**
      * Registers a new user with USER role.
-     * * @param request Contains raw credentials.
+     * Enforces domain uniqueness constraints on email and username prior to persistence.
      *
+     * @param request Contains raw credentials and profile data.
      * @return UserDto representing the persisted user.
-     * @throws EmailAlreadyInUseException if the provided email exists in the system.
+     * @throws EmailAlreadyInUseException    if the provided email exists.
+     * @throws UsernameAlreadyInUseException if the provided username exists.
      */
     @Transactional
     public UserDto register(RegisterRequestDto request) {
@@ -54,16 +58,37 @@ public class UserService implements AuthModuleApi {
             throw new EmailAlreadyInUseException("Email is already in use.");
         }
 
+        if (userRepository.existsByUsername(request.username())) {
+            throw new UsernameAlreadyInUseException("Username is already taken.");
+        }
+
         User user = new User();
         user.setEmail(request.email());
+        user.setUsername(request.username());
+        user.setAlias(request.alias());
         user.setPasswordHash(passwordEncoder.encode(request.password()));
         user.setRole(Role.USER);
 
         User savedUser = userRepository.save(user);
 
-        events.publishEvent(new UserRegisteredEvent(savedUser.getId()));
+        events.publishEvent(new UserRegisteredEvent(
+                savedUser.getId(),
+                savedUser.getUsername(),
+                savedUser.getAlias()
+        ));
 
         return mapToDto(savedUser);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<UserPublicProfile> getUserPublicProfile(UUID userId) {
+        return userRepository.findById(userId)
+                .map(user -> new UserPublicProfile(
+                        user.getId(),
+                        user.getUsername(),
+                        user.getAlias()
+                ));
     }
 
     @Override
@@ -71,14 +96,15 @@ public class UserService implements AuthModuleApi {
     public String getUserEmail(UUID userId) {
         return userRepository.findById(userId)
                 .map(User::getEmail)
-                .orElse("Unknown Artist");
+                .orElse("Unknown User");
     }
-
 
     private UserDto mapToDto(User user) {
         return new UserDto(
                 user.getId(),
                 user.getEmail(),
+                user.getUsername(),
+                user.getAlias(),
                 user.getRole(),
                 user.getCreatedAt()
         );

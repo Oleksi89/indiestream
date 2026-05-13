@@ -1,6 +1,6 @@
 import {mediaApi} from '../api/media.api';
 import type {TrackDto} from '../types';
-import {Disc3, Clock, Image as ImageIcon, Play, Pause, Layers} from 'lucide-react';
+import {Disc3, Clock, Image as ImageIcon, Play, Pause, Layers, User} from 'lucide-react';
 import {usePlayerStore} from '@/shared/store/playerStore';
 import {useSecureUrl} from '@/shared/hooks/useSecureUrl';
 import {cn} from '@/shared/lib/utils';
@@ -75,7 +75,14 @@ export const TrackCard = ({track}: TrackCardProps) => {
                     )}>
                         {track.title}
                     </h3>
-                    <div className="flex items-center gap-2 mt-1 text-slate-400 text-xs">
+                    {/* Added Artist Alias */}
+                    <div
+                        className="flex items-center gap-1.5 mt-0.5 text-slate-400 text-xs hover:text-slate-300 transition-colors cursor-pointer truncate">
+                        <User size={12} className="shrink-0"/>
+                        <span className="truncate">{track.artistAlias}</span>
+                    </div>
+                    <div
+                        className="flex items-center gap-2 mt-1.5 text-slate-500 text-[11px] uppercase tracking-wider font-semibold">
                         <Clock size={12}/>
                         <span>{track.durationSeconds > 0 ? `${Math.floor(track.durationSeconds / 60)}:${(track.durationSeconds % 60).toString().padStart(2, '0')}` : '0:00'}</span>
                     </div>

@@ -64,6 +64,7 @@ export const PlayerBar = () => {
         id: currentTrack.id,
         title: currentTrack.title,
         artistId: currentTrack.artistId,
+        artistAlias: currentTrack.artistAlias,
         durationSeconds: currentTrack.durationSeconds || 0,
         coverMinioPath: currentTrack.coverMinioPath || null
     } : null;
