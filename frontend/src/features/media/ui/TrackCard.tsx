@@ -7,9 +7,12 @@ import {cn} from '@/shared/lib/utils';
 
 interface TrackCardProps {
     track: TrackDto;
+    variant: 'list' | 'grid' | 'compact';
+    className?: string;
+    onClick?: () => void;
 }
 
-export const TrackCard = ({track}: TrackCardProps) => {
+export const TrackCard = ({track, variant, className, onClick}: TrackCardProps) => {
     const {currentTrack, isPlaying, setTrack, togglePlay} = usePlayerStore();
     const isCurrentTrack = currentTrack?.id === track.id;
 
@@ -32,29 +35,131 @@ export const TrackCard = ({track}: TrackCardProps) => {
         }
     };
 
+    const formatDuration = (seconds: number) => {
+        return seconds > 0
+            ? `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, '0')}`
+            : '0:00';
+    };
+
+    const renderCover = () => {
+        if (!track.coverMinioPath) {
+            return (
+                <div className="w-full h-full flex items-center justify-center bg-slate-800">
+                    <Disc3 size={variant === 'compact' ? 20 : 32} className="text-slate-600"/>
+                </div>
+            );
+        }
+        if (isCoverLoading) {
+            return (
+                <div className="w-full h-full flex items-center justify-center bg-slate-800 animate-pulse">
+                    <ImageIcon size={variant === 'compact' ? 20 : 32} className="text-slate-600"/>
+                </div>
+            );
+        }
+        return (
+            <img
+                src={coverUrl || ''}
+                alt={track.title}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            />
+        );
+    };
+
+    if (variant === 'compact') {
+        return (
+            <div
+                onClick={onClick}
+                className={cn(
+                    "group flex items-center gap-3 p-2 rounded-md hover:bg-slate-800/60 transition-colors cursor-pointer w-full max-w-[240px]",
+                    isCurrentTrack && "bg-slate-800/40",
+                    className
+                )}
+            >
+                <div className="h-10 w-10 flex-shrink-0 rounded overflow-hidden relative">
+                    {renderCover()}
+                    <div
+                        className="absolute inset-0 bg-slate-900/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Play size={16} fill="currentColor" className="text-white ml-0.5"/>
+                    </div>
+                </div>
+                <div className="flex flex-col overflow-hidden">
+                    <span className={cn(
+                        "text-sm font-medium truncate",
+                        isCurrentTrack ? "text-violet-400" : "text-slate-100"
+                    )}>
+                        {track.title}
+                    </span>
+                    <span className="text-xs text-slate-400 truncate">{track.artistAlias}</span>
+                </div>
+            </div>
+        );
+    }
+
+    if (variant === 'list') {
+        return (
+            <div
+                onClick={onClick}
+                className={cn(
+                    "group flex items-center justify-between p-2 rounded-lg hover:bg-slate-800/40 border border-transparent hover:border-slate-800 transition-all w-full cursor-pointer",
+                    isCurrentTrack && "bg-slate-800/30 border-slate-800",
+                    className
+                )}
+            >
+                <div className="flex items-center gap-4 min-w-0 flex-1">
+                    <div className="relative h-12 w-12 flex-shrink-0 rounded-md overflow-hidden bg-slate-800 shadow-sm">
+                        {renderCover()}
+                        <button
+                            onClick={handlePlayClick}
+                            className="absolute inset-0 bg-slate-900/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-slate-900/80"
+                        >
+                            {isCurrentTrack && isPlaying ? (
+                                <Pause size={20} fill="currentColor" className="text-violet-400"/>
+                            ) : (
+                                <Play size={20} fill="currentColor" className="text-white ml-0.5"/>
+                            )}
+                        </button>
+                    </div>
+                    <div className="flex flex-col overflow-hidden">
+                        <span className={cn(
+                            "text-[15px] font-medium truncate flex items-center gap-2",
+                            isCurrentTrack ? "text-violet-400" : "text-slate-100"
+                        )}>
+                            {track.title}
+                            {hasStems && (
+                                <span
+                                    className="bg-slate-800 text-violet-400 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded flex items-center gap-1">
+                                    <Layers size={10}/> Stems
+                                </span>
+                            )}
+                        </span>
+                        <div className="flex items-center gap-1 text-slate-400 text-xs mt-0.5">
+                            <User size={12} className="shrink-0"/>
+                            <span className="truncate hover:text-slate-300 transition-colors">{track.artistAlias}</span>
+                        </div>
+                    </div>
+                </div>
+                <div className="flex items-center gap-6 text-sm text-slate-400 flex-shrink-0 ml-4 px-2">
+                    <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider">
+                        <Clock size={14}/>
+                        <span>{formatDuration(track.durationSeconds)}</span>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Default 'grid' variant
     return (
         <div
-            className="group flex flex-col bg-slate-900 border border-slate-800 rounded-xl overflow-hidden hover:border-violet-500/50 transition-all duration-300 shadow-lg">
-
-            {/* Visual Part */}
+            onClick={onClick}
+            className={cn(
+                "group flex flex-col bg-slate-900 border border-slate-800 rounded-xl overflow-hidden hover:border-violet-500/50 transition-all duration-300 shadow-lg cursor-pointer",
+                isCurrentTrack && "border-violet-500/50",
+                className
+            )}
+        >
             <div className="aspect-square w-full bg-slate-800 relative overflow-hidden">
-                {track.coverMinioPath ? (
-                    isCoverLoading ? (
-                        <div className="w-full h-full flex items-center justify-center animate-pulse">
-                            <ImageIcon size={32} className="text-slate-600"/>
-                        </div>
-                    ) : (
-                        <img
-                            src={coverUrl || ''}
-                            alt={track.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                    )
-                ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                        <Disc3 size={64} className="text-slate-700"/>
-                    </div>
-                )}
+                {renderCover()}
 
                 {/* STEMS Badge Overlay */}
                 {hasStems && (
@@ -77,14 +182,14 @@ export const TrackCard = ({track}: TrackCardProps) => {
                     </h3>
                     {/* Added Artist Alias */}
                     <div
-                        className="flex items-center gap-1.5 mt-0.5 text-slate-400 text-xs hover:text-slate-300 transition-colors cursor-pointer truncate">
+                        className="flex items-center gap-1.5 mt-0.5 text-slate-400 text-xs hover:text-slate-300 transition-colors truncate">
                         <User size={12} className="shrink-0"/>
                         <span className="truncate">{track.artistAlias}</span>
                     </div>
                     <div
                         className="flex items-center gap-2 mt-1.5 text-slate-500 text-[11px] uppercase tracking-wider font-semibold">
                         <Clock size={12}/>
-                        <span>{track.durationSeconds > 0 ? `${Math.floor(track.durationSeconds / 60)}:${(track.durationSeconds % 60).toString().padStart(2, '0')}` : '0:00'}</span>
+                        <span>{formatDuration(track.durationSeconds)}</span>
                     </div>
                 </div>
 
@@ -94,8 +199,8 @@ export const TrackCard = ({track}: TrackCardProps) => {
                     className={cn(
                         "h-10 w-10 flex-shrink-0 rounded-full flex items-center justify-center transition-all shadow-md",
                         isCurrentTrack && isPlaying
-                            ? "bg-slate-800 text-violet-400 border border-violet-500/30"
-                            : "bg-violet-600 text-white hover:bg-violet-500"
+                            ? "bg-slate-800 text-violet-400 border border-violet-500/30 hover:bg-slate-700"
+                            : "bg-violet-600 text-white hover:bg-violet-500 hover:scale-105"
                     )}
                 >
                     {isCurrentTrack && isPlaying ? (

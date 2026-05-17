@@ -30,7 +30,7 @@ export const PublicFeed = () => {
     return (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {data.content.map((track) => (
-                <TrackCard track={track}/>
+                <TrackCard track={track} variant={"grid"}/>
             ))}
         </div>
     );
