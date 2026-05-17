@@ -4,15 +4,18 @@ import {Disc3, Clock, Image as ImageIcon, Play, Pause, Layers, User} from 'lucid
 import {usePlayerStore} from '@/shared/store/playerStore';
 import {useSecureUrl} from '@/shared/hooks/useSecureUrl';
 import {cn} from '@/shared/lib/utils';
+import React from 'react';
 
-interface TrackCardProps {
+export interface TrackCardProps {
     track: TrackDto;
-    variant: 'list' | 'grid' | 'compact';
+    variant: 'list' | 'grid' | 'compact' | 'playlist-row';
     className?: string;
+    index?: number;
+    addedAt?: string;
     onClick?: () => void;
 }
 
-export const TrackCard = ({track, variant, className, onClick}: TrackCardProps) => {
+export const TrackCard = ({track, variant, className, index, addedAt, onClick}: TrackCardProps) => {
     const {currentTrack, isPlaying, setTrack, togglePlay} = usePlayerStore();
     const isCurrentTrack = currentTrack?.id === track.id;
 
@@ -41,18 +44,20 @@ export const TrackCard = ({track, variant, className, onClick}: TrackCardProps) 
             : '0:00';
     };
 
-    const renderCover = () => {
+    const renderCover = (sizeClass: string = "w-full h-full") => {
         if (!track.coverMinioPath) {
             return (
-                <div className="w-full h-full flex items-center justify-center bg-slate-800">
-                    <Disc3 size={variant === 'compact' ? 20 : 32} className="text-slate-600"/>
+                <div className={`${sizeClass} flex items-center justify-center bg-slate-800`}>
+                    <Disc3 size={variant === 'compact' || variant === 'playlist-row' ? 16 : 32}
+                           className="text-slate-600"/>
                 </div>
             );
         }
         if (isCoverLoading) {
             return (
-                <div className="w-full h-full flex items-center justify-center bg-slate-800 animate-pulse">
-                    <ImageIcon size={variant === 'compact' ? 20 : 32} className="text-slate-600"/>
+                <div className={`${sizeClass} flex items-center justify-center bg-slate-800 animate-pulse`}>
+                    <ImageIcon size={variant === 'compact' || variant === 'playlist-row' ? 16 : 32}
+                               className="text-slate-600"/>
                 </div>
             );
         }
@@ -60,10 +65,72 @@ export const TrackCard = ({track, variant, className, onClick}: TrackCardProps) 
             <img
                 src={coverUrl || ''}
                 alt={track.title}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                className={`${sizeClass} object-cover group-hover:scale-105 transition-transform duration-500`}
             />
         );
     };
+
+    if (variant === 'playlist-row') {
+        return (
+            <div
+                onDoubleClick={() => setTrack(track)}
+                className={cn(
+                    "group grid grid-cols-[48px_minmax(120px,1fr)_120px_60px] md:grid-cols-[48px_minmax(120px,1fr)_150px_60px] gap-4 px-4 py-2.5 items-center rounded-md hover:bg-white/5 transition-colors cursor-pointer w-full border border-transparent",
+                    isCurrentTrack && "bg-slate-800/30 border-slate-800/50",
+                    className
+                )}
+            >
+                <div className="text-sm font-mono text-slate-500 flex items-center h-full">
+                    {isCurrentTrack && isPlaying ? (
+                        <div className="w-4 h-4 flex items-end justify-between gap-[2px]">
+                            <div className="w-1 bg-violet-500 h-full animate-[bounce_1s_infinite]"/>
+                            <div className="w-1 bg-violet-500 h-2/3 animate-[bounce_1s_infinite_100ms]"/>
+                            <div className="w-1 bg-violet-500 h-3/4 animate-[bounce_1s_infinite_200ms]"/>
+                        </div>
+                    ) : isCurrentTrack ? (
+                        <span className="text-violet-500 font-bold">{index}</span>
+                    ) : (
+                        <span className="group-hover:hidden">{index}</span>
+                    )}
+                    {!isCurrentTrack && (
+                        <Play size={16} fill="currentColor" onClick={handlePlayClick}
+                              className="hidden group-hover:block text-slate-300 hover:text-white"/>
+                    )}
+                </div>
+
+                <div className="flex items-center gap-3 min-w-0">
+                    <div
+                        className="w-10 h-10 bg-slate-800 rounded overflow-hidden flex-shrink-0 flex items-center justify-center">
+                        {renderCover()}
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                        <span
+                            className={cn("text-[15px] font-medium truncate flex items-center gap-2", isCurrentTrack ? "text-violet-400" : "text-white")}>
+                            {track.title}
+                            {hasStems && (
+                                <span
+                                    className="bg-slate-800 text-violet-400 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded flex items-center gap-1">
+                                    <Layers size={10}/>
+                                </span>
+                            )}
+                        </span>
+                        <span
+                            className="text-xs text-slate-400 hover:text-slate-300 hover:underline transition-colors truncate">
+                            {track.artistAlias}
+                        </span>
+                    </div>
+                </div>
+
+                <div className="hidden md:block text-[13px] text-slate-500 truncate">
+                    {addedAt ? new Date(addedAt).toLocaleDateString() : '-'}
+                </div>
+
+                <div className="text-right pr-2 text-[13px] font-mono text-slate-500">
+                    {formatDuration(track.durationSeconds)}
+                </div>
+            </div>
+        );
+    }
 
     if (variant === 'compact') {
         return (

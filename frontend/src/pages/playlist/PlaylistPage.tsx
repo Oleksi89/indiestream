@@ -2,11 +2,17 @@ import {useParams} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
 import {playlistApi} from '@/features/playlist/api/playlist.api';
 import {playlistKeys} from '@/features/playlist/hooks/usePlaylists';
-import {Clock, Play, Heart, MoreHorizontal} from 'lucide-react';
+import {Clock, Play, Heart, MoreHorizontal, Disc3, Image as ImageIcon} from 'lucide-react';
 import {Button} from '@/shared/ui/button';
+import {TrackContextMenu} from '@/features/media/ui/TrackContextMenu';
+import {usePlayerStore} from '@/shared/store/playerStore';
+import type {TrackDto} from "@/features/media/types";
+import {TrackCard} from "@/features/media/ui/TrackCard.tsx";
+
 
 export const PlaylistPage = () => {
     const {id} = useParams<{ id: string }>();
+    const {currentTrack, isPlaying, setTrack, togglePlay} = usePlayerStore();
 
     const {data: playlist, isLoading: isPlaylistLoading} = useQuery({
         queryKey: playlistKeys.detail(id!),
@@ -23,12 +29,29 @@ export const PlaylistPage = () => {
     if (isPlaylistLoading) return <div className="p-8 animate-pulse text-slate-500">Loading playlist...</div>;
     if (!playlist) return <div className="p-8 text-center text-slate-400">Playlist not found</div>;
 
+    const handlePlayPlaylist = () => {
+        if (tracksData?.content && tracksData.content.length > 0) {
+            const firstTrack = tracksData.content[0];
+            const trackDto: TrackDto = {
+                id: firstTrack.trackId,
+                title: firstTrack.title,
+                artistId: firstTrack.artistId,
+                artistAlias: firstTrack.artistAlias,
+                durationSeconds: firstTrack.durationSeconds,
+                coverMinioPath: firstTrack.coverMinioPath,
+                stemsMetadata: {}, // Default empty for playlist view
+                minioBucketPath: ''
+            };
+            setTrack(trackDto);
+        }
+    };
+
     return (
         <div className="flex flex-col min-h-full">
             {/* Hero Header */}
             <header
                 className="relative flex items-end gap-6 p-8 pb-6 bg-gradient-to-b from-slate-800/50 to-transparent">
-                <div className="w-52 h-52 shrink-0 shadow-2xl rounded-lg overflow-hidden bg-slate-800">
+                <div className="w-52 h-52 shrink-0 shadow-2xl rounded-xl overflow-hidden bg-slate-800">
                     {playlist.coverMinioPath ? (
                         <img src={playlist.coverMinioPath} className="w-full h-full object-cover" alt=""/>
                     ) : (
@@ -53,7 +76,11 @@ export const PlaylistPage = () => {
 
             {/* Action Bar */}
             <section className="px-8 py-4 flex items-center gap-6">
-                <Button size="icon" className="w-14 h-14 rounded-full bg-violet-600 hover:bg-violet-500 shadow-xl">
+                <Button
+                    onClick={handlePlayPlaylist}
+                    size="icon"
+                    className="w-14 h-14 rounded-full bg-violet-600 hover:bg-violet-500 shadow-xl hover:scale-105 transition-transform"
+                >
                     <Play size={24} fill="currentColor" className="ml-1"/>
                 </Button>
                 <button className="text-slate-400 hover:text-white transition-colors">
@@ -64,49 +91,49 @@ export const PlaylistPage = () => {
                 </button>
             </section>
 
-            {/* Tracks Table */}
-            <section className="px-8 mt-4">
-                <table className="w-full text-left border-collapse">
-                    <thead>
-                    <tr className="text-xs font-semibold text-slate-500 border-b border-slate-800/50 uppercase tracking-wider">
-                        <th className="py-3 pl-4 w-12">#</th>
-                        <th className="py-3">Title</th>
-                        <th className="py-3 hidden md:table-cell">Added At</th>
-                        <th className="py-3 text-right pr-4"><Clock size={16} className="inline-block"/></th>
-                    </tr>
-                    </thead>
-                    <tbody className="divide-y divide-transparent">
+            {/* Tracks List (CSS Grid Table) */}
+            <section className="px-8 mt-4 pb-20">
+                {/* Header Row */}
+                <div
+                    className="grid grid-cols-[48px_minmax(120px,1fr)_120px_60px] md:grid-cols-[48px_minmax(120px,1fr)_150px_60px] gap-4 px-4 py-2 mb-2 text-xs font-semibold text-slate-500 border-b border-slate-800/50 uppercase tracking-wider">
+                    <div>#</div>
+                    <div>Title</div>
+                    <div className="hidden md:block">Added At</div>
+                    <div className="text-right pr-2"><Clock size={16} className="inline-block"/></div>
+                </div>
+
+                {/* Body Rows */}
+                <div className="flex flex-col">
                     {isTracksLoading ? (
-                        <tr>
-                            <td colSpan={4} className="py-10 text-center text-slate-600">Syncing tracks...</td>
-                        </tr>
+                        <div className="py-10 text-center text-slate-600 flex justify-center items-center gap-2">
+                            <Disc3 className="animate-spin h-5 w-5"/> Syncing tracks...
+                        </div>
                     ) : (
-                        tracksData?.content.map((track, index) => (
-                            <tr key={track.trackId}
-                                className="group hover:bg-white/5 transition-colors rounded-md overflow-hidden">
-                                <td className="py-3 pl-4 text-sm font-mono text-slate-500">{index + 1}</td>
-                                <td className="py-3 flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-slate-800 rounded overflow-hidden">
-                                        {track.coverMinioPath &&
-                                            <img src={track.coverMinioPath} className="w-full h-full object-cover"/>}
-                                    </div>
-                                    <div className="flex flex-col min-w-0">
-                                        <span className="text-sm font-semibold text-white truncate">{track.title}</span>
-                                        <span
-                                            className="text-xs text-slate-400 hover:underline cursor-pointer truncate">{track.artistAlias}</span>
-                                    </div>
-                                </td>
-                                <td className="py-3 hidden md:table-cell text-xs text-slate-500">
-                                    {new Date(track.addedAt).toLocaleDateString()}
-                                </td>
-                                <td className="py-3 text-right pr-4 text-xs font-mono text-slate-500">
-                                    {Math.floor(track.durationSeconds / 60)}:{(track.durationSeconds % 60).toString().padStart(2, '0')}
-                                </td>
-                            </tr>
-                        ))
+                        tracksData?.content.map((track, index) => {
+                            const mappedTrack: TrackDto = {
+                                id: track.trackId,
+                                title: track.title,
+                                artistId: track.artistId,
+                                artistAlias: track.artistAlias,
+                                durationSeconds: track.durationSeconds,
+                                coverMinioPath: track.coverMinioPath,
+                                stemsMetadata: {},
+                                minioBucketPath: ''
+                            };
+
+                            return (
+                                <TrackContextMenu key={track.trackId} track={mappedTrack}>
+                                    <TrackCard
+                                        track={mappedTrack}
+                                        variant="playlist-row"
+                                        index={index + 1}
+                                        addedAt={track.addedAt}
+                                    />
+                                </TrackContextMenu>
+                            );
+                        })
                     )}
-                    </tbody>
-                </table>
+                </div>
             </section>
         </div>
     );
