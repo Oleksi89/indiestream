@@ -66,7 +66,7 @@ export const TrackContextMenu: React.FC<TrackContextMenuProps> = ({children, tra
         });
     };
 
-    const editablePlaylists = library?.content.filter(p => p.canEdit !== false) || [];
+    const editablePlaylists = library?.content || [];
 
     return (
         <ContextMenu>
