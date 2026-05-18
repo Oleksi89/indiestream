@@ -12,7 +12,7 @@ import {useToggleLike, useUserLibrary} from "@/features/playlist/hooks/usePlayli
 import {useQuery} from "@tanstack/react-query";
 import {playlistApi} from "@/features/playlist/api/playlist.api.ts";
 import type {TrackMetadataPayload} from "@/features/playlist/types";
-import {AddToPlaylistMenu} from "@/features/playlist/ui/AddToPlaylistMenu.tsx";
+import {AddToPlaylistDropdown} from "@/features/playlist/ui/AddToPlaylistDropdown.tsx";
 
 /**
  * Global Player Bar Component.
@@ -30,7 +30,6 @@ export const PlayerBar = () => {
 
     const [isMixerOpen, setIsMixerOpen] = useState(false);
     const [isPlaylistMenuOpen, setIsPlaylistMenuOpen] = useState(false);
-    const [menuPosition, setMenuPosition] = useState({x: 0, y: 0});
 
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const masterHlsRef = useRef<Hls | null>(null);
@@ -72,13 +71,6 @@ export const PlayerBar = () => {
     const handleLike = () => {
         if (!trackMetadata) return;
         toggleLike.mutate({track: trackMetadata, isLiked});
-    };
-
-    const handleMenuOpen = (e: React.MouseEvent<HTMLButtonElement>) => {
-        e.stopPropagation();
-        const rect = e.currentTarget.getBoundingClientRect();
-        setMenuPosition({x: rect.left, y: rect.top});
-        setIsPlaylistMenuOpen((prev) => !prev);
     };
 
     useEffect(() => {
@@ -221,20 +213,12 @@ export const PlayerBar = () => {
                                className={cn(isLiked && "fill-current", toggleLike.isPending && "opacity-50")}/>
                     </button>
 
-                    <button
-                        onClick={handleMenuOpen}
-                        className="p-2 rounded-full text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
-                    >
-                        <PlusCircle size={18}/>
-                    </button>
-
-                    {isPlaylistMenuOpen && trackMetadata && (
-                        <AddToPlaylistMenu
-                            track={trackMetadata}
-                            position={menuPosition}
-                            onClose={() => setIsPlaylistMenuOpen(false)}
-                        />
-                    )}
+                    <AddToPlaylistDropdown track={trackMetadata!}>
+                        <button
+                            className="p-2 rounded-full text-slate-400 hover:bg-slate-800 hover:text-white transition-colors outline-none focus:bg-slate-800">
+                            <PlusCircle size={18}/>
+                        </button>
+                    </AddToPlaylistDropdown>
                 </div>
             </div>
 

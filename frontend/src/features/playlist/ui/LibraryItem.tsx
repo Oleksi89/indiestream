@@ -1,7 +1,6 @@
 import {Lock, Users, Heart} from 'lucide-react';
 
 import {cn} from '@/shared/lib/utils';
-import {useContextMenu} from '@/shared/hooks/useContextMenu';
 import {PlaylistContextMenu} from './PlaylistContextMenu';
 import type {PlaylistDto} from "@/features/playlist/types";
 
@@ -15,12 +14,6 @@ interface LibraryItemProps {
 export const LibraryItem = ({playlist, viewMode, isActive, onClick}: LibraryItemProps) => {
     const isLikedTracks = playlist.isSystem && playlist.name === 'Liked Tracks';
 
-    // Initialize context menu hook
-    const {position, isOpen, handleContextMenu, closeMenu} = useContextMenu();
-
-    // Prevent opening context menu for the protected system playlist
-    const onRightClick = !isLikedTracks ? handleContextMenu : undefined;
-
     const renderCover = () => {
         if (isLikedTracks) {
             return <Heart
@@ -29,8 +22,12 @@ export const LibraryItem = ({playlist, viewMode, isActive, onClick}: LibraryItem
         if (playlist.coverMinioPath) {
             return <img src={playlist.coverMinioPath} alt={playlist.name} className="w-full h-full object-cover"/>;
         }
-        return <span
-            className={cn("font-bold text-slate-600", viewMode === 'expanded' ? "text-4xl" : "text-lg text-slate-400")}>{playlist.name[0]}</span>;
+        return (
+            <span
+                className={cn("font-bold text-slate-600", viewMode === 'expanded' ? "text-4xl" : "text-lg text-slate-400")}>
+                {playlist.name[0]}
+            </span>
+        );
     };
 
     const renderContent = () => {
@@ -39,9 +36,8 @@ export const LibraryItem = ({playlist, viewMode, isActive, onClick}: LibraryItem
             return (
                 <div
                     onClick={onClick}
-                    onContextMenu={onRightClick}
                     className={cn(
-                        "group flex flex-col gap-3 p-3 rounded-xl cursor-pointer transition-all duration-300",
+                        "group flex flex-col gap-3 p-3 rounded-xl cursor-pointer transition-all duration-300 w-full",
                         isActive ? "bg-slate-800/80 shadow-inner" : "bg-slate-900/40 hover:bg-slate-800/60"
                     )}
                 >
@@ -72,9 +68,8 @@ export const LibraryItem = ({playlist, viewMode, isActive, onClick}: LibraryItem
         return (
             <div
                 onClick={onClick}
-                onContextMenu={onRightClick}
                 className={cn(
-                    "group flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-all duration-200",
+                    "group flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-all duration-200 w-full",
                     isActive ? "bg-slate-800/80 shadow-inner" : "hover:bg-slate-800/40",
                     viewMode === 'collapsed' ? "justify-center" : ""
                 )}
@@ -105,18 +100,16 @@ export const LibraryItem = ({playlist, viewMode, isActive, onClick}: LibraryItem
         );
     };
 
-    return (
-        <>
-            {renderContent()}
+    const content = renderContent();
 
-            {/* Render Context Menu Portal if open */}
-            {isOpen && !isLikedTracks && (
-                <PlaylistContextMenu
-                    playlist={playlist}
-                    position={position}
-                    onClose={closeMenu}
-                />
-            )}
-        </>
+    // Do not attach Context Menu to System "Liked Tracks" playlist
+    if (isLikedTracks) {
+        return content;
+    }
+
+    return (
+        <PlaylistContextMenu playlist={playlist}>
+            {content}
+        </PlaylistContextMenu>
     );
 };

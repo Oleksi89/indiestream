@@ -3,6 +3,7 @@ import {mediaApi} from '../api/media.api';
 import {useAuthStore} from '@/shared/store/authStore';
 import {Disc3} from 'lucide-react';
 import {TrackCard} from './TrackCard';
+import {TrackContextMenu} from './TrackContextMenu';
 
 export const TrackList = () => {
     const user = useAuthStore((state) => state.user);
@@ -39,7 +40,9 @@ export const TrackList = () => {
             <h2 className="text-2xl font-bold text-white mb-6">Your Library</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {data.content.map((track) => (
-                    <TrackCard track={track}/>
+                    <TrackContextMenu key={track.id} track={track}>
+                        <TrackCard track={track} variant="grid"/>
+                    </TrackContextMenu>
                 ))}
             </div>
         </div>
