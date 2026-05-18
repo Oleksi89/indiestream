@@ -4,7 +4,10 @@ import {useAuthStore} from '@/shared/store/authStore';
 import {mediaApi} from '../api/media.api';
 import {useSecureUrl} from '@/shared/hooks/useSecureUrl';
 import {useWebAudio} from '../hooks/useWebAudio';
-import {Play, Pause, SkipForward, Volume2, Disc3, Settings2, Loader2, Heart, PlusCircle} from 'lucide-react';
+import {
+    Play, Pause, SkipForward, SkipBack, Volume2, Disc3, Settings2,
+    Loader2, Heart, PlusCircle, Shuffle, Repeat, Repeat1, ListVideo
+} from 'lucide-react';
 import {cn} from '@/shared/lib/utils';
 import {audioEngine} from "@/features/media/lib/webAudioEngine.ts";
 import Hls from "hls.js";
@@ -23,7 +26,8 @@ export const PlayerBar = () => {
     const {
         currentTrack, isPlaying, togglePlay, volume, setVolume,
         progress, setProgress, duration, setDuration, setPlaying,
-        playbackMode, setPlaybackMode, stemVolumes, setStemVolume
+        playbackMode, setPlaybackMode, stemVolumes, setStemVolume,
+        playNext, playPrevious, isShuffle, toggleShuffle, repeatMode, setRepeatMode, toggleQueue, isQueueOpen
     } = usePlayerStore();
 
     const token = useAuthStore(state => state.token);
@@ -149,6 +153,12 @@ export const PlayerBar = () => {
         }
     };
 
+    const handleRepeatClick = () => {
+        if (repeatMode === 'OFF') setRepeatMode('CONTEXT');
+        else if (repeatMode === 'CONTEXT') setRepeatMode('TRACK');
+        else setRepeatMode('OFF');
+    };
+
     if (!currentTrack || !trackId) return null;
 
     return (
@@ -169,7 +179,7 @@ export const PlayerBar = () => {
                         setDuration(currentTrack.durationSeconds || audioRef.current.duration);
                     }
                 }}
-                onEnded={() => setPlaying(false)}
+                onEnded={() => playNext()}
                 className="hidden"
             />
 
@@ -225,10 +235,21 @@ export const PlayerBar = () => {
             {/* Main Controls */}
             <div className="flex flex-col items-center gap-2 w-[45%]">
                 <div className="flex items-center gap-6">
-                    <button className="text-slate-400 hover:text-white transition-colors disabled:opacity-30"
-                            disabled={isStemsLoading}>
-                        <SkipForward className="rotate-180" size={20}/>
+                    <button
+                        onClick={toggleShuffle}
+                        className={cn("transition-colors", isShuffle ? "text-violet-400" : "text-slate-400 hover:text-white")}
+                    >
+                        <Shuffle size={16}/>
                     </button>
+
+                    <button
+                        onClick={playPrevious}
+                        className="text-slate-400 hover:text-white transition-colors disabled:opacity-30"
+                        disabled={isStemsLoading}
+                    >
+                        <SkipBack size={20}/>
+                    </button>
+
                     <button
                         onClick={togglePlay}
                         disabled={isStemsLoading}
@@ -237,9 +258,22 @@ export const PlayerBar = () => {
                         {isStemsLoading ? <Loader2 className="animate-spin" size={20}/> : isPlaying ?
                             <Pause size={20} fill="black"/> : <Play size={20} fill="black" className="ml-1"/>}
                     </button>
-                    <button className="text-slate-400 hover:text-white transition-colors disabled:opacity-30"
-                            disabled={isStemsLoading}>
+
+                    <button
+                        onClick={playNext}
+                        className="text-slate-400 hover:text-white transition-colors disabled:opacity-30"
+                        disabled={isStemsLoading}
+                    >
                         <SkipForward size={20}/>
+                    </button>
+
+                    <button
+                        onClick={handleRepeatClick}
+                        className={cn("transition-colors relative", repeatMode !== 'OFF' ? "text-violet-400" : "text-slate-400 hover:text-white")}
+                    >
+                        {repeatMode === 'TRACK' ? <Repeat1 size={16}/> : <Repeat size={16}/>}
+                        {repeatMode !== 'OFF' && <span
+                            className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 bg-violet-400 rounded-full"/>}
                     </button>
                 </div>
 
@@ -295,6 +329,13 @@ export const PlayerBar = () => {
                         </button>
                     </div>
                 )}
+
+                <button
+                    onClick={toggleQueue}
+                    className={cn("p-2 rounded-lg transition-colors", isQueueOpen ? "text-violet-400" : "text-slate-400 hover:text-white hover:bg-slate-800")}
+                >
+                    <ListVideo size={20}/>
+                </button>
 
                 {/* Mixer Popover Trigger */}
                 {hasStems && playbackMode === 'stems' && (
