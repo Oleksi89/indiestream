@@ -2,7 +2,7 @@ import {useParams} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
 import {playlistApi} from '@/features/playlist/api/playlist.api';
 import {playlistKeys} from '@/features/playlist/hooks/usePlaylists';
-import {Clock, Play, Heart, MoreHorizontal, Disc3, Image as ImageIcon} from 'lucide-react';
+import {Clock, Play, Heart, MoreHorizontal, Disc3} from 'lucide-react';
 import {Button} from '@/shared/ui/button';
 import {TrackContextMenu} from '@/features/media/ui/TrackContextMenu';
 import {usePlayerStore} from '@/shared/store/playerStore';
@@ -12,7 +12,7 @@ import {TrackCard} from "@/features/media/ui/TrackCard.tsx";
 
 export const PlaylistPage = () => {
     const {id} = useParams<{ id: string }>();
-    const {currentTrack, isPlaying, setTrack, togglePlay} = usePlayerStore();
+    const {setTrack} = usePlayerStore();
 
     const {data: playlist, isLoading: isPlaylistLoading} = useQuery({
         queryKey: playlistKeys.detail(id!),
