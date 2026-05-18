@@ -45,6 +45,7 @@ export interface PlaylistTrackDto {
     artistAlias: string;
     durationSeconds: number;
     coverMinioPath: string | null;
+    stemsMetadata: Record<string, string>;
     addedByUserId: string;
     addedAt: string;
 }
@@ -56,5 +57,6 @@ export interface TrackMetadataPayload {
     artistId: string;
     artistAlias: string;
     durationSeconds: number;
+    stemsMetadata: Record<string, string>;
     coverMinioPath: string | null;
 }

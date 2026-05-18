@@ -158,6 +158,7 @@ public class TrackService implements MediaModuleApi {
                         t.getTitle(),
                         t.getArtistId(),
                         t.getDurationSeconds(),
+                        t.getStemsMetadata(),
                         t.getCoverMinioPath()
                 ))
                 .orElseThrow(() -> new IllegalArgumentException("Track not found"));

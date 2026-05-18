@@ -69,6 +69,7 @@ export const PlayerBar = () => {
         artistId: currentTrack.artistId,
         artistAlias: currentTrack.artistAlias,
         durationSeconds: currentTrack.durationSeconds || 0,
+        stemsMetadata: currentTrack.stemsMetadata,
         coverMinioPath: currentTrack.coverMinioPath || null
     } : null;
 

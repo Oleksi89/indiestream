@@ -37,7 +37,7 @@ export const PlaylistPage = () => {
             artistAlias: track.artistAlias,
             durationSeconds: track.durationSeconds,
             coverMinioPath: track.coverMinioPath,
-            stemsMetadata: {},
+            stemsMetadata: track.stemsMetadata,
             minioBucketPath: ''
         }));
     }, [tracksData]);
