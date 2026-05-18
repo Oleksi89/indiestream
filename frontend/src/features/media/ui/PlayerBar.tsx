@@ -97,6 +97,9 @@ export const PlayerBar = () => {
             masterHlsRef.current = null;
         }
 
+        // Reset time explicitly to prevent ghost progress state
+        audioRef.current.currentTime = 0;
+
         const masterUrl = mediaApi.getHlsManifestUrl(trackId, 'master');
 
         if (Hls.isSupported()) {
@@ -108,8 +111,26 @@ export const PlayerBar = () => {
             hls.loadSource(masterUrl);
             hls.attachMedia(audioRef.current);
             masterHlsRef.current = hls;
+
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                const {isPlaying} = usePlayerStore.getState();
+                if (isPlaying && audioRef.current) {
+                    audioRef.current.play().catch((e) => {
+                        // Only pause on hard autoplay policy blocks, ignore AbortError during fast skips
+                        if (e.name === 'NotAllowedError') setPlaying(false);
+                    });
+                }
+            });
         } else if (audioRef.current.canPlayType('application/vnd.apple.mpegurl')) {
             audioRef.current.src = masterUrl;
+            audioRef.current.addEventListener('loadedmetadata', () => {
+                const {isPlaying} = usePlayerStore.getState();
+                if (isPlaying && audioRef.current) {
+                    audioRef.current.play().catch((e) => {
+                        if (e.name === 'NotAllowedError') setPlaying(false);
+                    });
+                }
+            }, {once: true});
         }
 
         return () => {
@@ -117,8 +138,10 @@ export const PlayerBar = () => {
                 masterHlsRef.current.destroy();
             }
         };
-    }, [trackId, playbackMode, token]);
+    }, [trackId, playbackMode, token, setPlaying]);
 
+
+    // Transport state synchronization
     useEffect(() => {
         if (!audioRef.current) return;
 
@@ -128,11 +151,16 @@ export const PlayerBar = () => {
         }
 
         if (isPlaying) {
-            audioRef.current.play().catch(() => setPlaying(false));
+            const playPromise = audioRef.current.play();
+            if (playPromise !== undefined) {
+                playPromise.catch((e) => {
+                    if (e.name === 'NotAllowedError') setPlaying(false);
+                });
+            }
         } else {
             audioRef.current.pause();
         }
-    }, [isPlaying, playbackMode, setPlaying]);
+    }, [isPlaying, playbackMode, trackId, setPlaying]);
 
     // Volume synchronization for Master Engine
     useEffect(() => {
@@ -179,7 +207,15 @@ export const PlayerBar = () => {
                         setDuration(currentTrack.durationSeconds || audioRef.current.duration);
                     }
                 }}
-                onEnded={() => playNext()}
+                onEnded={() => {
+                    const state = usePlayerStore.getState();
+                    if (state.repeatMode === 'TRACK' && audioRef.current) {
+                        audioRef.current.currentTime = 0;
+                        audioRef.current.play().catch(console.warn);
+                    }
+                    setProgress(0);
+                    playNext();
+                }}
                 className="hidden"
             />
 
