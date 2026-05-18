@@ -1,6 +1,7 @@
 import {useQuery} from '@tanstack/react-query';
 import {mediaApi} from '../api/media.api';
 import {TrackCard} from './TrackCard';
+import {TrackContextMenu} from "@/features/media/ui/TrackContextMenu.tsx";
 
 export const PublicFeed = () => {
     const {data, isLoading, isError} = useQuery({
@@ -30,7 +31,9 @@ export const PublicFeed = () => {
     return (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {data.content.map((track) => (
-                <TrackCard track={track}/>
+                <TrackContextMenu key={track.id} track={track}>
+                    <TrackCard track={track} variant="grid"/>
+                </TrackContextMenu>
             ))}
         </div>
     );
