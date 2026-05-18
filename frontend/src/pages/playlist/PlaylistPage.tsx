@@ -1,3 +1,4 @@
+import {useMemo} from 'react';
 import {useParams} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
 import {playlistApi} from '@/features/playlist/api/playlist.api';
@@ -12,7 +13,7 @@ import {TrackCard} from "@/features/media/ui/TrackCard.tsx";
 
 export const PlaylistPage = () => {
     const {id} = useParams<{ id: string }>();
-    const {setTrack} = usePlayerStore();
+    const {playContext} = usePlayerStore();
 
     const {data: playlist, isLoading: isPlaylistLoading} = useQuery({
         queryKey: playlistKeys.detail(id!),
@@ -26,23 +27,27 @@ export const PlaylistPage = () => {
         enabled: !!id
     });
 
+    // Map playlist items to TrackDto format for the Player Engine
+    const mappedTracks: TrackDto[] = useMemo(() => {
+        if (!tracksData?.content) return [];
+        return tracksData.content.map(track => ({
+            id: track.trackId,
+            title: track.title,
+            artistId: track.artistId,
+            artistAlias: track.artistAlias,
+            durationSeconds: track.durationSeconds,
+            coverMinioPath: track.coverMinioPath,
+            stemsMetadata: {},
+            minioBucketPath: ''
+        }));
+    }, [tracksData]);
+
     if (isPlaylistLoading) return <div className="p-8 animate-pulse text-slate-500">Loading playlist...</div>;
     if (!playlist) return <div className="p-8 text-center text-slate-400">Playlist not found</div>;
 
     const handlePlayPlaylist = () => {
-        if (tracksData?.content && tracksData.content.length > 0) {
-            const firstTrack = tracksData.content[0];
-            const trackDto: TrackDto = {
-                id: firstTrack.trackId,
-                title: firstTrack.title,
-                artistId: firstTrack.artistId,
-                artistAlias: firstTrack.artistAlias,
-                durationSeconds: firstTrack.durationSeconds,
-                coverMinioPath: firstTrack.coverMinioPath,
-                stemsMetadata: {}, // Default empty for playlist view
-                minioBucketPath: ''
-            };
-            setTrack(trackDto);
+        if (mappedTracks.length > 0) {
+            playContext(mappedTracks, `playlist:${id}`, 0);
         }
     };
 
@@ -91,7 +96,7 @@ export const PlaylistPage = () => {
                 </button>
             </section>
 
-            {/* Tracks List (CSS Grid Table) */}
+            {/* Tracks List */}
             <section className="px-8 mt-4 pb-20">
                 {/* Header Row */}
                 <div
@@ -109,29 +114,17 @@ export const PlaylistPage = () => {
                             <Disc3 className="animate-spin h-5 w-5"/> Syncing tracks...
                         </div>
                     ) : (
-                        tracksData?.content.map((track, index) => {
-                            const mappedTrack: TrackDto = {
-                                id: track.trackId,
-                                title: track.title,
-                                artistId: track.artistId,
-                                artistAlias: track.artistAlias,
-                                durationSeconds: track.durationSeconds,
-                                coverMinioPath: track.coverMinioPath,
-                                stemsMetadata: {},
-                                minioBucketPath: ''
-                            };
-
-                            return (
-                                <TrackContextMenu key={track.trackId} track={mappedTrack}>
-                                    <TrackCard
-                                        track={mappedTrack}
-                                        variant="playlist-row"
-                                        index={index + 1}
-                                        addedAt={track.addedAt}
-                                    />
-                                </TrackContextMenu>
-                            );
-                        })
+                        mappedTracks.map((track, index) => (
+                            <TrackContextMenu key={track.id} track={track}>
+                                <TrackCard
+                                    track={track}
+                                    variant="playlist-row"
+                                    index={index + 1}
+                                    addedAt={tracksData?.content[index].addedAt}
+                                    onPlayOverride={() => playContext(mappedTracks, `playlist:${id}`, index)}
+                                />
+                            </TrackContextMenu>
+                        ))
                     )}
                 </div>
             </section>

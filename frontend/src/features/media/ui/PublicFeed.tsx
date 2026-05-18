@@ -1,12 +1,15 @@
 import {useQuery} from '@tanstack/react-query';
 import {mediaApi} from '../api/media.api';
+import {usePlayerStore} from '@/shared/store/playerStore';
 import {TrackCard} from './TrackCard';
 import {TrackContextMenu} from "@/features/media/ui/TrackContextMenu.tsx";
 
 export const PublicFeed = () => {
+    const {playContext} = usePlayerStore();
+
     const {data, isLoading, isError} = useQuery({
         queryKey: ['tracks', 'public'],
-        queryFn: () => mediaApi.getPublicTracks(0, 12), // Limit to 12 items for the homepage initially
+        queryFn: () => mediaApi.getPublicTracks(0, 12),
     });
 
     if (isLoading) {
@@ -30,9 +33,13 @@ export const PublicFeed = () => {
 
     return (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {data.content.map((track) => (
+            {data.content.map((track, index) => (
                 <TrackContextMenu key={track.id} track={track}>
-                    <TrackCard track={track} variant="grid"/>
+                    <TrackCard
+                        track={track}
+                        variant="grid"
+                        onPlayOverride={() => playContext(data.content, 'public-feed', index)}
+                    />
                 </TrackContextMenu>
             ))}
         </div>
