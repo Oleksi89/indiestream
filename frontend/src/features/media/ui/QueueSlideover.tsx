@@ -1,16 +1,94 @@
 import {usePlayerStore} from '@/shared/store/playerStore';
 import {TrackCard} from './TrackCard';
-import {X, ListMusic, History} from 'lucide-react';
+import {X, ListMusic, History, GripVertical} from 'lucide-react';
 import {TrackContextMenu} from './TrackContextMenu';
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors
+} from '@dnd-kit/core';
+import type {DragEndEvent, UniqueIdentifier} from '@dnd-kit/core';
+import {
+    SortableContext,
+    sortableKeyboardCoordinates,
+    verticalListSortingStrategy,
+    useSortable
+} from '@dnd-kit/sortable';
+import {CSS} from '@dnd-kit/utilities';
+import type {TrackDto} from '../types';
+
+interface SortableTrackItemProps {
+    track: TrackDto;
+    id: UniqueIdentifier;
+}
+
+const SortableTrackItem = ({track, id}: SortableTrackItemProps) => {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging
+    } = useSortable({id});
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 50 : 'auto',
+        opacity: isDragging ? 0.8 : 1,
+    };
+
+    return (
+        <div ref={setNodeRef} style={style} className="flex items-center gap-2 group/dnd">
+            <div
+                {...attributes}
+                {...listeners}
+                className="cursor-grab active:cursor-grabbing text-slate-600 hover:text-slate-400 opacity-0 group-hover/dnd:opacity-100 transition-opacity outline-none"
+            >
+                <GripVertical size={16}/>
+            </div>
+            <div className="flex-1 min-w-0 pointer-events-auto">
+                <TrackContextMenu track={track}>
+                    <TrackCard track={track} variant="list"/>
+                </TrackContextMenu>
+            </div>
+        </div>
+    );
+};
 
 export const QueueSlideover = () => {
-    const {isQueueOpen, toggleQueue, currentTrack, queue, history} = usePlayerStore();
+    const {isQueueOpen, toggleQueue, currentTrack, queue, history, reorderQueue} = usePlayerStore();
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, {activationConstraint: {distance: 5}}),
+        useSensor(KeyboardSensor, {coordinateGetter: sortableKeyboardCoordinates})
+    );
+
+    // Generate deterministic unique IDs to prevent conflicts with duplicate tracks in the queue
+    const queueIds = queue.map((track, index) => `${track.id}-idx-${index}`);
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        const {active, over} = event;
+
+        if (over && active.id !== over.id) {
+            const oldIndex = queueIds.indexOf(active.id as string);
+            const newIndex = queueIds.indexOf(over.id as string);
+
+            if (oldIndex !== -1 && newIndex !== -1) {
+                reorderQueue(oldIndex, newIndex);
+            }
+        }
+    };
 
     if (!isQueueOpen) return null;
 
     return (
         <div
-            className="fixed inset-y-0 right-0 w-96 bg-slate-900 border-l border-slate-800 shadow-2xl z-[40] flex flex-col pt-4 pb-24 animate-in slide-in-from-right duration-200">
+            className="absolute right-0 top-0 bottom-0 w-96 bg-slate-900 border-l border-slate-800 shadow-2xl z-[40] flex flex-col pt-4 pb-24 animate-in slide-in-from-right duration-200">
             <div className="flex items-center justify-between px-6 pb-4 border-b border-slate-800">
                 <h2 className="text-lg font-bold text-white flex items-center gap-2">
                     <ListMusic size={20} className="text-violet-400"/>
@@ -31,9 +109,11 @@ export const QueueSlideover = () => {
                     <section>
                         <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 px-2">Now
                             Playing</h3>
-                        <TrackContextMenu track={currentTrack}>
-                            <TrackCard track={currentTrack} variant="list"/>
-                        </TrackContextMenu>
+                        <div className="pl-6">
+                            <TrackContextMenu track={currentTrack}>
+                                <TrackCard track={currentTrack} variant="list"/>
+                            </TrackContextMenu>
+                        </div>
                     </section>
                 )}
 
@@ -41,13 +121,19 @@ export const QueueSlideover = () => {
                 {queue.length > 0 && (
                     <section>
                         <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 px-2">Next Up</h3>
-                        <div className="space-y-1">
-                            {queue.map((track, idx) => (
-                                <TrackContextMenu key={`${track.id}-${idx}`} track={track}>
-                                    <TrackCard track={track} variant="list"/>
-                                </TrackContextMenu>
-                            ))}
-                        </div>
+                        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                            <SortableContext items={queueIds} strategy={verticalListSortingStrategy}>
+                                <div className="space-y-1">
+                                    {queue.map((track, idx) => (
+                                        <SortableTrackItem
+                                            key={queueIds[idx]}
+                                            id={queueIds[idx]}
+                                            track={track}
+                                        />
+                                    ))}
+                                </div>
+                            </SortableContext>
+                        </DndContext>
                     </section>
                 )}
 
@@ -57,8 +143,7 @@ export const QueueSlideover = () => {
                         <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 px-2 flex items-center gap-2">
                             <History size={14}/> Recently Played
                         </h3>
-                        <div className="space-y-1 opacity-60 hover:opacity-100 transition-opacity">
-                            {/* Reverse to show latest first */}
+                        <div className="space-y-1 opacity-60 hover:opacity-100 transition-opacity pl-6">
                             {[...history].reverse().map((track, idx) => (
                                 <TrackContextMenu key={`history-${track.id}-${idx}`} track={track}>
                                     <TrackCard track={track} variant="list"/>

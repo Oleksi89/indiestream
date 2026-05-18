@@ -42,6 +42,7 @@ interface PlayerState {
     toggleShuffle: () => void;
     setRepeatMode: (mode: RepeatMode) => void;
     toggleQueue: () => void;
+    reorderQueue: (startIndex: number, endIndex: number) => void;
 
     // Stems Actions
     setPlaybackMode: (mode: PlaybackMode) => void;
@@ -125,6 +126,13 @@ export const usePlayerStore = create<PlayerState>()(
             addToQueue: (track) => set((state) => ({
                 queue: [track, ...state.queue]
             })),
+
+            reorderQueue: (startIndex, endIndex) => set((state) => {
+                const newQueue = Array.from(state.queue);
+                const [removed] = newQueue.splice(startIndex, 1);
+                newQueue.splice(endIndex, 0, removed);
+                return {queue: newQueue};
+            }),
 
             playNext: () => {
                 const {queue, originalQueue, repeatMode, isShuffle, currentTrack} = get();
