@@ -112,6 +112,7 @@ export const useTogglePlaylistTrack = () => {
                     artistAlias: track.artistAlias || 'Unknown Artist',
                     durationSeconds: track.durationSeconds,
                     coverMinioPath: track.coverMinioPath,
+                    stemsMetadata: track.stemsMetadata,
                     addedByUserId: 'optimistic',
                     addedAt: new Date().toISOString()
                 };
@@ -179,6 +180,7 @@ export const useToggleLike = () => {
                     artistAlias: track.artistAlias || 'Unknown Artist',
                     durationSeconds: track.durationSeconds,
                     coverMinioPath: track.coverMinioPath,
+                    stemsMetadata: track.stemsMetadata,
                     addedByUserId: 'optimistic',
                     addedAt: new Date().toISOString()
                 };

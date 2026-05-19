@@ -13,9 +13,10 @@ export interface TrackCardProps {
     index?: number;
     addedAt?: string;
     onClick?: () => void;
+    onPlayOverride?: () => void; // for Context Playback
 }
 
-export const TrackCard = ({track, variant, className, index, addedAt, onClick}: TrackCardProps) => {
+export const TrackCard = ({track, variant, className, index, addedAt, onClick, onPlayOverride}: TrackCardProps) => {
     const {currentTrack, isPlaying, setTrack, togglePlay} = usePlayerStore();
     const isCurrentTrack = currentTrack?.id === track.id;
 
@@ -33,6 +34,8 @@ export const TrackCard = ({track, variant, className, index, addedAt, onClick}: 
         e.stopPropagation();
         if (isCurrentTrack) {
             togglePlay();
+        } else if (onPlayOverride) {
+            onPlayOverride(); // If the parent component passed the context
         } else {
             setTrack(track);
         }
@@ -73,7 +76,7 @@ export const TrackCard = ({track, variant, className, index, addedAt, onClick}: 
     if (variant === 'playlist-row') {
         return (
             <div
-                onDoubleClick={() => setTrack(track)}
+                onDoubleClick={() => onPlayOverride ? onPlayOverride() : setTrack(track)}
                 className={cn(
                     "group grid grid-cols-[48px_minmax(120px,1fr)_120px_60px] md:grid-cols-[48px_minmax(120px,1fr)_150px_60px] gap-4 px-4 py-2.5 items-center rounded-md hover:bg-white/5 transition-colors cursor-pointer w-full border border-transparent",
                     isCurrentTrack && "bg-slate-800/30 border-slate-800/50",
