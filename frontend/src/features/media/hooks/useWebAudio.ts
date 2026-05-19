@@ -1,5 +1,4 @@
 import {useEffect, useState, useRef} from 'react';
-
 import {usePlayerStore} from '@/shared/store/playerStore';
 import {useAuthStore} from '@/shared/store/authStore';
 import {mediaApi} from '../api/media.api';
@@ -37,10 +36,29 @@ export const useWebAudio = () => {
                 if (loadedCount === stemNames.length) finalizeSetup();
             };
 
+            let isFirst = true;
+
             stemNames.forEach(name => {
                 const audioEl = new Audio();
-                audioEl.crossOrigin = 'anonymous'; // Critical for WebAudio API routing
+                audioEl.crossOrigin = 'anonymous';
                 audioEl.preload = 'auto';
+
+                // Bind the queue engine to the first stem's lifecycle
+                if (isFirst) {
+                    audioEl.addEventListener('ended', () => {
+                        const state = usePlayerStore.getState();
+                        if (state.repeatMode === 'TRACK') {
+                            stemElements.current.forEach(el => {
+                                el.currentTime = 0;
+                                el.play().catch(console.warn);
+                            });
+                        }
+                        state.setProgress(0);
+                        state.playNext();
+                    });
+                    isFirst = false;
+                }
+
                 stemElements.current.set(name, audioEl);
 
                 const streamUrl = mediaApi.getHlsManifestUrl(currentTrack.id, 'stems', name);
@@ -129,28 +147,18 @@ export const useWebAudio = () => {
         }
     }, [isPlaying, isStemsLoading, playbackMode]);
 
-    // Timeline Polling (Reads from the first available HTML5 element)
+    // Timeline Polling
     useEffect(() => {
         if (playbackMode !== 'stems' || !isPlaying || isStemsLoading) return;
 
         const intervalId = setInterval(() => {
             const firstStem = Array.from(stemElements.current.values())[0];
             if (!firstStem) return;
-
-            const time = firstStem.currentTime;
-            const duration = usePlayerStore.getState().duration;
-
-            // Auto-stop at the end of the track
-            if (duration > 0 && time >= duration) {
-                setProgress(duration);
-                setPlaying(false);
-            } else {
-                setProgress(time);
-            }
-        }, 250); // 250ms standard tick rate for media players to balance precision and CPU load
+            setProgress(firstStem.currentTime);
+        }, 250);
 
         return () => clearInterval(intervalId);
-    }, [isPlaying, playbackMode, isStemsLoading, setProgress, setPlaying]);
+    }, [isPlaying, playbackMode, isStemsLoading, setProgress]);
 
     // Mixer Synchronization
     useEffect(() => {

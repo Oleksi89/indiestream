@@ -3,23 +3,27 @@ import {Navbar} from '@/shared/components/Navbar';
 import {PlayerBar} from '@/features/media/ui/PlayerBar';
 import {usePlayerStore} from '@/shared/store/playerStore';
 import {LibrarySidebar} from '@/features/playlist/ui/LibrarySidebar';
+import {QueueSlideover} from '@/features/media/ui/QueueSlideover';
 import {cn} from "@/shared/lib/utils.ts";
 
 /**
  * Layout for authenticated pages.
  * Includes the persistent navigation, the reactive Library Sidebar,
- * content container, and global audio player.
+ * content container, global audio player, and dynamic Queue Slideover.
  */
 export const AuthenticatedLayout = () => {
-    // Observe the currentTrack to determine if the player bar is visible
-    const currentTrack = usePlayerStore((state) => state.currentTrack);
+    const {currentTrack, isQueueOpen} = usePlayerStore();
 
     return (
-        <div className="flex h-screen bg-slate-950 text-slate-100 overflow-hidden">
-            {/* Persistent Library Sidebar */}
+        <div className="flex h-screen bg-slate-950 text-slate-100 overflow-hidden relative">
+            {/* Persistent Library Sidebar (Left) */}
             <LibrarySidebar/>
 
-            <div className="flex-1 flex flex-col min-w-0 relative">
+            {/* Central Content Area - Dynamically resizes when Queue is open */}
+            <div className={cn(
+                "flex-1 flex flex-col min-w-0 relative transition-all duration-300",
+                isQueueOpen ? "mr-96" : "mr-0" // w-96 = 24rem (384px)
+            )}>
                 <Navbar/>
 
                 <main className={cn(
@@ -36,6 +40,9 @@ export const AuthenticatedLayout = () => {
                     <PlayerBar/>
                 </div>
             </div>
+
+            {/* Right Sidebar Overlay (Queue Engine) */}
+            <QueueSlideover/>
         </div>
     );
 };

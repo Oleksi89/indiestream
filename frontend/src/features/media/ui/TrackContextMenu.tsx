@@ -56,6 +56,7 @@ export const TrackContextMenu: React.FC<TrackContextMenuProps> = ({children, tra
             artistId: track.artistId,
             artistAlias: track.artistAlias,
             coverMinioPath: track.coverMinioPath ?? null,
+            stemsMetadata: track.stemsMetadata,
             durationSeconds: track.durationSeconds
         };
 

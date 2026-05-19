@@ -1,5 +1,6 @@
 package com.indiestream.media;
 
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -11,6 +12,7 @@ public record TrackMetadata(
         String title,
         UUID artistId,
         Integer durationSeconds,
+        Map<String, String> stemsMetadata,
         String coverMinioPath
 ) {
 }

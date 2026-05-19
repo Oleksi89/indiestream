@@ -132,6 +132,7 @@ public class PlaylistService {
                             metadata.artistId(),
                             artistAlias,
                             metadata.durationSeconds(),
+                            metadata.stemsMetadata(),
                             metadata.coverMinioPath(),
                             pt.getAddedById(),
                             pt.getAddedAt()

@@ -1,12 +1,14 @@
 import {useQuery} from '@tanstack/react-query';
 import {mediaApi} from '../api/media.api';
 import {useAuthStore} from '@/shared/store/authStore';
+import {usePlayerStore} from '@/shared/store/playerStore';
 import {Disc3} from 'lucide-react';
 import {TrackCard} from './TrackCard';
 import {TrackContextMenu} from './TrackContextMenu';
 
 export const TrackList = () => {
     const user = useAuthStore((state) => state.user);
+    const {playContext} = usePlayerStore();
 
     // Using TanStack Query strictly for server state fetching as per constraints
     const {data, isLoading, isError} = useQuery({
@@ -39,9 +41,13 @@ export const TrackList = () => {
         <div className="w-full space-y-4">
             <h2 className="text-2xl font-bold text-white mb-6">Your Library</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {data.content.map((track) => (
+                {data.content.map((track, index) => (
                     <TrackContextMenu key={track.id} track={track}>
-                        <TrackCard track={track} variant="grid"/>
+                        <TrackCard
+                            track={track}
+                            variant="grid"
+                            onPlayOverride={() => playContext(data.content, `artist-library:${user?.id}`, index)}
+                        />
                     </TrackContextMenu>
                 ))}
             </div>
