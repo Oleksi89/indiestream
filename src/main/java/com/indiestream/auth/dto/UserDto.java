@@ -11,6 +11,7 @@ public record UserDto(
         String username,
         String alias,
         Role role,
+        UserProfileDto profile,
         Instant createdAt
 ) {
 }

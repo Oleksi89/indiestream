@@ -33,6 +33,9 @@ public class User {
     @Column(nullable = false)
     private Role role;
 
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY, optional = false)
+    private UserProfile profile;
+
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;
 
@@ -48,5 +51,13 @@ public class User {
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = Instant.now();
+    }
+
+    // Helper to ensure bidirectional sync
+    public void setProfile(UserProfile profile) {
+        if (profile != null) {
+            profile.setUser(this);
+        }
+        this.profile = profile;
     }
 }
