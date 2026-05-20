@@ -19,10 +19,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -165,13 +162,14 @@ public class TrackService implements MediaModuleApi {
     }
 
     private TrackDto mapToDto(Track track) {
-        String artistAlias = authModuleApi.getUserPublicProfile(track.getArtistId())
-                .map(UserPublicProfile::alias)
-                .orElse("Unknown Artist");
+        Optional<UserPublicProfile> profile = authModuleApi.getUserPublicProfile(track.getArtistId());
+        String artistAlias = profile.map(UserPublicProfile::alias).orElse("Unknown Artist");
+        String artistUsername = profile.map(UserPublicProfile::username).orElse("unknown");
 
         return new TrackDto(
                 track.getId(),
                 track.getArtistId(),
+                artistUsername,
                 artistAlias,
                 track.getTitle(),
                 track.getMinioBucketPath(),

@@ -32,6 +32,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -121,15 +122,17 @@ public class PlaylistService {
         return playlistTrackRepository.findAllByIdPlaylistIdOrderByPositionIndexAsc(playlistId, pageable)
                 .map(pt -> {
                     // Resolve track metadata through cross-module API
-                    var metadata = mediaModuleApi.getTrackMetadata(pt.getId().getTrackId());
-                    String artistAlias = authModuleApi.getUserPublicProfile(metadata.artistId())
-                            .map(UserPublicProfile::alias)
-                            .orElse("Unknown Artist");
+                    TrackMetadata metadata = mediaModuleApi.getTrackMetadata(pt.getId().getTrackId());
+                    Optional<UserPublicProfile> profile = authModuleApi.getUserPublicProfile(metadata.artistId());
+
+                    String artistAlias = profile.map(UserPublicProfile::alias).orElse("Unknown Artist");
+                    String artistUsername = profile.map(UserPublicProfile::username).orElse("unknown");
 
                     return new PlaylistTrackDetailsDto(
                             pt.getId().getTrackId(),
                             metadata.title(),
                             metadata.artistId(),
+                            artistUsername,
                             artistAlias,
                             metadata.durationSeconds(),
                             metadata.stemsMetadata(),
@@ -381,13 +384,14 @@ public class PlaylistService {
     }
 
     private PlaylistDto mapToDto(Playlist playlist) {
-        String ownerAlias = authModuleApi.getUserPublicProfile(playlist.getOwnerId())
-                .map(UserPublicProfile::alias)
-                .orElse("Unknown User");
+        Optional<UserPublicProfile> profile = authModuleApi.getUserPublicProfile(playlist.getOwnerId());
+        String ownerAlias = profile.map(UserPublicProfile::alias).orElse("Unknown User");
+        String ownerUsername = profile.map(UserPublicProfile::username).orElse("unknown");
 
         return new PlaylistDto(
                 playlist.getId(),
                 playlist.getOwnerId(),
+                ownerUsername,
                 ownerAlias,
                 playlist.getName(),
                 playlist.getDescription(),
