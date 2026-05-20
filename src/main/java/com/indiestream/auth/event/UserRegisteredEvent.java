@@ -1,4 +1,4 @@
-package com.indiestream.auth;
+package com.indiestream.auth.event;
 
 import java.util.UUID;
 

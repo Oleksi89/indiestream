@@ -1,9 +1,6 @@
 package com.indiestream.config;
 
-import com.indiestream.auth.exception.EmailAlreadyInUseException;
-import com.indiestream.auth.exception.UsernameAlreadyInUseException;
-import com.indiestream.auth.exception.InvalidFileException;
-import com.indiestream.auth.exception.FileTooLargeException;
+import com.indiestream.auth.exception.*;
 import com.indiestream.playlist.exception.PlaylistNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -51,6 +48,14 @@ public class GlobalExceptionHandler {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.PAYLOAD_TOO_LARGE, ex.getMessage());
         problemDetail.setTitle("Payload Too Large");
         problemDetail.setType(URI.create("https://indiestream.com/errors/file-too-large"));
+        return problemDetail;
+    }
+
+    @ExceptionHandler(CannotFollowSelfException.class)
+    public ProblemDetail handleCannotFollowSelf(CannotFollowSelfException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+        problemDetail.setTitle("Invalid Follow Operation");
+        problemDetail.setType(URI.create("https://indiestream.com/errors/invalid-follow"));
         return problemDetail;
     }
 
