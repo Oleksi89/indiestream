@@ -30,12 +30,35 @@ export interface AuthResponse {
     token: string;
 }
 
+export interface UserProfileDto {
+    bio: string | null;
+    avatarPath: string | null;
+    bannerPath: string | null;
+    isPrivate: boolean;
+    hideSubscriptions: boolean;
+    updatedAt: string;
+}
+
 // Represents the User entity returned by the backend (without sensitive data)
 export interface UserDto {
-    id: string | number;
+    id: string;
     email: string;
     username: string;
     alias: string;
     role: 'USER' | 'ARTIST' | 'ADMIN';
-    createdAt?: string;
+    profile?: UserProfileDto;
+    createdAt: string;
+    // Client-side projection fields for social graph state
+    followersCount?: number;
+    followingCount?: number;
+    isFollowedByMe?: boolean;
+}
+
+export interface PageResponse<T> {
+    content: T[];
+    pageNumber: number;
+    pageSize: number;
+    totalElements: number;
+    totalPages: number;
+    isLast: boolean;
 }
