@@ -2,9 +2,7 @@ package com.indiestream.auth.service;
 
 import com.indiestream.auth.exception.FileTooLargeException;
 import com.indiestream.auth.exception.InvalidFileException;
-import io.minio.MinioClient;
-import io.minio.PutObjectArgs;
-import io.minio.RemoveObjectArgs;
+import io.minio.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -62,6 +60,32 @@ public class ProfileStorageService {
         } catch (Exception e) {
             // TODO: [Auth Storage] - Implement a dead-letter queue for failed deletions if strict cleanup is required later.
             log.warn("Failed to delete old asset from MinIO: {}", objectPath, e);
+        }
+    }
+
+    public StatObjectResponse getObjectMetadata(String objectName) {
+        try {
+            return minioClient.statObject(
+                    StatObjectArgs.builder()
+                            .bucket(bucket)
+                            .object(objectName)
+                            .build()
+            );
+        } catch (Exception e) {
+            throw new RuntimeException("Profile media not found.");
+        }
+    }
+
+    public InputStream getObjectStream(String objectName) {
+        try {
+            return minioClient.getObject(
+                    GetObjectArgs.builder()
+                            .bucket(bucket)
+                            .object(objectName)
+                            .build()
+            );
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to stream profile media.");
         }
     }
 

@@ -2,8 +2,11 @@ package com.indiestream.auth.controller;
 
 import com.indiestream.auth.dto.UpdateUserProfileRequestDto;
 import com.indiestream.auth.dto.UserDto;
+import com.indiestream.auth.service.ProfileStorageService;
 import com.indiestream.auth.service.UserService;
+import io.minio.StatObjectResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +24,7 @@ import java.util.UUID;
 public class UserController {
 
     private final UserService userService;
+    private final ProfileStorageService profileStorageService;
 
     /**
      * Retrieves the profile of the currently authenticated user.
@@ -60,6 +64,53 @@ public class UserController {
     @PostMapping(value = "/me/banner", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<UserDto> updateBanner(@RequestParam("file") MultipartFile file, Principal principal) {
         return ResponseEntity.ok(userService.updateBanner(extractId(principal), file));
+    }
+
+    /**
+     * Proxies the avatar image securely via the backend.
+     */
+    @GetMapping("/{username}/avatar")
+    public ResponseEntity<InputStreamResource> getAvatar(@PathVariable String username) {
+        UserDto user = userService.getProfileByUsername(username, null)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (user.profile() == null || user.profile().avatarPath() == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+
+        StatObjectResponse metadata = profileStorageService.getObjectMetadata(user.profile().avatarPath());
+        InputStreamResource resource = new InputStreamResource(
+                profileStorageService.getObjectStream(user.profile().avatarPath())
+        );
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(metadata.contentType()))
+                .contentLength(metadata.size())
+                .body(resource);
+    }
+
+    /**
+     * Proxies the banner image securely via the backend.
+     */
+    @GetMapping("/{username}/banner")
+    public ResponseEntity<InputStreamResource> getBanner(@PathVariable String username) {
+        UserDto user = userService.getProfileByUsername(username, null)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (user.profile() == null || user.profile().bannerPath() == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        StatObjectResponse metadata = profileStorageService.getObjectMetadata(user.profile().bannerPath());
+        InputStreamResource resource = new InputStreamResource(
+                profileStorageService.getObjectStream(user.profile().bannerPath())
+        );
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(metadata.contentType()))
+                .contentLength(metadata.size())
+                .body(resource);
     }
 
     private UUID extractId(Principal principal) {
