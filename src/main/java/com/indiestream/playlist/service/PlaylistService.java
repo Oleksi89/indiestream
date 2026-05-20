@@ -2,7 +2,7 @@ package com.indiestream.playlist.service;
 
 import com.indiestream.auth.AuthModuleApi;
 import com.indiestream.auth.UserPublicProfile;
-import com.indiestream.auth.UserRegisteredEvent;
+import com.indiestream.auth.event.UserRegisteredEvent;
 import com.indiestream.media.MediaModuleApi;
 import com.indiestream.media.TrackMetadata;
 import com.indiestream.playlist.domain.*;

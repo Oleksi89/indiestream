@@ -2,7 +2,7 @@ package com.indiestream.auth.service;
 
 import com.indiestream.auth.AuthModuleApi;
 import com.indiestream.auth.UserPublicProfile;
-import com.indiestream.auth.UserRegisteredEvent;
+import com.indiestream.auth.event.UserRegisteredEvent;
 import com.indiestream.auth.domain.Role;
 import com.indiestream.auth.domain.User;
 import com.indiestream.auth.domain.UserProfile;
