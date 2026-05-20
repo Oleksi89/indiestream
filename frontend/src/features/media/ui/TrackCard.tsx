@@ -5,6 +5,7 @@ import {usePlayerStore} from '@/shared/store/playerStore';
 import {useSecureUrl} from '@/shared/hooks/useSecureUrl';
 import {cn} from '@/shared/lib/utils';
 import React from 'react';
+import {Link} from 'react-router-dom';
 
 export interface TrackCardProps {
     track: TrackDto;
@@ -117,10 +118,13 @@ export const TrackCard = ({track, variant, className, index, addedAt, onClick, o
                                 </span>
                             )}
                         </span>
-                        <span
-                            className="text-xs text-slate-400 hover:text-slate-300 hover:underline transition-colors truncate">
+                        <Link
+                            to={`/user/${track.artistUsername}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-xs text-slate-400 hover:text-slate-300 hover:underline transition-colors truncate w-fit"
+                        >
                             {track.artistAlias}
-                        </span>
+                        </Link>
                     </div>
                 </div>
 
@@ -204,7 +208,13 @@ export const TrackCard = ({track, variant, className, index, addedAt, onClick, o
                         </span>
                         <div className="flex items-center gap-1 text-slate-400 text-xs mt-0.5">
                             <User size={12} className="shrink-0"/>
-                            <span className="truncate hover:text-slate-300 transition-colors">{track.artistAlias}</span>
+                            <Link
+                                to={`/user/${track.artistUsername}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="truncate hover:text-slate-300 transition-colors"
+                            >
+                                {track.artistAlias}
+                            </Link>
                         </div>
                     </div>
                 </div>
@@ -254,7 +264,13 @@ export const TrackCard = ({track, variant, className, index, addedAt, onClick, o
                     <div
                         className="flex items-center gap-1.5 mt-0.5 text-slate-400 text-xs hover:text-slate-300 transition-colors truncate">
                         <User size={12} className="shrink-0"/>
-                        <span className="truncate">{track.artistAlias}</span>
+                        <Link
+                            to={`/user/${track.artistUsername}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="truncate"
+                        >
+                            {track.artistAlias}
+                        </Link>
                     </div>
                     <div
                         className="flex items-center gap-2 mt-1.5 text-slate-500 text-[11px] uppercase tracking-wider font-semibold">

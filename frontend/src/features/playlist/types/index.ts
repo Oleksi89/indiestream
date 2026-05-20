@@ -1,6 +1,7 @@
 export interface PlaylistDto {
     id: string;
     ownerId: string;
+    ownerUsername: string;
     ownerAlias: string;
     name: string;
     description: string | null;
@@ -42,6 +43,7 @@ export interface PlaylistTrackDto {
     trackId: string;
     title: string;
     artistId: string;
+    artistUsername: string;
     artistAlias: string;
     durationSeconds: number;
     coverMinioPath: string | null;
