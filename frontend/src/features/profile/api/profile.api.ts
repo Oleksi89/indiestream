@@ -36,6 +36,20 @@ export const profileApi = {
         return response.data;
     },
 
+    getAvatarBlob: async (username: string): Promise<Blob> => {
+        const response = await apiClient.get(`/users/${username}/avatar`, {
+            responseType: 'blob'
+        });
+        return response.data;
+    },
+
+    getBannerBlob: async (username: string): Promise<Blob> => {
+        const response = await apiClient.get(`/users/${username}/banner`, {
+            responseType: 'blob'
+        });
+        return response.data;
+    },
+
     followUser: async (username: string): Promise<void> => {
         await apiClient.post(`/users/${username}/follow`);
     },
