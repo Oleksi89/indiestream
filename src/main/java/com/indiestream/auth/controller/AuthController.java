@@ -1,9 +1,6 @@
 package com.indiestream.auth.controller;
 
-import com.indiestream.auth.dto.AuthResponseDto;
-import com.indiestream.auth.dto.LoginRequestDto;
-import com.indiestream.auth.dto.RegisterRequestDto;
-import com.indiestream.auth.dto.UserDto;
+import com.indiestream.auth.dto.*;
 import com.indiestream.auth.repository.UserRepository;
 import com.indiestream.auth.security.JwtService;
 import com.indiestream.auth.service.TokenBlacklistService;
@@ -44,8 +41,8 @@ public class AuthController {
      * @return Created UserDto without sensitive data.
      */
     @PostMapping("/register")
-    public ResponseEntity<UserDto> register(@RequestBody RegisterRequestDto request) {
-        UserDto createdUser = userService.register(request);
+    public ResponseEntity<UserProfileResponse> register(@RequestBody RegisterRequestDto request) {
+        UserProfileResponse createdUser = userService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
     }
 

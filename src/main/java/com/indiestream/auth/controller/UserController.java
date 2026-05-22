@@ -2,6 +2,7 @@ package com.indiestream.auth.controller;
 
 import com.indiestream.auth.dto.UpdateUserProfileRequestDto;
 import com.indiestream.auth.dto.UserDto;
+import com.indiestream.auth.dto.UserProfileResponse;
 import com.indiestream.auth.service.ProfileStorageService;
 import com.indiestream.auth.service.UserService;
 import io.minio.StatObjectResponse;
@@ -44,7 +45,7 @@ public class UserController {
      * Resolves a profile publicly. Subject to visibility constraints defined in the service tier.
      */
     @GetMapping("/{username}/profile")
-    public ResponseEntity<UserDto> getProfile(@PathVariable String username, Principal principal) {
+    public ResponseEntity<UserProfileResponse> getProfile(@PathVariable String username, Principal principal) {
         UUID requesterId = principal != null ? extractId(principal) : null;
         return userService.getProfileByUsername(username, requesterId)
                 .map(ResponseEntity::ok)
@@ -52,17 +53,17 @@ public class UserController {
     }
 
     @PutMapping("/me/profile")
-    public ResponseEntity<UserDto> updateProfile(@RequestBody UpdateUserProfileRequestDto request, Principal principal) {
+    public ResponseEntity<UserProfileResponse> updateProfile(@RequestBody UpdateUserProfileRequestDto request, Principal principal) {
         return ResponseEntity.ok(userService.updateProfile(extractId(principal), request));
     }
 
     @PostMapping(value = "/me/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<UserDto> updateAvatar(@RequestParam("file") MultipartFile file, Principal principal) {
+    public ResponseEntity<UserProfileResponse> updateAvatar(@RequestParam("file") MultipartFile file, Principal principal) {
         return ResponseEntity.ok(userService.updateAvatar(extractId(principal), file));
     }
 
     @PostMapping(value = "/me/banner", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<UserDto> updateBanner(@RequestParam("file") MultipartFile file, Principal principal) {
+    public ResponseEntity<UserProfileResponse> updateBanner(@RequestParam("file") MultipartFile file, Principal principal) {
         return ResponseEntity.ok(userService.updateBanner(extractId(principal), file));
     }
 
@@ -71,7 +72,7 @@ public class UserController {
      */
     @GetMapping("/{username}/avatar")
     public ResponseEntity<InputStreamResource> getAvatar(@PathVariable String username) {
-        UserDto user = userService.getProfileByUsername(username, null)
+        UserProfileResponse user = userService.getProfileByUsername(username, null)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         if (user.profile() == null || user.profile().avatarPath() == null) {
@@ -95,7 +96,7 @@ public class UserController {
      */
     @GetMapping("/{username}/banner")
     public ResponseEntity<InputStreamResource> getBanner(@PathVariable String username) {
-        UserDto user = userService.getProfileByUsername(username, null)
+        UserProfileResponse user = userService.getProfileByUsername(username, null)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         if (user.profile() == null || user.profile().bannerPath() == null) {

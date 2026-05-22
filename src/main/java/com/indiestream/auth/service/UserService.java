@@ -2,14 +2,12 @@ package com.indiestream.auth.service;
 
 import com.indiestream.auth.AuthModuleApi;
 import com.indiestream.auth.UserPublicProfile;
-import com.indiestream.auth.event.UserRegisteredEvent;
 import com.indiestream.auth.domain.Role;
 import com.indiestream.auth.domain.User;
 import com.indiestream.auth.domain.UserProfile;
-import com.indiestream.auth.dto.RegisterRequestDto;
-import com.indiestream.auth.dto.UpdateUserProfileRequestDto;
-import com.indiestream.auth.dto.UserDto;
-import com.indiestream.auth.dto.UserProfileDto;
+import com.indiestream.auth.dto.*;
+import com.indiestream.auth.event.UserRegisteredEvent;
+import com.indiestream.auth.repository.UserFollowerRepository;
 import com.indiestream.auth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -28,43 +26,46 @@ import java.util.UUID;
 public class UserService implements AuthModuleApi {
 
     private final UserRepository userRepository;
+    private final UserFollowerRepository followerRepository;
     private final PasswordEncoder passwordEncoder;
     private final ApplicationEventPublisher events;
     private final ProfileStorageService profileStorageService;
 
     /**
      * Retrieves a user by their UUID.
-     * Used primarily for fetching profiles via the Security Principal.
+     * Uses fast-path mapping since the authenticated user is requesting themselves.
      */
     @Transactional(readOnly = true)
     public Optional<UserDto> getUserById(UUID id) {
-        return userRepository.findById(id)
-                .map(this::mapToDto);
+        return userRepository.findById(id).map(this::mapToBasicDto);
     }
 
     @Transactional(readOnly = true)
     public Optional<UserDto> getUserByEmail(String email) {
-        return userRepository.findByEmail(email)
-                .map(this::mapToDto);
+        return userRepository.findByEmail(email).map(this::mapToBasicDto);
     }
 
     /**
-     * Resolves user by username. Evaluates privacy guard.
+     * Resolves user by username. Evaluates privacy guard and populates the View Model.
      */
     @Transactional(readOnly = true)
-    public Optional<UserDto> getProfileByUsername(String username, UUID currentUserId) {
+    public Optional<UserProfileResponse> getProfileByUsername(String username, UUID currentUserId) {
         return userRepository.findByUsername(username).map(user -> {
             boolean isOwner = currentUserId != null && currentUserId.equals(user.getId());
             if (user.getProfile().isPrivate() && !isOwner) {
                 // Return restricted view or throw AccessDenied. For now, we return empty to trigger 404.
                 return null;
             }
-            return mapToDto(user);
+            return mapToProfileResponse(user, currentUserId);
         });
     }
 
+    /**
+     * Registers a new user and provisions an empty profile.
+     * Bypasses social graph DB queries entirely during initialization.
+     */
     @Transactional
-    public UserDto register(RegisterRequestDto request) {
+    public UserProfileResponse register(RegisterRequestDto request) {
         if (userRepository.existsByEmail(request.email())) {
             throw new EmailAlreadyInUseException("Email is already in use.");
         }
@@ -91,27 +92,31 @@ public class UserService implements AuthModuleApi {
                 savedUser.getAlias()
         ));
 
-        return mapToDto(savedUser);
+        return mapToProfileResponse(savedUser, savedUser.getId());
     }
 
     /**
      * Idempotent update of text metadata.
      */
     @Transactional
-    public UserDto updateProfile(UUID userId, UpdateUserProfileRequestDto request) {
+    public UserProfileResponse updateProfile(UUID userId, UpdateUserProfileRequestDto request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (request.alias() != null && !request.alias().isBlank()) {
+            user.setAlias(request.alias());
+        }
 
         UserProfile profile = user.getProfile();
         if (request.bio() != null) profile.setBio(request.bio());
         if (request.isPrivate() != null) profile.setPrivate(request.isPrivate());
         if (request.hideSubscriptions() != null) profile.setHideSubscriptions(request.hideSubscriptions());
 
-        return mapToDto(userRepository.save(user));
+        return mapToProfileResponse(userRepository.save(user), userId);
     }
 
     @Transactional
-    public UserDto updateAvatar(UUID userId, MultipartFile file) {
+    public UserProfileResponse updateAvatar(UUID userId, MultipartFile file) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
@@ -122,13 +127,13 @@ public class UserService implements AuthModuleApi {
         profile.setAvatarPath(newAvatarPath);
 
         userRepository.save(user);
-        profileStorageService.deleteFile(oldAvatar); // Cleanup MinIO after successful DB save
+        profileStorageService.deleteFile(oldAvatar);
 
-        return mapToDto(user);
+        return mapToProfileResponse(user, userId);
     }
 
     @Transactional
-    public UserDto updateBanner(UUID userId, MultipartFile file) {
+    public UserProfileResponse updateBanner(UUID userId, MultipartFile file) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
@@ -141,7 +146,7 @@ public class UserService implements AuthModuleApi {
         userRepository.save(user);
         profileStorageService.deleteFile(oldBanner);
 
-        return mapToDto(user);
+        return mapToProfileResponse(user, userId);
     }
 
     @Override
@@ -163,27 +168,50 @@ public class UserService implements AuthModuleApi {
                 .orElse("Unknown User");
     }
 
-    private UserDto mapToDto(User user) {
-        UserProfileDto profileDto = null;
-        if (user.getProfile() != null) {
-            profileDto = new UserProfileDto(
-                    user.getProfile().getBio(),
-                    user.getProfile().getAvatarPath(),
-                    user.getProfile().getBannerPath(),
-                    user.getProfile().isPrivate(),
-                    user.getProfile().isHideSubscriptions(),
-                    user.getProfile().getUpdatedAt()
-            );
-        }
-
+    private UserDto mapToBasicDto(User user) {
         return new UserDto(
                 user.getId(),
                 user.getEmail(),
                 user.getUsername(),
                 user.getAlias(),
                 user.getRole(),
-                profileDto,
+                extractProfileDto(user),
                 user.getCreatedAt()
+        );
+    }
+
+    /**
+     * Maps Entity to View Model Response with short-circuit social state verification.
+     */
+    private UserProfileResponse mapToProfileResponse(User user, UUID currentUserId) {
+        // Fast-path optimization: avoid DB query if anonymous or checking own profile
+        boolean isFollowed = currentUserId != null
+                && !currentUserId.equals(user.getId())
+                && followerRepository.existsByIdFollowerIdAndIdFollowedId(currentUserId, user.getId());
+
+        return new UserProfileResponse(
+                user.getId(),
+                user.getEmail(),
+                user.getUsername(),
+                user.getAlias(),
+                user.getRole(),
+                extractProfileDto(user),
+                user.getCreatedAt(),
+                user.getProfile() != null ? user.getProfile().getFollowersCount() : 0L,
+                user.getProfile() != null ? user.getProfile().getFollowingCount() : 0L,
+                isFollowed
+        );
+    }
+
+    private UserProfileDto extractProfileDto(User user) {
+        if (user.getProfile() == null) return null;
+        return new UserProfileDto(
+                user.getProfile().getBio(),
+                user.getProfile().getAvatarPath(),
+                user.getProfile().getBannerPath(),
+                user.getProfile().isPrivate(),
+                user.getProfile().isHideSubscriptions(),
+                user.getProfile().getUpdatedAt()
         );
     }
 }
