@@ -12,6 +12,7 @@ import toast from 'react-hot-toast';
 import {useSecureUrl} from '@/shared/hooks/useSecureUrl';
 
 const profileSchema = z.object({
+    alias: z.string().min(1, "Display name is required").max(100, "Maximum 100 characters"),
     bio: z.string().max(500, "Bio cannot exceed 500 characters").optional().nullable(),
 });
 
@@ -72,6 +73,7 @@ export const EditProfileModal = ({isOpen, onOpenChange, user}: EditProfileModalP
     const {register, handleSubmit, formState: {errors, isSubmitting}} = useForm({
         resolver: zodResolver(profileSchema),
         defaultValues: {
+            alias: user.alias,
             bio: user.profile?.bio || '',
         },
     });
@@ -80,7 +82,10 @@ export const EditProfileModal = ({isOpen, onOpenChange, user}: EditProfileModalP
         mutationFn: async (data: ProfileFormData) => {
             if (avatarFile) await profileApi.updateAvatar(avatarFile);
             if (bannerFile) await profileApi.updateBanner(bannerFile);
-            await profileApi.updateProfileText({bio: data.bio ?? undefined});
+            await profileApi.updateProfileText({
+                alias: data.alias,
+                bio: data.bio ?? undefined
+            });
         },
         onSuccess: () => {
             queryClient.invalidateQueries({queryKey: ['profiles', user.username]});
@@ -144,15 +149,26 @@ export const EditProfileModal = ({isOpen, onOpenChange, user}: EditProfileModalP
                             </div>
                         </div>
 
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-300">Bio</label>
-                            <textarea
-                                {...register('bio')}
-                                rows={4}
-                                className="w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500 resize-none"
-                                placeholder="Tell the community about yourself..."
-                            />
-                            {errors.bio && <span className="text-xs text-red-400">{errors.bio.message}</span>}
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-slate-300">Display Name (Alias)</label>
+                                <input
+                                    {...register('alias')}
+                                    className="w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
+                                />
+                                {errors.alias && <span className="text-xs text-red-400">{errors.alias.message}</span>}
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-slate-300">Bio</label>
+                                <textarea
+                                    {...register('bio')}
+                                    rows={3}
+                                    className="w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500 resize-none"
+                                    placeholder="Tell the community about yourself..."
+                                />
+                                {errors.bio && <span className="text-xs text-red-400">{errors.bio.message}</span>}
+                            </div>
                         </div>
 
                         <div className="flex justify-end gap-3 pt-4 border-t border-white/10">

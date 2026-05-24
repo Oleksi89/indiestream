@@ -2,6 +2,7 @@ import {apiClient} from '@/shared/api/apiClient';
 import type {UserDto, PageResponse} from '@/features/auth/types';
 
 export interface UpdateProfileRequest {
+    alias?: string;
     bio?: string;
     isPrivate?: boolean;
     hideSubscriptions?: boolean;

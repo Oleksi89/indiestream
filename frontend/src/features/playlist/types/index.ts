@@ -57,6 +57,7 @@ export interface TrackMetadataPayload {
     id: string;
     title: string;
     artistId: string;
+    artistUsername: string;
     artistAlias: string;
     durationSeconds: number;
     stemsMetadata: Record<string, string>;
