@@ -39,7 +39,7 @@ export interface UserProfileDto {
     updatedAt: string;
 }
 
-// Represents the User entity returned by the backend (without sensitive data)
+// Clean, base DTO used for authentication
 export interface UserDto {
     id: string;
     email: string;
@@ -48,10 +48,21 @@ export interface UserDto {
     role: 'USER' | 'ARTIST' | 'ADMIN';
     profile?: UserProfileDto;
     createdAt: string;
-    // Client-side projection fields for social graph state
-    followersCount?: number;
-    followingCount?: number;
-    isFollowedByMe?: boolean;
+}
+
+// Rich View Model used strictly for Profile Pages
+export interface UserProfileResponse extends UserDto {
+    followersCount: number;
+    followingCount: number;
+    isFollowedByMe: boolean;
+}
+
+// Lightweight View Model used for Follower/Following Lists
+export interface UserSummaryDto {
+    id: string;
+    username: string;
+    alias: string;
+    avatarPath: string | null;
 }
 
 export interface PageResponse<T> {

@@ -1,5 +1,5 @@
 import {apiClient} from '@/shared/api/apiClient';
-import type {UserDto, PageResponse} from '@/features/auth/types';
+import type {PageResponse, UserProfileResponse, UserSummaryDto} from '@/features/auth/types';
 
 export interface UpdateProfileRequest {
     alias?: string;
@@ -9,29 +9,29 @@ export interface UpdateProfileRequest {
 }
 
 export const profileApi = {
-    getProfile: async (username: string): Promise<UserDto> => {
-        const response = await apiClient.get<UserDto>(`/users/${username}/profile`);
+    getProfile: async (username: string): Promise<UserProfileResponse> => {
+        const response = await apiClient.get<UserProfileResponse>(`/users/${username}/profile`);
         return response.data;
     },
 
-    updateProfileText: async (data: UpdateProfileRequest): Promise<UserDto> => {
-        const response = await apiClient.put<UserDto>('/users/me/profile', data);
+    updateProfileText: async (data: UpdateProfileRequest): Promise<UserProfileResponse> => {
+        const response = await apiClient.put<UserProfileResponse>('/users/me/profile', data);
         return response.data;
     },
 
-    updateAvatar: async (file: File): Promise<UserDto> => {
+    updateAvatar: async (file: File): Promise<UserProfileResponse> => {
         const formData = new FormData();
         formData.append('file', file);
-        const response = await apiClient.post<UserDto>('/users/me/avatar', formData, {
+        const response = await apiClient.post<UserProfileResponse>('/users/me/avatar', formData, {
             headers: {'Content-Type': 'multipart/form-data'},
         });
         return response.data;
     },
 
-    updateBanner: async (file: File): Promise<UserDto> => {
+    updateBanner: async (file: File): Promise<UserProfileResponse> => {
         const formData = new FormData();
         formData.append('file', file);
-        const response = await apiClient.post<UserDto>('/users/me/banner', formData, {
+        const response = await apiClient.post<UserProfileResponse>('/users/me/banner', formData, {
             headers: {'Content-Type': 'multipart/form-data'},
         });
         return response.data;
@@ -59,8 +59,8 @@ export const profileApi = {
         await apiClient.delete(`/users/${username}/follow`);
     },
 
-    getFollowers: async (username: string, page = 0, size = 20): Promise<PageResponse<UserDto>> => {
-        const response = await apiClient.get<PageResponse<UserDto>>(`/users/${username}/followers`, {
+    getFollowers: async (username: string, page = 0, size = 20): Promise<PageResponse<UserSummaryDto>> => {
+        const response = await apiClient.get<PageResponse<UserSummaryDto>>(`/users/${username}/followers`, {
             params: {page, size}
         });
         return response.data;
