@@ -1,10 +1,11 @@
 import React, {useState, useEffect} from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
-import {useForm} from 'react-hook-form';
+import {useForm, Controller} from 'react-hook-form';
 import {z} from 'zod';
 import {zodResolver} from '@hookform/resolvers/zod';
-import {X, Upload, Camera} from 'lucide-react';
+import {X, Upload, Camera, Lock, EyeOff} from 'lucide-react';
 import {Button} from '@/shared/ui/button';
+import {Switch} from '@/shared/ui/switch';
 import {useQueryClient, useMutation} from '@tanstack/react-query';
 import {profileApi} from '../api/profile.api';
 import type {UserDto} from '@/features/auth/types';
@@ -14,6 +15,8 @@ import {useSecureUrl} from '@/shared/hooks/useSecureUrl';
 const profileSchema = z.object({
     alias: z.string().min(1, "Display name is required").max(100, "Maximum 100 characters"),
     bio: z.string().max(500, "Bio cannot exceed 500 characters").optional().nullable(),
+    isPrivate: z.boolean().default(false),
+    hideSubscriptions: z.boolean().default(false),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -53,28 +56,24 @@ export const EditProfileModal = ({isOpen, onOpenChange, user}: EditProfileModalP
     const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0] || null;
         setAvatarFile(file);
-        if (file) {
-            setAvatarPreview(URL.createObjectURL(file));
-        } else {
-            setAvatarPreview(null);
-        }
+        if (file) setAvatarPreview(URL.createObjectURL(file));
+        else setAvatarPreview(null);
     };
 
     const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0] || null;
         setBannerFile(file);
-        if (file) {
-            setBannerPreview(URL.createObjectURL(file));
-        } else {
-            setBannerPreview(null);
-        }
+        if (file) setBannerPreview(URL.createObjectURL(file));
+        else setBannerPreview(null);
     };
 
-    const {register, handleSubmit, formState: {errors, isSubmitting}} = useForm({
+    const {register, handleSubmit, control, formState: {errors, isSubmitting}} = useForm({
         resolver: zodResolver(profileSchema),
         defaultValues: {
             alias: user.alias,
             bio: user.profile?.bio || '',
+            isPrivate: user.profile?.isPrivate || false,
+            hideSubscriptions: user.profile?.hideSubscriptions || false,
         },
     });
 
@@ -84,7 +83,9 @@ export const EditProfileModal = ({isOpen, onOpenChange, user}: EditProfileModalP
             if (bannerFile) await profileApi.updateBanner(bannerFile);
             await profileApi.updateProfileText({
                 alias: data.alias,
-                bio: data.bio ?? undefined
+                bio: data.bio ?? undefined,
+                isPrivate: data.isPrivate,
+                hideSubscriptions: data.hideSubscriptions
             });
         },
         onSuccess: () => {
@@ -101,9 +102,9 @@ export const EditProfileModal = ({isOpen, onOpenChange, user}: EditProfileModalP
                 <Dialog.Overlay
                     className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"/>
                 <Dialog.Content
-                    className="fixed left-[50%] top-[50%] z-50 w-full max-w-lg translate-x-[-50%] translate-y-[-50%] rounded-xl border border-white/10 bg-slate-900/90 backdrop-blur-md p-0 shadow-2xl duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95">
+                    className="fixed left-[50%] top-[50%] z-50 w-full max-w-lg translate-x-[-50%] translate-y-[-50%] rounded-xl border border-white/10 bg-slate-900/90 backdrop-blur-md p-0 shadow-2xl duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 overflow-hidden flex flex-col max-h-[90vh]">
 
-                    <div className="flex items-center justify-between border-b border-white/10 p-4">
+                    <div className="flex items-center justify-between border-b border-white/10 p-4 shrink-0">
                         <Dialog.Title className="text-lg font-semibold text-white">Edit Profile</Dialog.Title>
                         <Dialog.Close asChild>
                             <button
@@ -113,74 +114,125 @@ export const EditProfileModal = ({isOpen, onOpenChange, user}: EditProfileModalP
                         </Dialog.Close>
                     </div>
 
-                    <form onSubmit={handleSubmit((d) => updateProfileMutation.mutate(d))} className="p-4 space-y-6">
-                        <div
-                            className="relative h-32 w-full rounded-lg bg-slate-800 overflow-hidden group border border-dashed border-white/20 hover:border-violet-500/50 transition-colors">
-                            {(bannerPreview || user.profile?.bannerPath) ? (
-                                <img src={bannerPreview || secureBannerUrl || ''} alt="Banner"
-                                     className="h-full w-full object-cover opacity-60"/>
-                            ) : (
-                                <div
-                                    className="absolute inset-0 flex flex-col items-center justify-center text-slate-500">
-                                    <Upload size={24} className="mb-2"/>
-                                    <span className="text-xs">Upload Header</span>
-                                </div>
-                            )}
-                            <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleBannerChange}
-                                   className="absolute inset-0 cursor-pointer opacity-0"/>
-                        </div>
+                    <div className="overflow-y-auto p-4 custom-scrollbar">
+                        <form id="profile-form" onSubmit={handleSubmit((d) => updateProfileMutation.mutate(d))}
+                              className="space-y-6">
 
-                        <div
-                            className="relative -mt-16 ml-4 h-24 w-24 rounded-full border-4 border-slate-900 bg-slate-800 overflow-hidden group">
-                            {(avatarPreview || user.profile?.avatarPath) ? (
-                                <img src={avatarPreview || secureAvatarUrl || ''} alt="Avatar"
-                                     className="h-full w-full object-cover"/>
-                            ) : (
-                                <div className="flex h-full w-full items-center justify-center bg-slate-800">
-                                    <Camera size={28} className="text-slate-500"/>
-                                </div>
-                            )}
+                            {/* Images */}
                             <div
-                                className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100 cursor-pointer">
-                                <Camera size={24} className="text-white"/>
+                                className="relative h-32 w-full rounded-lg bg-slate-800 overflow-hidden group border border-dashed border-white/20 hover:border-violet-500/50 transition-colors">
+                                {(bannerPreview || user.profile?.bannerPath) ? (
+                                    <img src={bannerPreview || secureBannerUrl || ''} alt="Banner"
+                                         className="h-full w-full object-cover opacity-60"/>
+                                ) : (
+                                    <div
+                                        className="absolute inset-0 flex flex-col items-center justify-center text-slate-500">
+                                        <Upload size={24} className="mb-2"/>
+                                        <span className="text-xs">Upload Header</span>
+                                    </div>
+                                )}
                                 <input type="file" accept="image/jpeg,image/png,image/webp"
-                                       onChange={handleAvatarChange}
+                                       onChange={handleBannerChange}
                                        className="absolute inset-0 cursor-pointer opacity-0"/>
                             </div>
-                        </div>
 
-                        <div className="space-y-4">
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-300">Display Name (Alias)</label>
-                                <input
-                                    {...register('alias')}
-                                    className="w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
-                                />
-                                {errors.alias && <span className="text-xs text-red-400">{errors.alias.message}</span>}
+                            <div
+                                className="relative -mt-16 ml-4 h-24 w-24 rounded-full border-4 border-slate-900 bg-slate-800 overflow-hidden group">
+                                {(avatarPreview || user.profile?.avatarPath) ? (
+                                    <img src={avatarPreview || secureAvatarUrl || ''} alt="Avatar"
+                                         className="h-full w-full object-cover"/>
+                                ) : (
+                                    <div className="flex h-full w-full items-center justify-center bg-slate-800">
+                                        <Camera size={28} className="text-slate-500"/>
+                                    </div>
+                                )}
+                                <div
+                                    className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100 cursor-pointer">
+                                    <Camera size={24} className="text-white"/>
+                                    <input type="file" accept="image/jpeg,image/png,image/webp"
+                                           onChange={handleAvatarChange}
+                                           className="absolute inset-0 cursor-pointer opacity-0"/>
+                                </div>
                             </div>
 
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-300">Bio</label>
-                                <textarea
-                                    {...register('bio')}
-                                    rows={3}
-                                    className="w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500 resize-none"
-                                    placeholder="Tell the community about yourself..."
-                                />
-                                {errors.bio && <span className="text-xs text-red-400">{errors.bio.message}</span>}
-                            </div>
-                        </div>
+                            {/* Text Fields */}
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-300">Display Name</label>
+                                    <input
+                                        {...register('alias')}
+                                        className="w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
+                                    />
+                                    {errors.alias &&
+                                        <span className="text-xs text-red-400">{errors.alias.message}</span>}
+                                </div>
 
-                        <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
-                            <Dialog.Close asChild>
-                                <Button type="button" variant="ghost">Cancel</Button>
-                            </Dialog.Close>
-                            <Button type="submit" disabled={isSubmitting || updateProfileMutation.isPending}
-                                    className="bg-violet-600 hover:bg-violet-500 text-white">
-                                {isSubmitting ? 'Saving...' : 'Save Changes'}
-                            </Button>
-                        </div>
-                    </form>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-300">Bio</label>
+                                    <textarea
+                                        {...register('bio')}
+                                        rows={3}
+                                        className="w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500 resize-none"
+                                        placeholder="Tell the community about yourself..."
+                                    />
+                                    {errors.bio && <span className="text-xs text-red-400">{errors.bio.message}</span>}
+                                </div>
+                            </div>
+
+                            <div className="h-px w-full bg-white/5 my-4"/>
+
+                            {/* Privacy Toggles */}
+                            <div className="space-y-4">
+                                <h3 className="text-sm font-semibold text-white">Privacy Settings</h3>
+
+                                <div
+                                    className="flex items-center justify-between p-3 rounded-lg border border-white/5 bg-white/5">
+                                    <div className="flex flex-col gap-1 pr-4">
+                                        <span className="text-sm font-medium text-slate-200 flex items-center gap-2">
+                                            <Lock size={14} className="text-violet-400"/> Private Account
+                                        </span>
+                                        <span className="text-xs text-slate-500">Only you can see your playlists, tracks, and social connections.</span>
+                                    </div>
+                                    <Controller
+                                        name="isPrivate"
+                                        control={control}
+                                        render={({field}) => (
+                                            <Switch checked={field.value ?? false} onCheckedChange={field.onChange}/>
+                                        )}
+                                    />
+                                </div>
+
+                                <div
+                                    className="flex items-center justify-between p-3 rounded-lg border border-white/5 bg-white/5">
+                                    <div className="flex flex-col gap-1 pr-4">
+                                        <span className="text-sm font-medium text-slate-200 flex items-center gap-2">
+                                            <EyeOff size={14} className="text-violet-400"/> Hide Subscriptions
+                                        </span>
+                                        <span className="text-xs text-slate-500">Hide your followers and following lists from other users.</span>
+                                    </div>
+                                    <Controller
+                                        name="hideSubscriptions"
+                                        control={control}
+                                        render={({field}) => (
+                                            <Switch checked={field.value ?? false} onCheckedChange={field.onChange}/>
+                                        )}
+                                    />
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div className="flex justify-end gap-3 p-4 border-t border-white/10 shrink-0 bg-slate-900">
+                        <Dialog.Close asChild>
+                            <Button type="button" variant="ghost">Cancel</Button>
+                        </Dialog.Close>
+                        <Button type="submit" form="profile-form"
+                                disabled={isSubmitting || updateProfileMutation.isPending}
+                                className="bg-violet-600 hover:bg-violet-500 text-white">
+                            {isSubmitting ? 'Saving...' : 'Save Changes'}
+                        </Button>
+                    </div>
+
                 </Dialog.Content>
             </Dialog.Portal>
         </Dialog.Root>
