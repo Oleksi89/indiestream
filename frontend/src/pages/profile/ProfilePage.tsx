@@ -1,18 +1,28 @@
-import {useParams} from 'react-router-dom';
+import {useParams, useNavigate} from 'react-router-dom';
 import {useUserProfile, useFollowMutation, useUnfollowMutation} from '@/features/profile/hooks/useProfile';
 import {useAuthStore} from '@/shared/store/authStore';
 import {EditProfileModal} from '@/features/profile/ui/EditProfileModal';
 import {Button} from '@/shared/ui/button';
 import {useState} from 'react';
-import {User, CalendarDays, Loader2, ImageIcon} from 'lucide-react';
+import {User, CalendarDays, Loader2, ImageIcon, Lock} from 'lucide-react';
 import {cn} from '@/shared/lib/utils';
-import {useSecureUrl} from "@/shared/hooks/useSecureUrl.ts";
-import {profileApi} from "@/features/profile/api/profile.api.ts";
+import {useSecureUrl} from "@/shared/hooks/useSecureUrl";
+import {profileApi} from "@/features/profile/api/profile.api";
+import {useQuery} from '@tanstack/react-query';
+import {playlistApi} from '@/features/playlist/api/playlist.api';
+import {mediaApi} from '@/features/media/api/media.api';
+import {LibraryItem} from '@/features/playlist/ui/LibraryItem';
+import {TrackCard} from '@/features/media/ui/TrackCard';
+import type {PlaylistDto} from '@/features/playlist/types';
+
+type Tab = 'playlists' | 'tracks' | 'followers' | 'following';
 
 export const ProfilePage = () => {
     const {username} = useParams<{ username: string }>();
+    const navigate = useNavigate();
     const {user: currentUser} = useAuthStore();
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState<Tab>('playlists');
 
     const {data: profile, isLoading, isError} = useUserProfile(username || '');
     const followMutation = useFollowMutation(username || '');
@@ -30,6 +40,19 @@ export const ProfilePage = () => {
         !!profile?.profile?.bannerPath && !!profile?.username
     );
 
+    // Queries for Content Grids
+    const {data: publicPlaylists, isLoading: isPlaylistsLoading} = useQuery({
+        queryKey: ['playlists', 'user', profile?.id],
+        queryFn: () => playlistApi.getUserLibrary(profile!.id),
+        enabled: !!profile?.id && activeTab === 'playlists' && (!profile.profile?.isPrivate || currentUser?.username === profile.username)
+    });
+
+    const {data: artistTracks, isLoading: isTracksLoading} = useQuery({
+        queryKey: ['tracks', 'artist', profile?.id],
+        queryFn: () => mediaApi.getArtistTracks(profile!.id),
+        enabled: !!profile?.id && activeTab === 'tracks' && (!profile.profile?.isPrivate || currentUser?.username === profile.username)
+    });
+
     if (isLoading) {
         return (
             <div className="flex h-full w-full items-center justify-center">
@@ -43,13 +66,19 @@ export const ProfilePage = () => {
     }
 
     const isOwnProfile = currentUser?.username === profile.username;
+    const isPrivateAndNotOwner = profile.profile?.isPrivate && !isOwnProfile;
+
+    // Filter tabs dynamically based on privacy settings
+    const tabs = [
+        {id: 'playlists', label: 'Playlists', hidden: false},
+        {id: 'tracks', label: 'Tracks', hidden: profile.role === 'USER'},
+        {id: 'followers', label: 'Followers', hidden: profile.profile?.hideSubscriptions && !isOwnProfile},
+        {id: 'following', label: 'Following', hidden: profile.profile?.hideSubscriptions && !isOwnProfile},
+    ].filter(t => !t.hidden);
 
     const handleFollowToggle = () => {
-        if (profile.isFollowedByMe) {
-            unfollowMutation.mutate();
-        } else {
-            followMutation.mutate();
-        }
+        if (profile.isFollowedByMe) unfollowMutation.mutate();
+        else followMutation.mutate();
     };
 
     const formattedDate = new Date(profile.createdAt).toLocaleDateString('en-US', {month: 'long', year: 'numeric'});
@@ -80,7 +109,7 @@ export const ProfilePage = () => {
                     {/* Avatar & Identity Info */}
                     <div className="flex items-end gap-6">
                         <div
-                            className="h-32 w-32 shrink-0 overflow-hidden rounded-full border-4 border-black bg-slate-800 md:h-40 md:w-40 shadow-2xl">
+                            className="h-32 w-32 shrink-0 overflow-hidden rounded-full border-4 border-black bg-slate-800 md:h-40 md:w-40 shadow-2xl relative">
                             {profile.profile?.avatarPath ? (
                                 isAvatarLoading ? (
                                     <div className="h-full w-full flex items-center justify-center animate-pulse">
@@ -98,7 +127,10 @@ export const ProfilePage = () => {
                         </div>
 
                         <div className="mb-2 flex flex-col">
-                            <h1 className="text-3xl font-bold tracking-tight text-white md:text-5xl">{profile.alias}</h1>
+                            <h1 className="text-3xl font-bold tracking-tight text-white md:text-5xl flex items-center gap-3">
+                                {profile.alias}
+                                {profile.profile?.isPrivate && <Lock size={20} className="text-slate-500"/>}
+                            </h1>
                             <span className="text-slate-400 mt-1">@{profile.username}</span>
                         </div>
                     </div>
@@ -126,45 +158,109 @@ export const ProfilePage = () => {
                     </div>
                 </div>
 
-                {/* Profile Stats & Bio panel (Glassmorphism styling) */}
-                <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <div className="col-span-1 flex flex-col gap-6">
-                        <div
-                            className="rounded-xl border border-white/10 bg-slate-900/50 backdrop-blur-md p-6 shadow-xl">
-                            <div className="flex gap-6 mb-6">
-                                <div className="flex flex-col">
-                                    <span className="text-xl font-bold text-white">{profile.followersCount || 0}</span>
-                                    <span className="text-xs text-slate-400 uppercase tracking-wider">Followers</span>
-                                </div>
-                                <div className="flex flex-col">
-                                    <span className="text-xl font-bold text-white">{profile.followingCount || 0}</span>
-                                    <span className="text-xs text-slate-400 uppercase tracking-wider">Following</span>
-                                </div>
+                <div className="mt-8 flex flex-col gap-8">
+                    {/* Stats & Bio */}
+                    <div
+                        className="flex flex-col gap-6 rounded-xl  backdrop-blur-md p-6 shadow-xl w-full max-w-3xl">
+                        {profile.profile?.bio && (
+                            <p className="text-sm text-slate-300 leading-relaxed">
+                                {profile.profile.bio}
+                            </p>
+                        )}
+
+                        <div className="flex items-center gap-8">
+                            <div className="flex flex-col">
+                                <span className="text-xl font-bold text-white">{profile.followersCount || 0}</span>
+                                <span className="text-xs text-slate-400 uppercase tracking-wider">Followers</span>
                             </div>
-
-                            {profile.profile?.bio && (
-                                <p className="text-sm text-slate-300 leading-relaxed mb-6">
-                                    {profile.profile.bio}
-                                </p>
-                            )}
-
-                            <div className="flex flex-col gap-3 text-sm text-slate-400">
-                                <div className="flex items-center gap-2">
-                                    <CalendarDays size={16}/>
-                                    <span>Joined {formattedDate}</span>
-                                </div>
+                            <div className="flex flex-col">
+                                <span className="text-xl font-bold text-white">{profile.followingCount || 0}</span>
+                                <span className="text-xs text-slate-400 uppercase tracking-wider">Following</span>
+                            </div>
+                            <div className="w-px h-8 bg-white/10 mx-2"/>
+                            <div className="flex items-center gap-2 text-sm text-slate-400">
+                                <CalendarDays size={16}/>
+                                <span>Joined {formattedDate}</span>
                             </div>
                         </div>
                     </div>
 
-                    {/* Placeholder for  Public Library Grid */}
-                    <div className="col-span-1 md:col-span-2">
-                        <h2 className="text-xl font-bold border-b border-white/10 pb-4 mb-6">Public Library</h2>
+                    {isPrivateAndNotOwner ? (
                         <div
-                            className="flex items-center justify-center h-48 rounded-xl border border-dashed border-white/10 bg-white/5">
-                            <span className="text-slate-500 text-sm">No public tracks or playlists yet.</span>
+                            className="flex flex-col items-center justify-center py-20 border border-white/5 bg-white/5 rounded-2xl">
+                            <Lock size={48} className="text-slate-600 mb-4"/>
+                            <h2 className="text-xl font-bold text-white mb-2">This account is private</h2>
+                            <p className="text-slate-400 text-sm">You must be the owner to view this content.</p>
                         </div>
-                    </div>
+                    ) : (
+                        <div className="flex flex-col mt-4">
+                            <div
+                                className="flex items-center gap-6 border-b border-white/10 mb-6 overflow-x-auto custom-scrollbar pb-[-1px]">
+                                {tabs.map((tab) => (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => setActiveTab(tab.id as Tab)}
+                                        className={cn(
+                                            "pb-3 text-sm font-medium transition-colors border-b-2 whitespace-nowrap",
+                                            activeTab === tab.id
+                                                ? "border-violet-500 text-white"
+                                                : "border-transparent text-slate-400 hover:text-slate-200"
+                                        )}
+                                    >
+                                        {tab.label}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="min-h-[300px]">
+                                {activeTab === 'playlists' && (
+                                    <div
+                                        className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                                        {isPlaylistsLoading ? (
+                                            <Loader2
+                                                className="animate-spin text-violet-500 mx-auto col-span-full my-10 h-8 w-8"/>
+                                        ) : publicPlaylists?.content?.length ? (
+                                            publicPlaylists.content.map((pl: PlaylistDto) => (
+                                                <LibraryItem
+                                                    key={pl.id}
+                                                    playlist={pl}
+                                                    viewMode="expanded"
+                                                    onClick={() => navigate(`/playlist/${pl.id}`)}
+                                                />
+                                            ))
+                                        ) : (
+                                            <div className="col-span-full text-center text-slate-500 py-10">No public
+                                                playlists found.</div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {activeTab === 'tracks' && (
+                                    <div
+                                        className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                        {isTracksLoading ? (
+                                            <Loader2
+                                                className="animate-spin text-violet-500 mx-auto col-span-full my-10 h-8 w-8"/>
+                                        ) : artistTracks?.content?.length ? (
+                                            artistTracks.content.map(track => (
+                                                <TrackCard key={track.id} track={track} variant="grid"/>
+                                            ))
+                                        ) : (
+                                            <div className="col-span-full text-center text-slate-500 py-10">No tracks
+                                                published yet.</div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {(activeTab === 'followers' || activeTab === 'following') && (
+                                    <div
+                                        className="flex items-center justify-center h-48 rounded-xl border border-dashed border-white/10 bg-white/5 text-slate-500 text-sm">
+                                        Social lists view coming soon...
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
