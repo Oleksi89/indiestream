@@ -3,6 +3,8 @@ import {profileApi} from '../api/profile.api';
 import type {UserProfileResponse} from '@/features/auth/types';
 import toast from 'react-hot-toast';
 import {isAxiosError} from 'axios';
+import {libraryKeys} from '@/features/library/hooks/useLibrary';
+import type {LibraryItemDto} from '@/features/library/types';
 
 export const profileKeys = {
     all: ['profiles'] as const,
@@ -31,7 +33,10 @@ export const useFollowMutation = (username: string) => {
         mutationFn: () => profileApi.followUser(username),
         onMutate: async () => {
             await queryClient.cancelQueries({queryKey: profileKeys.detail(username)});
+            await queryClient.cancelQueries({queryKey: libraryKeys.me()});
+
             const previousProfile = queryClient.getQueryData<UserProfileResponse>(profileKeys.detail(username));
+            const previousLibrary = queryClient.getQueryData<LibraryItemDto[]>(libraryKeys.me());
 
             if (previousProfile) {
                 queryClient.setQueryData<UserProfileResponse>(profileKeys.detail(username), {
@@ -39,12 +44,27 @@ export const useFollowMutation = (username: string) => {
                     isFollowedByMe: true,
                     followersCount: (previousProfile.followersCount || 0) + 1,
                 });
+
+                if (previousLibrary) {
+                    const optimisticLibraryItem: LibraryItemDto = {
+                        id: previousProfile.id,
+                        type: 'FOLLOWED_PROFILE',
+                        title: previousProfile.alias,
+                        imageUrl: previousProfile.profile?.avatarPath || null,
+                        subtitle: `Profile • @${previousProfile.username}`,
+                        addedAt: new Date().toISOString()
+                    };
+                    queryClient.setQueryData<LibraryItemDto[]>(libraryKeys.me(), [optimisticLibraryItem, ...previousLibrary]);
+                }
             }
-            return {previousProfile};
+            return {previousProfile, previousLibrary};
         },
         onError: (err, _variables, context) => {
             if (context?.previousProfile) {
                 queryClient.setQueryData(profileKeys.detail(username), context.previousProfile);
+            }
+            if (context?.previousLibrary) {
+                queryClient.setQueryData(libraryKeys.me(), context.previousLibrary);
             }
 
             const errorMessage = isAxiosError(err) && err.response?.data?.detail
@@ -55,6 +75,7 @@ export const useFollowMutation = (username: string) => {
         },
         onSettled: () => {
             queryClient.invalidateQueries({queryKey: profileKeys.detail(username)});
+            queryClient.invalidateQueries({queryKey: libraryKeys.me()});
         },
     });
 };
@@ -66,7 +87,10 @@ export const useUnfollowMutation = (username: string) => {
         mutationFn: () => profileApi.unfollowUser(username),
         onMutate: async () => {
             await queryClient.cancelQueries({queryKey: profileKeys.detail(username)});
+            await queryClient.cancelQueries({queryKey: libraryKeys.me()});
+
             const previousProfile = queryClient.getQueryData<UserProfileResponse>(profileKeys.detail(username));
+            const previousLibrary = queryClient.getQueryData<LibraryItemDto[]>(libraryKeys.me());
 
             if (previousProfile) {
                 queryClient.setQueryData<UserProfileResponse>(profileKeys.detail(username), {
@@ -74,12 +98,22 @@ export const useUnfollowMutation = (username: string) => {
                     isFollowedByMe: false,
                     followersCount: Math.max(0, (previousProfile.followersCount || 1) - 1),
                 });
+
+                if (previousLibrary) {
+                    queryClient.setQueryData<LibraryItemDto[]>(
+                        libraryKeys.me(),
+                        previousLibrary.filter(item => item.id !== previousProfile.id)
+                    );
+                }
             }
-            return {previousProfile};
+            return {previousProfile, previousLibrary};
         },
         onError: (err, _variables, context) => {
             if (context?.previousProfile) {
                 queryClient.setQueryData(profileKeys.detail(username), context.previousProfile);
+            }
+            if (context?.previousLibrary) {
+                queryClient.setQueryData(libraryKeys.me(), context.previousLibrary);
             }
 
             const errorMessage = isAxiosError(err) && err.response?.data?.detail
@@ -90,6 +124,7 @@ export const useUnfollowMutation = (username: string) => {
         },
         onSettled: () => {
             queryClient.invalidateQueries({queryKey: profileKeys.detail(username)});
+            queryClient.invalidateQueries({queryKey: libraryKeys.me()});
         },
     });
 };
