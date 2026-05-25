@@ -9,6 +9,7 @@ import type {
     PlaylistTrackDto,
     TrackMetadataPayload
 } from '../types';
+import {libraryKeys} from "@/features/library/hooks/useLibrary.ts";
 
 // Query Key Factory for strict cache management
 export const playlistKeys = {
@@ -34,7 +35,7 @@ export const useCreatePlaylist = () => {
         mutationFn: (payload: CreatePlaylistPayload) => playlistApi.createPlaylist(payload),
         onSuccess: () => {
             toast.success('Playlist created');
-            queryClient.invalidateQueries({queryKey: playlistKeys.library()});
+            queryClient.invalidateQueries({queryKey: libraryKeys.me()});
         },
         onError: () => toast.error('Failed to create playlist'),
     });
@@ -47,7 +48,7 @@ export const useUpdatePlaylist = () => {
         mutationFn: ({id, payload}: { id: string; payload: UpdatePlaylistPayload }) =>
             playlistApi.updatePlaylist(id, payload),
         onSuccess: (_, variables) => {
-            queryClient.invalidateQueries({queryKey: playlistKeys.library()});
+            queryClient.invalidateQueries({queryKey: libraryKeys.me()});
             queryClient.invalidateQueries({queryKey: playlistKeys.detail(variables.id)});
         },
         onError: () => toast.error('Failed to update playlist'),
@@ -61,7 +62,7 @@ export const useDeletePlaylist = () => {
         mutationFn: (playlistId: string) => playlistApi.deletePlaylist(playlistId),
         onSuccess: () => {
             toast.success('Playlist deleted');
-            queryClient.invalidateQueries({queryKey: playlistKeys.library()});
+            queryClient.invalidateQueries({queryKey: libraryKeys.me()});
         },
         onError: () => toast.error('Failed to delete playlist'),
     });
@@ -74,7 +75,7 @@ export const useDuplicatePlaylist = () => {
         mutationFn: (playlistId: string) => playlistApi.duplicatePlaylist(playlistId),
         onSuccess: () => {
             toast.success('Playlist duplicated');
-            queryClient.invalidateQueries({queryKey: playlistKeys.library()});
+            queryClient.invalidateQueries({queryKey: libraryKeys.me()});
         },
         onError: () => toast.error('Failed to duplicate playlist'),
     });
@@ -93,11 +94,8 @@ export const useTogglePlaylistTrack = () => {
             track: TrackMetadataPayload;
             isPresent: boolean
         }) => {
-            if (isPresent) {
-                return playlistApi.removeTrack(playlistId, track.id);
-            } else {
-                return playlistApi.addTrack(playlistId, track.id);
-            }
+            if (isPresent) return playlistApi.removeTrack(playlistId, track.id);
+            return playlistApi.addTrack(playlistId, track.id);
         },
         onMutate: async ({playlistId, track, isPresent}) => {
             await queryClient.cancelQueries({queryKey: playlistKeys.tracks(playlistId)});
@@ -138,7 +136,7 @@ export const useTogglePlaylistTrack = () => {
             toast.error('Action failed. Reverting.');
         },
         onSettled: (_data, _error, _variables, context) => {
-            queryClient.invalidateQueries({queryKey: playlistKeys.library()});
+            queryClient.invalidateQueries({queryKey: libraryKeys.me()});
             if (context?.playlistId) {
                 queryClient.invalidateQueries({queryKey: playlistKeys.tracks(context.playlistId)});
             }
@@ -220,11 +218,32 @@ export const useFollowPlaylist = () => {
 
     return useMutation({
         mutationFn: (playlistId: string) => playlistApi.followPlaylist(playlistId),
-        onSuccess: () => {
-            toast.success('Added to Library');
-            queryClient.invalidateQueries({queryKey: playlistKeys.library()});
+        onMutate: async (playlistId) => {
+            await queryClient.cancelQueries({queryKey: playlistKeys.detail(playlistId)});
+            const previousPlaylist = queryClient.getQueryData<PlaylistDto & {
+                isFollowedByMe?: boolean,
+                followersCount?: number
+            }>(playlistKeys.detail(playlistId));
+
+            if (previousPlaylist) {
+                queryClient.setQueryData(playlistKeys.detail(playlistId), {
+                    ...previousPlaylist,
+                    isFollowedByMe: true,
+                    followersCount: (previousPlaylist.followersCount || 0) + 1
+                });
+            }
+            return {previousPlaylist, playlistId};
         },
-        onError: () => toast.error('Failed to follow playlist'),
+        onError: (_err, _variables, context) => {
+            if (context?.previousPlaylist) {
+                queryClient.setQueryData(playlistKeys.detail(context.playlistId), context.previousPlaylist);
+            }
+            toast.error('Failed to follow playlist');
+        },
+        onSettled: (_data, _error, variables) => {
+            queryClient.invalidateQueries({queryKey: libraryKeys.me()});
+            queryClient.invalidateQueries({queryKey: playlistKeys.detail(variables)});
+        },
     });
 };
 
@@ -238,32 +257,30 @@ export const useUnfollowPlaylist = () => {
     return useMutation({
         mutationFn: (playlistId: string) => playlistApi.unfollowPlaylist(playlistId),
         onMutate: async (playlistId) => {
-            await queryClient.cancelQueries({queryKey: playlistKeys.library()});
+            await queryClient.cancelQueries({queryKey: playlistKeys.detail(playlistId)});
+            const previousPlaylist = queryClient.getQueryData<PlaylistDto & {
+                isFollowedByMe?: boolean,
+                followersCount?: number
+            }>(playlistKeys.detail(playlistId));
 
-            const previousLibrary = queryClient.getQueryData<PageResponse<PlaylistDto>>(
-                [...playlistKeys.library(), 0, 50]
-            );
-
-            if (previousLibrary) {
-                queryClient.setQueryData<PageResponse<PlaylistDto>>(
-                    [...playlistKeys.library(), 0, 50],
-                    {
-                        ...previousLibrary,
-                        content: previousLibrary.content.filter(p => p.id !== playlistId),
-                    }
-                );
+            if (previousPlaylist) {
+                queryClient.setQueryData(playlistKeys.detail(playlistId), {
+                    ...previousPlaylist,
+                    isFollowedByMe: false,
+                    followersCount: Math.max(0, (previousPlaylist.followersCount || 0) - 1)
+                });
             }
-
-            return {previousLibrary};
+            return {previousPlaylist, playlistId};
         },
         onError: (_err, _variables, context) => {
-            if (context?.previousLibrary) {
-                queryClient.setQueryData([...playlistKeys.library(), 0, 50], context.previousLibrary);
+            if (context?.previousPlaylist) {
+                queryClient.setQueryData(playlistKeys.detail(context.playlistId), context.previousPlaylist);
             }
-            toast.error('Failed to remove from Library. Reverting.');
+            toast.error('Failed to unfollow playlist');
         },
-        onSettled: () => {
-            queryClient.invalidateQueries({queryKey: playlistKeys.library()});
+        onSettled: (_data, _error, variables) => {
+            queryClient.invalidateQueries({queryKey: libraryKeys.me()});
+            queryClient.invalidateQueries({queryKey: playlistKeys.detail(variables)});
         },
     });
 };
