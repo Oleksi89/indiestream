@@ -13,6 +13,13 @@ export const playlistApi = {
         return data;
     },
 
+    getUserPublicPlaylists: async (userId: string, page = 0, size = 20): Promise<PageResponse<PlaylistDto>> => {
+        const {data} = await apiClient.get<unknown, AxiosResponse<PageResponse<PlaylistDto>>>(`/playlists/users/${userId}/public`, {
+            params: {page, size},
+        });
+        return data;
+    },
+
     getPlaylist: async (playlistId: string): Promise<PlaylistDto> => {
         const {data} = await apiClient.get<unknown, AxiosResponse<PlaylistDto>>(`/playlists/${playlistId}`);
         return data;
