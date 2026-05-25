@@ -66,6 +66,15 @@ public class PlaylistController {
         return ResponseEntity.ok(playlistService.getUserLibrary(userId, pageable));
     }
 
+    @GetMapping("/users/{userId}/public")
+    public ResponseEntity<Page<PlaylistDto>> getUserPublicPlaylists(
+            @PathVariable UUID userId,
+            Principal principal,
+            Pageable pageable) {
+        UUID currentUserId = principal != null ? UUID.fromString(principal.getName()) : null;
+        return ResponseEntity.ok(playlistService.getUserPublicPlaylists(userId, currentUserId, pageable));
+    }
+
     @PostMapping("/{playlistId}/tracks/{trackId}")
     public ResponseEntity<Void> addTrackToPlaylist(
             @PathVariable UUID playlistId,

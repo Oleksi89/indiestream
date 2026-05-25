@@ -1,5 +1,5 @@
 import {useMemo} from 'react';
-import {useParams} from 'react-router-dom';
+import {Link, useParams} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
 import {playlistApi} from '@/features/playlist/api/playlist.api';
 import {playlistKeys} from '@/features/playlist/hooks/usePlaylists';
@@ -34,6 +34,7 @@ export const PlaylistPage = () => {
             id: track.trackId,
             title: track.title,
             artistId: track.artistId,
+            artistUsername: track.artistUsername,
             artistAlias: track.artistAlias,
             durationSeconds: track.durationSeconds,
             coverMinioPath: track.coverMinioPath,
@@ -70,7 +71,10 @@ export const PlaylistPage = () => {
                     <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Playlist</span>
                     <h1 className="text-7xl font-black tracking-tighter text-white mb-4">{playlist.name}</h1>
                     <div className="flex items-center gap-2 text-sm font-medium text-slate-300">
-                        <span className="text-white hover:underline cursor-pointer">{playlist.ownerAlias}</span>
+                        <Link to={`/user/${playlist.ownerUsername}`}
+                              className="text-white hover:underline cursor-pointer">
+                            {playlist.ownerAlias}
+                        </Link>
                         <span>•</span>
                         <span>{playlist.trackCount} tracks</span>
                         <span>•</span>
@@ -89,7 +93,7 @@ export const PlaylistPage = () => {
                     <Play size={24} fill="currentColor" className="ml-1"/>
                 </Button>
                 <button className="text-slate-400 hover:text-white transition-colors">
-                    <Heart size={32}/>
+                <Heart size={32}/>
                 </button>
                 <button className="text-slate-400 hover:text-white transition-colors">
                     <MoreHorizontal size={32}/>

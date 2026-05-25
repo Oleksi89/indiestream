@@ -8,6 +8,7 @@ import java.util.UUID;
 public record TrackDto(
         UUID id,
         UUID artistId,
+        String artistUsername,
         String artistAlias,
         String title,
         String minioBucketPath,
