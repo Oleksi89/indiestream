@@ -56,11 +56,13 @@ public class TrackController {
     @GetMapping
     public ResponseEntity<Page<TrackDto>> getTracks(
             @RequestParam(value = "artistId", required = false) UUID artistId,
-            @PageableDefault(size = 10) Pageable pageable
+            @PageableDefault(size = 10) Pageable pageable,
+            Principal principal
     ) {
+        UUID currentUserId = principal != null ? UUID.fromString(principal.getName()) : null;
         Page<TrackDto> trackPage;
         if (artistId != null) {
-            trackPage = trackService.getTracksByArtist(artistId, pageable);
+            trackPage = trackService.getTracksByArtist(artistId, currentUserId, pageable);
         } else {
             trackPage = trackService.getPublicTracks(pageable);
         }

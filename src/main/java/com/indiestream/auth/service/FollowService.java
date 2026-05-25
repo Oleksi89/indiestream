@@ -4,8 +4,7 @@ import com.indiestream.auth.domain.User;
 import com.indiestream.auth.domain.UserFollower;
 import com.indiestream.auth.domain.UserFollowerId;
 import com.indiestream.auth.dto.PageResponse;
-import com.indiestream.auth.dto.UserDto;
-import com.indiestream.auth.dto.UserProfileDto;
+import com.indiestream.auth.dto.UserSummaryDto;
 import com.indiestream.auth.event.UserFollowedEvent;
 import com.indiestream.auth.event.UserUnfollowedEvent;
 import com.indiestream.auth.exception.CannotFollowSelfException;
@@ -15,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -64,49 +64,59 @@ public class FollowService {
         }
     }
 
+    /**
+     * Retrieves followers enforcing strict Modulith CQRS mapping and privacy guards.
+     */
     @Transactional(readOnly = true)
-    public PageResponse<UserDto> getFollowers(String username, Pageable pageable) {
+    public PageResponse<UserSummaryDto> getFollowers(String username, UUID currentUserId, Pageable pageable) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        Page<UserDto> mappedPage = userRepository.findFollowersByFollowedId(user.getId(), pageable)
-                .map(this::mapToDto);
+        enforcePrivacyGuards(user, currentUserId);
+
+        Page<UserSummaryDto> mappedPage = userRepository.findFollowersByFollowedId(user.getId(), pageable)
+                .map(this::mapToSummary);
 
         return PageResponse.of(mappedPage);
     }
 
+    /**
+     * Retrieves following enforcing strict Modulith CQRS mapping and privacy guards.
+     */
     @Transactional(readOnly = true)
-    public PageResponse<UserDto> getFollowing(String username, Pageable pageable) {
+    public PageResponse<UserSummaryDto> getFollowing(String username, UUID currentUserId, Pageable pageable) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        Page<UserDto> mappedPage = userRepository.findFollowingByFollowerId(user.getId(), pageable)
-                .map(this::mapToDto);
+        enforcePrivacyGuards(user, currentUserId);
+
+        Page<UserSummaryDto> mappedPage = userRepository.findFollowingByFollowerId(user.getId(), pageable)
+                .map(this::mapToSummary);
 
         return PageResponse.of(mappedPage);
     }
 
-    private UserDto mapToDto(User user) {
-        UserProfileDto profileDto = null;
-        if (user.getProfile() != null) {
-            profileDto = new UserProfileDto(
-                    user.getProfile().getBio(),
-                    user.getProfile().getAvatarPath(),
-                    user.getProfile().getBannerPath(),
-                    user.getProfile().isPrivate(),
-                    user.getProfile().isHideSubscriptions(),
-                    user.getProfile().getUpdatedAt()
-            );
+    /**
+     * Prevents access to social graph if the profile is private or subscriptions are hidden.
+     */
+    private void enforcePrivacyGuards(User targetUser, UUID currentUserId) {
+        boolean isOwner = currentUserId != null && currentUserId.equals(targetUser.getId());
+        if (isOwner) return; // Owners can always see their own stats
+
+        if (targetUser.getProfile() != null) {
+            if (targetUser.getProfile().isPrivate() || targetUser.getProfile().isHideSubscriptions()) {
+                throw new AccessDeniedException("This profile's social graph is private.");
+            }
         }
+    }
 
-        return new UserDto(
+    private UserSummaryDto mapToSummary(User user) {
+        String avatarPath = user.getProfile() != null ? user.getProfile().getAvatarPath() : null;
+        return new UserSummaryDto(
                 user.getId(),
-                user.getEmail(),
                 user.getUsername(),
                 user.getAlias(),
-                user.getRole(),
-                profileDto,
-                user.getCreatedAt()
+                avatarPath
         );
     }
 }

@@ -2,6 +2,7 @@ package com.indiestream.auth.controller;
 
 import com.indiestream.auth.dto.PageResponse;
 import com.indiestream.auth.dto.UserDto;
+import com.indiestream.auth.dto.UserSummaryDto;
 import com.indiestream.auth.service.FollowService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -21,27 +22,33 @@ public class FollowController {
 
     @PostMapping("/follow")
     public ResponseEntity<Void> follow(@PathVariable String username, Principal principal) {
-        followService.followUser(UUID.fromString(principal.getName()), username);
+        followService.followUser(extractId(principal), username);
         return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("/follow")
     public ResponseEntity<Void> unfollow(@PathVariable String username, Principal principal) {
-        followService.unfollowUser(UUID.fromString(principal.getName()), username);
+        followService.unfollowUser(extractId(principal), username);
         return ResponseEntity.ok().build();
     }
 
     @GetMapping("/followers")
-    public ResponseEntity<PageResponse<UserDto>> getFollowers(
+    public ResponseEntity<PageResponse<UserSummaryDto>> getFollowers(
             @PathVariable String username,
-            @PageableDefault(size = 20) Pageable pageable) {
-        return ResponseEntity.ok(followService.getFollowers(username, pageable));
+            @PageableDefault(size = 20) Pageable pageable,
+            Principal principal) {
+        return ResponseEntity.ok(followService.getFollowers(username, extractId(principal), pageable));
     }
 
     @GetMapping("/following")
-    public ResponseEntity<PageResponse<UserDto>> getFollowing(
+    public ResponseEntity<PageResponse<UserSummaryDto>> getFollowing(
             @PathVariable String username,
-            @PageableDefault(size = 20) Pageable pageable) {
-        return ResponseEntity.ok(followService.getFollowing(username, pageable));
+            @PageableDefault(size = 20) Pageable pageable,
+            Principal principal) {
+        return ResponseEntity.ok(followService.getFollowing(username, extractId(principal), pageable));
+    }
+
+    private UUID extractId(Principal principal) {
+        return UUID.fromString(principal.getName());
     }
 }

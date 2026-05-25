@@ -1,5 +1,5 @@
 import {createBrowserRouter} from 'react-router-dom';
-import { LoginPage } from '@/pages/auth/LoginPage';
+import {LoginPage} from '@/pages/auth/LoginPage';
 import {RegisterPage} from "@/pages/auth/RegisterPage";
 import {ProtectedRoute} from "@/shared/components/ProtectedRoute";
 import {AuthenticatedLayout} from "@/shared/layouts/AuthenticatedLayout";
@@ -9,6 +9,7 @@ import {ArtistDashboardPage} from "@/pages/artist/ArtistDashboardPage";
 import {RoleRoute} from "@/shared/components/RoleRoute";
 import {NotFoundPage} from "@/pages/error/NotFoundPage";
 import {PlaylistPage} from "@/pages/playlist/PlaylistPage.tsx";
+import {ProfilePage} from "@/pages/profile/ProfilePage.tsx";
 
 const routes = [
     // Guest Only Routes
@@ -39,6 +40,10 @@ const routes = [
                     {
                         path: '/playlist/:id',
                         element: <PlaylistPage/>,
+                    },
+                    {
+                        path: '/user/:username',
+                        element: <ProfilePage/>
                     },
                     // Role-Protected Routes
                     {

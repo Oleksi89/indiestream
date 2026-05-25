@@ -8,6 +8,7 @@ public record PlaylistTrackDetailsDto(
         UUID trackId,
         String title,
         UUID artistId,
+        String artistUsername,
         String artistAlias,
         Integer durationSeconds,
         Map<String, String> stemsMetadata,

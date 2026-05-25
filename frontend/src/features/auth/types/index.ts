@@ -30,12 +30,46 @@ export interface AuthResponse {
     token: string;
 }
 
-// Represents the User entity returned by the backend (without sensitive data)
+export interface UserProfileDto {
+    bio: string | null;
+    avatarPath: string | null;
+    bannerPath: string | null;
+    isPrivate: boolean;
+    hideSubscriptions: boolean;
+    updatedAt: string;
+}
+
+// Clean, base DTO used for authentication
 export interface UserDto {
-    id: string | number;
+    id: string;
     email: string;
     username: string;
     alias: string;
     role: 'USER' | 'ARTIST' | 'ADMIN';
-    createdAt?: string;
+    profile?: UserProfileDto;
+    createdAt: string;
+}
+
+// Rich View Model used strictly for Profile Pages
+export interface UserProfileResponse extends UserDto {
+    followersCount: number;
+    followingCount: number;
+    isFollowedByMe: boolean;
+}
+
+// Lightweight View Model used for Follower/Following Lists
+export interface UserSummaryDto {
+    id: string;
+    username: string;
+    alias: string;
+    avatarPath: string | null;
+}
+
+export interface PageResponse<T> {
+    content: T[];
+    pageNumber: number;
+    pageSize: number;
+    totalElements: number;
+    totalPages: number;
+    isLast: boolean;
 }

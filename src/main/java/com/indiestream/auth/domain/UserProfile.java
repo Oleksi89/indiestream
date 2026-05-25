@@ -37,6 +37,13 @@ public class UserProfile {
     @Column(name = "hide_subscriptions", nullable = false)
     private boolean hideSubscriptions = false;
 
+    // Denormalized Social Graph Counters
+    @Column(name = "followers_count", nullable = false)
+    private Long followersCount = 0L;
+
+    @Column(name = "following_count", nullable = false)
+    private Long followingCount = 0L;
+
     @Column(name = "updated_at")
     private Instant updatedAt;
 

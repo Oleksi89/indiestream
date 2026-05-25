@@ -1,8 +1,9 @@
 export interface TrackDto {
     id: string;
     artistId: string;
-    title: string;
+    artistUsername: string;
     artistAlias: string;
+    title: string;
     minioBucketPath: string;
     coverMinioPath?: string | null;
     stemsMetadata: Record<string, string>;

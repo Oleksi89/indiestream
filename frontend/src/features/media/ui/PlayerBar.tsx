@@ -67,6 +67,7 @@ export const PlayerBar = () => {
         id: currentTrack.id,
         title: currentTrack.title,
         artistId: currentTrack.artistId,
+        artistUsername: currentTrack.artistUsername,
         artistAlias: currentTrack.artistAlias,
         durationSeconds: currentTrack.durationSeconds || 0,
         stemsMetadata: currentTrack.stemsMetadata,
