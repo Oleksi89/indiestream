@@ -16,6 +16,8 @@ public interface AuthModuleApi {
      */
     Optional<UserPublicProfile> getUserPublicProfile(UUID userId);
 
+    boolean isProfileAccessible(UUID targetUserId, UUID currentUserId);
+
     /**
      * Legacy method for email resolution.
      * // TODO: [Auth] - Deprecate and replace with getUserPublicProfile in Media module metadata logic.

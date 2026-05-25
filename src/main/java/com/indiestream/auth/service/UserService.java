@@ -50,14 +50,16 @@ public class UserService implements AuthModuleApi {
      */
     @Transactional(readOnly = true)
     public Optional<UserProfileResponse> getProfileByUsername(String username, UUID currentUserId) {
-        return userRepository.findByUsername(username).map(user -> {
-            boolean isOwner = currentUserId != null && currentUserId.equals(user.getId());
-            if (user.getProfile().isPrivate() && !isOwner) {
-                // Return restricted view or throw AccessDenied. For now, we return empty to trigger 404.
-                return null;
-            }
-            return mapToProfileResponse(user, currentUserId);
-        });
+        return userRepository.findByUsername(username).map(user -> mapToProfileResponse(user, currentUserId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean isProfileAccessible(UUID targetUserId, UUID currentUserId) {
+        if (currentUserId != null && currentUserId.equals(targetUserId)) return true;
+        return userRepository.findById(targetUserId)
+                .map(u -> u.getProfile() == null || !u.getProfile().isPrivate())
+                .orElse(false);
     }
 
     /**
