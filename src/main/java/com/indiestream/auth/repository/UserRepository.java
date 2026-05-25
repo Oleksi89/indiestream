@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -36,4 +37,10 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     @EntityGraph(attributePaths = {"profile"})
     @Query("SELECT u FROM User u JOIN UserFollower uf ON u.id = uf.id.followedId WHERE uf.id.followerId = :followerId")
     Page<User> findFollowingByFollowerId(@Param("followerId") UUID followerId, Pageable pageable);
+
+    /**
+     * Bulk fetch alias resolution. Prevents N+1 queries during cross-module aggregation.
+     */
+    @Query("SELECT u.id, u.alias FROM User u WHERE u.id IN :userIds")
+    List<Object[]> findAliasesByIds(@Param("userIds") java.util.Set<UUID> userIds);
 }
