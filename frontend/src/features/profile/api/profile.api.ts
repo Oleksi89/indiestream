@@ -65,4 +65,11 @@ export const profileApi = {
         });
         return response.data;
     },
+
+    getFollowing: async (username: string, page = 0, size = 20): Promise<PageResponse<UserSummaryDto>> => {
+        const response = await apiClient.get<PageResponse<UserSummaryDto>>(`/users/${username}/following`, {
+            params: {page, size}
+        });
+        return response.data;
+    },
 };

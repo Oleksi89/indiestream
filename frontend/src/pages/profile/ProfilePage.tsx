@@ -23,6 +23,7 @@ export const ProfilePage = () => {
     const {user: currentUser} = useAuthStore();
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<Tab>('playlists');
+    const isOwnProfile = currentUser?.username === username;
 
     const {data: profile, isLoading, isError} = useUserProfile(username || '');
     const followMutation = useFollowMutation(username || '');
@@ -43,7 +44,7 @@ export const ProfilePage = () => {
     // Queries for Content Grids
     const {data: publicPlaylists, isLoading: isPlaylistsLoading} = useQuery({
         queryKey: ['playlists', 'user', profile?.id],
-        queryFn: () => playlistApi.getUserLibrary(profile!.id),
+        queryFn: () => playlistApi.getUserPublicPlaylists(profile!.id),
         enabled: !!profile?.id && activeTab === 'playlists' && (!profile.profile?.isPrivate || currentUser?.username === profile.username)
     });
 
@@ -51,6 +52,18 @@ export const ProfilePage = () => {
         queryKey: ['tracks', 'artist', profile?.id],
         queryFn: () => mediaApi.getArtistTracks(profile!.id),
         enabled: !!profile?.id && activeTab === 'tracks' && (!profile.profile?.isPrivate || currentUser?.username === profile.username)
+    });
+
+    const {data: followers, isLoading: isFollowersLoading} = useQuery({
+        queryKey: ['followers', profile?.username],
+        queryFn: () => profileApi.getFollowers(profile!.username),
+        enabled: !!profile?.username && activeTab === 'followers' && (!profile.profile?.hideSubscriptions || isOwnProfile)
+    });
+
+    const {data: following, isLoading: isFollowingLoading} = useQuery({
+        queryKey: ['following', profile?.username],
+        queryFn: () => profileApi.getFollowing(profile!.username),
+        enabled: !!profile?.username && activeTab === 'following' && (!profile.profile?.hideSubscriptions || isOwnProfile)
     });
 
     if (isLoading) {
@@ -65,7 +78,6 @@ export const ProfilePage = () => {
         return <div className="flex h-full w-full items-center justify-center text-slate-400">Profile not found.</div>;
     }
 
-    const isOwnProfile = currentUser?.username === profile.username;
     const isPrivateAndNotOwner = profile.profile?.isPrivate && !isOwnProfile;
 
     // Filter tabs dynamically based on privacy settings
@@ -252,10 +264,57 @@ export const ProfilePage = () => {
                                     </div>
                                 )}
 
-                                {(activeTab === 'followers' || activeTab === 'following') && (
-                                    <div
-                                        className="flex items-center justify-center h-48 rounded-xl border border-dashed border-white/10 bg-white/5 text-slate-500 text-sm">
-                                        Social lists view coming soon...
+                                {activeTab === 'followers' && (
+                                    <div className="flex flex-col gap-2">
+                                        {isFollowersLoading ? (
+                                            <Loader2 className="animate-spin text-violet-500 mx-auto my-10 h-8 w-8"/>
+                                        ) : followers?.content?.length ? (
+                                            followers.content.map(user => (
+                                                <div key={user.id} onClick={() => navigate(`/user/${user.username}`)}
+                                                     className="flex items-center gap-4 p-3 rounded-xl border border-transparent hover:border-white/10 bg-slate-900/40 hover:bg-slate-800/60 cursor-pointer transition-all">
+                                                    <div
+                                                        className="h-12 w-12 rounded-full overflow-hidden bg-slate-800 shrink-0 flex items-center justify-center">
+                                                        {/* Тут ми використовуємо простий підхід до аватару для списків, для оптимізації можна винести в окремий мікро-компонент */}
+                                                        <User className="text-slate-500 h-6 w-6"/>
+                                                    </div>
+                                                    <div className="flex flex-col min-w-0">
+                                                        <span
+                                                            className="text-sm font-bold text-white truncate">{user.alias}</span>
+                                                        <span
+                                                            className="text-xs text-slate-400 truncate">@{user.username}</span>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="text-center text-slate-500 py-10">No followers yet.</div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {activeTab === 'following' && (
+                                    <div className="flex flex-col gap-2">
+                                        {isFollowingLoading ? (
+                                            <Loader2 className="animate-spin text-violet-500 mx-auto my-10 h-8 w-8"/>
+                                        ) : following?.content?.length ? (
+                                            following.content.map(user => (
+                                                <div key={user.id} onClick={() => navigate(`/user/${user.username}`)}
+                                                     className="flex items-center gap-4 p-3 rounded-xl border border-transparent hover:border-white/10 bg-slate-900/40 hover:bg-slate-800/60 cursor-pointer transition-all">
+                                                    <div
+                                                        className="h-12 w-12 rounded-full overflow-hidden bg-slate-800 shrink-0 flex items-center justify-center">
+                                                        <User className="text-slate-500 h-6 w-6"/>
+                                                    </div>
+                                                    <div className="flex flex-col min-w-0">
+                                                        <span
+                                                            className="text-sm font-bold text-white truncate">{user.alias}</span>
+                                                        <span
+                                                            className="text-xs text-slate-400 truncate">@{user.username}</span>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="text-center text-slate-500 py-10">Not following anyone
+                                                yet.</div>
+                                        )}
                                     </div>
                                 )}
                             </div>
