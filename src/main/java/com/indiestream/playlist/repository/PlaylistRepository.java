@@ -44,4 +44,11 @@ public interface PlaylistRepository extends JpaRepository<Playlist, UUID> {
         ORDER BY p.updatedAt DESC
     """)
     Page<Playlist> findUserLibraryWithVisibilityGuards(@Param("userId") UUID userId, Pageable pageable);
+
+
+    @Query("SELECT p FROM Playlist p WHERE p.ownerId = :ownerId AND p.isPublic = true AND p.isSystem = false ORDER BY p.createdAt DESC")
+    Page<Playlist> findPublicPlaylistsByOwnerId(@Param("ownerId") UUID ownerId, Pageable pageable);
+
+    @Query("SELECT p FROM Playlist p WHERE p.ownerId = :ownerId AND p.isSystem = false ORDER BY p.createdAt DESC")
+    Page<Playlist> findAllPlaylistsByOwnerId(@Param("ownerId") UUID ownerId, Pageable pageable);
 }

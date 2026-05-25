@@ -160,6 +160,17 @@ public class PlaylistService {
                 .map(this::mapToDto);
     }
 
+    @Transactional(readOnly = true)
+    public Page<PlaylistDto> getUserPublicPlaylists(UUID targetUserId, UUID currentUserId, Pageable pageable) {
+        if (!authModuleApi.isProfileAccessible(targetUserId, currentUserId)) {
+            throw new AccessDeniedException("This profile is private.");
+        }
+        if (currentUserId != null && currentUserId.equals(targetUserId)) {
+            return playlistRepository.findAllPlaylistsByOwnerId(targetUserId, pageable).map(this::mapToDto);
+        }
+        return playlistRepository.findPublicPlaylistsByOwnerId(targetUserId, pageable).map(this::mapToDto);
+    }
+
     /**
      * Updates playlist metadata.
      * Guards prevent renaming or altering the core identity of system playlists.
