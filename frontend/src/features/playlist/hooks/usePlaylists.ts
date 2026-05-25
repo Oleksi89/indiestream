@@ -9,9 +9,9 @@ import type {
     PlaylistTrackDto,
     TrackMetadataPayload
 } from '../types';
-import {libraryKeys} from "@/features/library/hooks/useLibrary.ts";
+import {libraryKeys} from "@/features/library/hooks/useLibrary";
+import type {LibraryItemDto} from "@/features/library/types";
 
-// Query Key Factory for strict cache management
 export const playlistKeys = {
     all: ['playlists'] as const,
     library: () => [...playlistKeys.all, 'library'] as const,
@@ -24,7 +24,7 @@ export const useUserLibrary = (page: number = 0, size: number = 50) => {
     return useQuery({
         queryKey: [...playlistKeys.library(), page, size],
         queryFn: () => playlistApi.getUserLibrary(page, size),
-        staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+        staleTime: 1000 * 60 * 5,
     });
 };
 
@@ -81,10 +81,6 @@ export const useDuplicatePlaylist = () => {
     });
 };
 
-/**
- * Generic hook to toggle a track's presence in a specific playlist.
- * Implements strict optimistic cache updates.
- */
 export const useTogglePlaylistTrack = () => {
     const queryClient = useQueryClient();
 
@@ -144,10 +140,6 @@ export const useTogglePlaylistTrack = () => {
     });
 };
 
-/**
- * Hook to toggle the "Like" state of a track.
- * Automatically resolves the user's system "Liked Tracks" playlist.
- */
 export const useToggleLike = () => {
     const queryClient = useQueryClient();
     const {data: library} = useUserLibrary();
@@ -219,24 +211,31 @@ export const useFollowPlaylist = () => {
     return useMutation({
         mutationFn: (playlistId: string) => playlistApi.followPlaylist(playlistId),
         onMutate: async (playlistId) => {
+            // Cancel outgoing refetches
+            await queryClient.cancelQueries({queryKey: libraryKeys.me()});
             await queryClient.cancelQueries({queryKey: playlistKeys.detail(playlistId)});
-            const previousPlaylist = queryClient.getQueryData<PlaylistDto & {
-                isFollowedByMe?: boolean,
-                followersCount?: number
-            }>(playlistKeys.detail(playlistId));
 
-            if (previousPlaylist) {
-                queryClient.setQueryData(playlistKeys.detail(playlistId), {
-                    ...previousPlaylist,
-                    isFollowedByMe: true,
-                    followersCount: (previousPlaylist.followersCount || 0) + 1
-                });
+            const previousLibrary = queryClient.getQueryData<LibraryItemDto[]>(libraryKeys.me());
+            const playlistInfo = queryClient.getQueryData<PlaylistDto>(playlistKeys.detail(playlistId));
+
+            // 1. Optimistically update Library Sidebar
+            if (previousLibrary && playlistInfo) {
+                const optimisticItem: LibraryItemDto = {
+                    id: playlistInfo.id,
+                    type: 'FOLLOWED_PLAYLIST',
+                    title: playlistInfo.name,
+                    imageUrl: playlistInfo.coverMinioPath,
+                    subtitle: `Playlist • ${playlistInfo.ownerAlias}`,
+                    addedAt: new Date().toISOString()
+                };
+                queryClient.setQueryData<LibraryItemDto[]>(libraryKeys.me(), [optimisticItem, ...previousLibrary]);
             }
-            return {previousPlaylist, playlistId};
+
+            return {previousLibrary, playlistId};
         },
         onError: (_err, _variables, context) => {
-            if (context?.previousPlaylist) {
-                queryClient.setQueryData(playlistKeys.detail(context.playlistId), context.previousPlaylist);
+            if (context?.previousLibrary) {
+                queryClient.setQueryData(libraryKeys.me(), context.previousLibrary);
             }
             toast.error('Failed to follow playlist');
         },
@@ -257,24 +256,25 @@ export const useUnfollowPlaylist = () => {
     return useMutation({
         mutationFn: (playlistId: string) => playlistApi.unfollowPlaylist(playlistId),
         onMutate: async (playlistId) => {
+            // Cancel outgoing refetches
+            await queryClient.cancelQueries({queryKey: libraryKeys.me()});
             await queryClient.cancelQueries({queryKey: playlistKeys.detail(playlistId)});
-            const previousPlaylist = queryClient.getQueryData<PlaylistDto & {
-                isFollowedByMe?: boolean,
-                followersCount?: number
-            }>(playlistKeys.detail(playlistId));
 
-            if (previousPlaylist) {
-                queryClient.setQueryData(playlistKeys.detail(playlistId), {
-                    ...previousPlaylist,
-                    isFollowedByMe: false,
-                    followersCount: Math.max(0, (previousPlaylist.followersCount || 0) - 1)
-                });
+            const previousLibrary = queryClient.getQueryData<LibraryItemDto[]>(libraryKeys.me());
+
+            // Optimistically remove from Library Sidebar
+            if (previousLibrary) {
+                queryClient.setQueryData<LibraryItemDto[]>(
+                    libraryKeys.me(),
+                    previousLibrary.filter(item => item.id !== playlistId)
+                );
             }
-            return {previousPlaylist, playlistId};
+
+            return {previousLibrary, playlistId};
         },
         onError: (_err, _variables, context) => {
-            if (context?.previousPlaylist) {
-                queryClient.setQueryData(playlistKeys.detail(context.playlistId), context.previousPlaylist);
+            if (context?.previousLibrary) {
+                queryClient.setQueryData(libraryKeys.me(), context.previousLibrary);
             }
             toast.error('Failed to unfollow playlist');
         },
