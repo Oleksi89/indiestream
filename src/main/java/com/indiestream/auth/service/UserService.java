@@ -1,6 +1,7 @@
 package com.indiestream.auth.service;
 
 import com.indiestream.auth.AuthModuleApi;
+import com.indiestream.auth.FollowedUserProfileProjection;
 import com.indiestream.auth.UserPublicProfile;
 import com.indiestream.auth.domain.Role;
 import com.indiestream.auth.domain.User;
@@ -168,6 +169,24 @@ public class UserService implements AuthModuleApi {
         return userRepository.findById(userId)
                 .map(User::getEmail)
                 .orElse("Unknown User");
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.List<FollowedUserProfileProjection> getFollowedProfilesForLibrary(UUID followerId) {
+        return followerRepository.findFollowedProfilesForLibrary(followerId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.Map<UUID, String> getUserAliases(java.util.Set<UUID> userIds) {
+        if (userIds == null || userIds.isEmpty()) return java.util.Collections.emptyMap();
+
+        java.util.List<Object[]> results = userRepository.findAliasesByIds(userIds);
+        return results.stream().collect(java.util.stream.Collectors.toMap(
+                row -> (UUID) row[0],
+                row -> (String) row[1]
+        ));
     }
 
     private UserDto mapToBasicDto(User user) {

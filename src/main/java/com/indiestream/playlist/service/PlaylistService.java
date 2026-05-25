@@ -5,6 +5,8 @@ import com.indiestream.auth.UserPublicProfile;
 import com.indiestream.auth.event.UserRegisteredEvent;
 import com.indiestream.media.MediaModuleApi;
 import com.indiestream.media.TrackMetadata;
+import com.indiestream.playlist.PlaylistLibraryProjection;
+import com.indiestream.playlist.PlaylistModuleApi;
 import com.indiestream.playlist.domain.*;
 import com.indiestream.playlist.dto.PlaylistDto;
 import com.indiestream.playlist.dto.PlaylistTrackDetailsDto;
@@ -39,7 +41,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class PlaylistService {
+public class PlaylistService implements PlaylistModuleApi {
 
     private final PlaylistRepository playlistRepository;
     private final PlaylistTrackRepository playlistTrackRepository;
@@ -169,6 +171,18 @@ public class PlaylistService {
             return playlistRepository.findAllPlaylistsByOwnerId(targetUserId, pageable).map(this::mapToDto);
         }
         return playlistRepository.findPublicPlaylistsByOwnerId(targetUserId, pageable).map(this::mapToDto);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.List<PlaylistLibraryProjection> getOwnedPlaylistsForLibrary(UUID userId) {
+        return playlistRepository.findOwnedPlaylistsForLibrary(userId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.List<PlaylistLibraryProjection> getFollowedPlaylistsForLibrary(UUID userId) {
+        return followerRepository.findFollowedPlaylistsForLibrary(userId);
     }
 
     /**

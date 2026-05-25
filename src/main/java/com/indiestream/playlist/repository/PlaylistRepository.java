@@ -1,5 +1,6 @@
 package com.indiestream.playlist.repository;
 
+import com.indiestream.playlist.PlaylistLibraryProjection;
 import com.indiestream.playlist.domain.Playlist;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
@@ -10,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -51,4 +53,11 @@ public interface PlaylistRepository extends JpaRepository<Playlist, UUID> {
 
     @Query("SELECT p FROM Playlist p WHERE p.ownerId = :ownerId AND p.isSystem = false ORDER BY p.createdAt DESC")
     Page<Playlist> findAllPlaylistsByOwnerId(@Param("ownerId") UUID ownerId, Pageable pageable);
+
+    /**
+     * Strict JPQL projection. Bypasses standard Entity lifecycle and tracking entirely.
+     */
+    @Query("SELECT new com.indiestream.playlist.PlaylistLibraryProjection(p.id, p.name, p.coverMinioPath, p.ownerId, p.createdAt) " +
+            "FROM Playlist p WHERE p.ownerId = :ownerId")
+    List<PlaylistLibraryProjection> findOwnedPlaylistsForLibrary(@Param("ownerId") UUID ownerId);
 }
