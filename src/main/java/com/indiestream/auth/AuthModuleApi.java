@@ -1,6 +1,8 @@
 package com.indiestream.auth;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -17,6 +19,10 @@ public interface AuthModuleApi {
     Optional<UserPublicProfile> getUserPublicProfile(UUID userId);
 
     boolean isProfileAccessible(UUID targetUserId, UUID currentUserId);
+
+    List<FollowedUserProfileProjection> getFollowedProfilesForLibrary(UUID followerId);
+
+    java.util.Map<UUID, String> getUserAliases(Set<UUID> userIds);
 
     /**
      * Legacy method for email resolution.
