@@ -2,11 +2,14 @@ import {useMemo} from 'react';
 import {Link, useParams} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
 import {playlistApi} from '@/features/playlist/api/playlist.api';
-import {playlistKeys} from '@/features/playlist/hooks/usePlaylists';
-import {Clock, Play, Heart, MoreHorizontal, Disc3} from 'lucide-react';
+import {playlistKeys, useFollowPlaylist, useUnfollowPlaylist} from '@/features/playlist/hooks/usePlaylists';
+import {useLibrary} from '@/features/library/hooks/useLibrary';
+import {Clock, Play, MoreHorizontal, Disc3, Check} from 'lucide-react';
 import {Button} from '@/shared/ui/button';
+import {cn} from '@/shared/lib/utils';
 import {TrackContextMenu} from '@/features/media/ui/TrackContextMenu';
 import {usePlayerStore} from '@/shared/store/playerStore';
+import {useAuthStore} from '@/shared/store/authStore';
 import type {TrackDto} from "@/features/media/types";
 import {TrackCard} from "@/features/media/ui/TrackCard.tsx";
 
@@ -14,6 +17,8 @@ import {TrackCard} from "@/features/media/ui/TrackCard.tsx";
 export const PlaylistPage = () => {
     const {id} = useParams<{ id: string }>();
     const {playContext} = usePlayerStore();
+    const {user: currentUser} = useAuthStore();
+    const {data: library} = useLibrary();
 
     const {data: playlist, isLoading: isPlaylistLoading} = useQuery({
         queryKey: playlistKeys.detail(id!),
@@ -27,7 +32,9 @@ export const PlaylistPage = () => {
         enabled: !!id
     });
 
-    // Map playlist items to TrackDto format for the Player Engine
+    const followMutation = useFollowPlaylist();
+    const unfollowMutation = useUnfollowPlaylist();
+
     const mappedTracks: TrackDto[] = useMemo(() => {
         if (!tracksData?.content) return [];
         return tracksData.content.map(track => ({
@@ -46,10 +53,17 @@ export const PlaylistPage = () => {
     if (isPlaylistLoading) return <div className="p-8 animate-pulse text-slate-500">Loading playlist...</div>;
     if (!playlist) return <div className="p-8 text-center text-slate-400">Playlist not found</div>;
 
+    const isOwner = currentUser?.id === playlist.ownerId;
+
+    const isFollowed = library?.some(item => item.id === playlist.id && item.type === 'FOLLOWED_PLAYLIST') || false;
+
     const handlePlayPlaylist = () => {
-        if (mappedTracks.length > 0) {
-            playContext(mappedTracks, `playlist:${id}`, 0);
-        }
+        if (mappedTracks.length > 0) playContext(mappedTracks, `playlist:${id}`, 0);
+    };
+
+    const handleFollowToggle = () => {
+        if (isFollowed) unfollowMutation.mutate(playlist.id);
+        else followMutation.mutate(playlist.id);
     };
 
     return (
@@ -85,16 +99,26 @@ export const PlaylistPage = () => {
 
             {/* Action Bar */}
             <section className="px-8 py-4 flex items-center gap-6">
-                <Button
-                    onClick={handlePlayPlaylist}
-                    size="icon"
-                    className="w-14 h-14 rounded-full bg-violet-600 hover:bg-violet-500 shadow-xl hover:scale-105 transition-transform"
-                >
+                <Button onClick={handlePlayPlaylist} size="icon"
+                        className="w-14 h-14 rounded-full bg-violet-600 hover:bg-violet-500 shadow-xl hover:scale-105 transition-transform">
                     <Play size={24} fill="currentColor" className="ml-1"/>
                 </Button>
-                <button className="text-slate-400 hover:text-white transition-colors">
-                <Heart size={32}/>
-                </button>
+
+                {!isOwner && !playlist.isSystem && (
+                    <Button
+                        onClick={handleFollowToggle}
+                        variant={isFollowed ? "outline" : "default"}
+                        className={cn(
+                            "rounded-full px-6 font-bold tracking-wide transition-all",
+                            isFollowed
+                                ? "border-white/20 text-white hover:border-white/40 bg-transparent"
+                                : "bg-white text-black hover:bg-slate-200"
+                        )}
+                    >
+                        {isFollowed ? <><Check className="w-4 h-4 mr-2"/> Following</> : 'Follow'}
+                    </Button>
+                )}
+
                 <button className="text-slate-400 hover:text-white transition-colors">
                     <MoreHorizontal size={32}/>
                 </button>

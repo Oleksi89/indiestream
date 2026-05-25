@@ -9,8 +9,9 @@ import type {
     PlaylistTrackDto,
     TrackMetadataPayload
 } from '../types';
+import {libraryKeys} from "@/features/library/hooks/useLibrary";
+import type {LibraryItemDto} from "@/features/library/types";
 
-// Query Key Factory for strict cache management
 export const playlistKeys = {
     all: ['playlists'] as const,
     library: () => [...playlistKeys.all, 'library'] as const,
@@ -23,7 +24,7 @@ export const useUserLibrary = (page: number = 0, size: number = 50) => {
     return useQuery({
         queryKey: [...playlistKeys.library(), page, size],
         queryFn: () => playlistApi.getUserLibrary(page, size),
-        staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+        staleTime: 1000 * 60 * 5,
     });
 };
 
@@ -34,7 +35,7 @@ export const useCreatePlaylist = () => {
         mutationFn: (payload: CreatePlaylistPayload) => playlistApi.createPlaylist(payload),
         onSuccess: () => {
             toast.success('Playlist created');
-            queryClient.invalidateQueries({queryKey: playlistKeys.library()});
+            queryClient.invalidateQueries({queryKey: libraryKeys.me()});
         },
         onError: () => toast.error('Failed to create playlist'),
     });
@@ -47,7 +48,7 @@ export const useUpdatePlaylist = () => {
         mutationFn: ({id, payload}: { id: string; payload: UpdatePlaylistPayload }) =>
             playlistApi.updatePlaylist(id, payload),
         onSuccess: (_, variables) => {
-            queryClient.invalidateQueries({queryKey: playlistKeys.library()});
+            queryClient.invalidateQueries({queryKey: libraryKeys.me()});
             queryClient.invalidateQueries({queryKey: playlistKeys.detail(variables.id)});
         },
         onError: () => toast.error('Failed to update playlist'),
@@ -61,7 +62,7 @@ export const useDeletePlaylist = () => {
         mutationFn: (playlistId: string) => playlistApi.deletePlaylist(playlistId),
         onSuccess: () => {
             toast.success('Playlist deleted');
-            queryClient.invalidateQueries({queryKey: playlistKeys.library()});
+            queryClient.invalidateQueries({queryKey: libraryKeys.me()});
         },
         onError: () => toast.error('Failed to delete playlist'),
     });
@@ -74,16 +75,12 @@ export const useDuplicatePlaylist = () => {
         mutationFn: (playlistId: string) => playlistApi.duplicatePlaylist(playlistId),
         onSuccess: () => {
             toast.success('Playlist duplicated');
-            queryClient.invalidateQueries({queryKey: playlistKeys.library()});
+            queryClient.invalidateQueries({queryKey: libraryKeys.me()});
         },
         onError: () => toast.error('Failed to duplicate playlist'),
     });
 };
 
-/**
- * Generic hook to toggle a track's presence in a specific playlist.
- * Implements strict optimistic cache updates.
- */
 export const useTogglePlaylistTrack = () => {
     const queryClient = useQueryClient();
 
@@ -93,11 +90,8 @@ export const useTogglePlaylistTrack = () => {
             track: TrackMetadataPayload;
             isPresent: boolean
         }) => {
-            if (isPresent) {
-                return playlistApi.removeTrack(playlistId, track.id);
-            } else {
-                return playlistApi.addTrack(playlistId, track.id);
-            }
+            if (isPresent) return playlistApi.removeTrack(playlistId, track.id);
+            return playlistApi.addTrack(playlistId, track.id);
         },
         onMutate: async ({playlistId, track, isPresent}) => {
             await queryClient.cancelQueries({queryKey: playlistKeys.tracks(playlistId)});
@@ -138,7 +132,7 @@ export const useTogglePlaylistTrack = () => {
             toast.error('Action failed. Reverting.');
         },
         onSettled: (_data, _error, _variables, context) => {
-            queryClient.invalidateQueries({queryKey: playlistKeys.library()});
+            queryClient.invalidateQueries({queryKey: libraryKeys.me()});
             if (context?.playlistId) {
                 queryClient.invalidateQueries({queryKey: playlistKeys.tracks(context.playlistId)});
             }
@@ -146,10 +140,6 @@ export const useTogglePlaylistTrack = () => {
     });
 };
 
-/**
- * Hook to toggle the "Like" state of a track.
- * Automatically resolves the user's system "Liked Tracks" playlist.
- */
 export const useToggleLike = () => {
     const queryClient = useQueryClient();
     const {data: library} = useUserLibrary();
@@ -220,11 +210,39 @@ export const useFollowPlaylist = () => {
 
     return useMutation({
         mutationFn: (playlistId: string) => playlistApi.followPlaylist(playlistId),
-        onSuccess: () => {
-            toast.success('Added to Library');
-            queryClient.invalidateQueries({queryKey: playlistKeys.library()});
+        onMutate: async (playlistId) => {
+            // Cancel outgoing refetches
+            await queryClient.cancelQueries({queryKey: libraryKeys.me()});
+            await queryClient.cancelQueries({queryKey: playlistKeys.detail(playlistId)});
+
+            const previousLibrary = queryClient.getQueryData<LibraryItemDto[]>(libraryKeys.me());
+            const playlistInfo = queryClient.getQueryData<PlaylistDto>(playlistKeys.detail(playlistId));
+
+            // 1. Optimistically update Library Sidebar
+            if (previousLibrary && playlistInfo) {
+                const optimisticItem: LibraryItemDto = {
+                    id: playlistInfo.id,
+                    type: 'FOLLOWED_PLAYLIST',
+                    title: playlistInfo.name,
+                    imageUrl: playlistInfo.coverMinioPath,
+                    subtitle: `Playlist • ${playlistInfo.ownerAlias}`,
+                    addedAt: new Date().toISOString()
+                };
+                queryClient.setQueryData<LibraryItemDto[]>(libraryKeys.me(), [optimisticItem, ...previousLibrary]);
+            }
+
+            return {previousLibrary, playlistId};
         },
-        onError: () => toast.error('Failed to follow playlist'),
+        onError: (_err, _variables, context) => {
+            if (context?.previousLibrary) {
+                queryClient.setQueryData(libraryKeys.me(), context.previousLibrary);
+            }
+            toast.error('Failed to follow playlist');
+        },
+        onSettled: (_data, _error, variables) => {
+            queryClient.invalidateQueries({queryKey: libraryKeys.me()});
+            queryClient.invalidateQueries({queryKey: playlistKeys.detail(variables)});
+        },
     });
 };
 
@@ -238,32 +256,31 @@ export const useUnfollowPlaylist = () => {
     return useMutation({
         mutationFn: (playlistId: string) => playlistApi.unfollowPlaylist(playlistId),
         onMutate: async (playlistId) => {
-            await queryClient.cancelQueries({queryKey: playlistKeys.library()});
+            // Cancel outgoing refetches
+            await queryClient.cancelQueries({queryKey: libraryKeys.me()});
+            await queryClient.cancelQueries({queryKey: playlistKeys.detail(playlistId)});
 
-            const previousLibrary = queryClient.getQueryData<PageResponse<PlaylistDto>>(
-                [...playlistKeys.library(), 0, 50]
-            );
+            const previousLibrary = queryClient.getQueryData<LibraryItemDto[]>(libraryKeys.me());
 
+            // Optimistically remove from Library Sidebar
             if (previousLibrary) {
-                queryClient.setQueryData<PageResponse<PlaylistDto>>(
-                    [...playlistKeys.library(), 0, 50],
-                    {
-                        ...previousLibrary,
-                        content: previousLibrary.content.filter(p => p.id !== playlistId),
-                    }
+                queryClient.setQueryData<LibraryItemDto[]>(
+                    libraryKeys.me(),
+                    previousLibrary.filter(item => item.id !== playlistId)
                 );
             }
 
-            return {previousLibrary};
+            return {previousLibrary, playlistId};
         },
         onError: (_err, _variables, context) => {
             if (context?.previousLibrary) {
-                queryClient.setQueryData([...playlistKeys.library(), 0, 50], context.previousLibrary);
+                queryClient.setQueryData(libraryKeys.me(), context.previousLibrary);
             }
-            toast.error('Failed to remove from Library. Reverting.');
+            toast.error('Failed to unfollow playlist');
         },
-        onSettled: () => {
-            queryClient.invalidateQueries({queryKey: playlistKeys.library()});
+        onSettled: (_data, _error, variables) => {
+            queryClient.invalidateQueries({queryKey: libraryKeys.me()});
+            queryClient.invalidateQueries({queryKey: playlistKeys.detail(variables)});
         },
     });
 };
