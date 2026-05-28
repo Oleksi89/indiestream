@@ -18,4 +18,9 @@ public interface PlaylistFollowerRepository extends JpaRepository<PlaylistFollow
             "FROM PlaylistFollower pf JOIN Playlist p ON pf.id.playlistId = p.id " +
             "WHERE pf.id.userId = :userId AND p.isPublic = true")
     List<PlaylistLibraryProjection> findFollowedPlaylistsForLibrary(@Param("userId") UUID userId);
+
+    /**
+     * For data consistency checks or validation logic outside the DTO mapping flow.
+     */
+    int countByIdPlaylistId(UUID playlistId);
 }
