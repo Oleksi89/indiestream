@@ -11,6 +11,7 @@ export interface PlaylistDto {
     isCollaborative: boolean;
     trackCount: number;
     totalDurationSeconds: number;
+    followersCount: number;
     createdAt: string;
     updatedAt: string | null;
 }
