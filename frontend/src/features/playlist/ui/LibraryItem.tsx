@@ -5,6 +5,7 @@ import {useSecureUrl} from '@/shared/hooks/useSecureUrl';
 import {profileApi} from '@/features/profile/api/profile.api';
 import type {PlaylistDto} from "@/features/playlist/types";
 import type {LibraryItemDto} from "@/features/library/types";
+import {playlistApi} from "@/features/playlist/api/playlist.api";
 
 interface LibraryItemProps {
     item?: LibraryItemDto;
@@ -21,6 +22,7 @@ export const LibraryItem = ({item, playlist, viewMode, isActive, onClick}: Libra
     const title = item?.title || playlist?.name || 'Unknown';
     const subtitle = item?.subtitle || (playlist ? `Playlist • ${playlist.ownerAlias} • ${playlist.trackCount} tracks` : '');
     const rawImageUrl = item?.imageUrl || playlist?.coverMinioPath;
+    const targetId = item?.id || playlist?.id;
 
     const username = isProfile && item?.subtitle ? item.subtitle.split('@')[1] : null;
 
@@ -30,7 +32,14 @@ export const LibraryItem = ({item, playlist, viewMode, isActive, onClick}: Libra
         !!(isProfile && rawImageUrl && username)
     );
 
-    const displayImageUrl = isProfile ? secureAvatarUrl : rawImageUrl;
+    const {url: securePlaylistCoverUrl, isLoading: isPlaylistCoverLoading} = useSecureUrl(
+        `library-playlist-cover-${targetId || 'idle'}`,
+        () => targetId ? playlistApi.getPlaylistCoverBlob(targetId) : Promise.reject('No targetId'),
+        !!(!isProfile && !isSystemLiked && rawImageUrl && targetId)
+    );
+
+    const displayImageUrl = isProfile ? secureAvatarUrl : securePlaylistCoverUrl;
+    const isLoading = isProfile ? isAvatarLoading : isPlaylistCoverLoading;
 
     const renderCover = () => {
         if (isSystemLiked) {
@@ -38,13 +47,12 @@ export const LibraryItem = ({item, playlist, viewMode, isActive, onClick}: Libra
                 className={cn("text-white fill-white", viewMode === 'expanded' ? "w-12 h-12 shadow-sm" : "w-5 h-5")}/>;
         }
 
-        if (isProfile) {
-            if (isAvatarLoading) {
-                return <div className="w-full h-full animate-pulse bg-slate-700"/>;
-            }
-            if (!displayImageUrl) {
-                return <UserIcon className={cn("text-slate-400", viewMode === 'expanded' ? "w-12 h-12" : "w-6 h-6")}/>;
-            }
+        if (isLoading) {
+            return <div className="w-full h-full animate-pulse bg-slate-700"/>;
+        }
+
+        if (isProfile && !displayImageUrl) {
+            return <UserIcon className={cn("text-slate-400", viewMode === 'expanded' ? "w-12 h-12" : "w-6 h-6")}/>;
         }
 
         if (displayImageUrl) {
@@ -53,7 +61,7 @@ export const LibraryItem = ({item, playlist, viewMode, isActive, onClick}: Libra
 
         return (
             <span
-                className={cn("font-bold text-slate-600 uppercase", viewMode === 'expanded' ? "text-4xl" : "text-lg text-slate-400")}>
+                className={cn("font-bold text-slate-500 uppercase", viewMode === 'expanded' ? "text-4xl" : "text-lg")}>
                 {title[0]}
             </span>
         );

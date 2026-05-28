@@ -47,6 +47,18 @@ export const playlistApi = {
         return data;
     },
 
+    uploadPlaylistCover: async (playlistId: string, formData: FormData): Promise<PlaylistDto> => {
+        const {data} = await apiClient.post<unknown, AxiosResponse<PlaylistDto>>(`/playlists/${playlistId}/cover`, formData, {
+            headers: {'Content-Type': 'multipart/form-data'}
+        });
+        return data;
+    },
+
+    getPlaylistCoverBlob: async (playlistId: string): Promise<Blob> => {
+        const response = await apiClient.get(`/playlists/${playlistId}/cover`, {responseType: 'blob'});
+        return response.data;
+    },
+
     deletePlaylist: async (playlistId: string): Promise<void> => {
         await apiClient.delete(`/playlists/${playlistId}`);
     },

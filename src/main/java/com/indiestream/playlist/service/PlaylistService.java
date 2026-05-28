@@ -31,7 +31,9 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.InputStream;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -47,8 +49,9 @@ public class PlaylistService implements PlaylistModuleApi {
     private final PlaylistTrackRepository playlistTrackRepository;
     private final PlaylistCollaboratorRepository collaboratorRepository;
     private final PlaylistFollowerRepository followerRepository;
+    private final PlaylistStorageService storageService;
 
-    // Cross-module strictly defined API call
+    // Cross-module strictly defined API calls
     private final MediaModuleApi mediaModuleApi;
     private final AuthModuleApi authModuleApi;
     private final ApplicationEventPublisher events;
@@ -175,13 +178,13 @@ public class PlaylistService implements PlaylistModuleApi {
 
     @Override
     @Transactional(readOnly = true)
-    public java.util.List<PlaylistLibraryProjection> getOwnedPlaylistsForLibrary(UUID userId) {
+    public List<PlaylistLibraryProjection> getOwnedPlaylistsForLibrary(UUID userId) {
         return playlistRepository.findOwnedPlaylistsForLibrary(userId);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public java.util.List<PlaylistLibraryProjection> getFollowedPlaylistsForLibrary(UUID userId) {
+    public List<PlaylistLibraryProjection> getFollowedPlaylistsForLibrary(UUID userId) {
         return followerRepository.findFollowedPlaylistsForLibrary(userId);
     }
 
@@ -194,7 +197,7 @@ public class PlaylistService implements PlaylistModuleApi {
         Playlist playlist = playlistRepository.findById(playlistId)
                 .orElseThrow(() -> new PlaylistNotFoundException(playlistId));
 
-        enforceOwnerAccess(playlist, userId);
+        enforceModificationAccess(playlist, userId);
 
         // System playlists like "Liked Tracks" must remain immutable in name/publicity
         if (playlist.getIsSystem()) {
@@ -206,6 +209,42 @@ public class PlaylistService implements PlaylistModuleApi {
         if (isPublic != null) playlist.setIsPublic(isPublic);
 
         return mapToDto(playlistRepository.save(playlist));
+    }
+
+    /**
+     * Replaces the playlist cover image in MinIO, aggressively preventing orphan blobs.
+     */
+    @Transactional
+    public PlaylistDto updatePlaylistCover(UUID playlistId, UUID userId, MultipartFile file) {
+        Playlist playlist = playlistRepository.findById(playlistId)
+                .orElseThrow(() -> new PlaylistNotFoundException(playlistId));
+
+        enforceModificationAccess(playlist, userId);
+
+        if (playlist.getIsSystem()) {
+            throw new IllegalArgumentException("System playlists cannot have custom covers.");
+        }
+
+        if (playlist.getCoverMinioPath() != null) {
+            storageService.deleteCover(playlist.getCoverMinioPath());
+        }
+
+        String newPath = storageService.uploadCover(file, playlistId);
+        playlist.setCoverMinioPath(newPath);
+
+        return mapToDto(playlistRepository.save(playlist));
+    }
+
+    @Transactional(readOnly = true)
+    public InputStream getPlaylistCoverStream(UUID playlistId) {
+        Playlist playlist = playlistRepository.findById(playlistId)
+                .orElseThrow(() -> new PlaylistNotFoundException(playlistId));
+
+        if (playlist.getCoverMinioPath() == null) {
+            throw new IllegalStateException("Playlist has no cover configured.");
+        }
+
+        return storageService.getCoverStream(playlist.getCoverMinioPath());
     }
 
     /**
@@ -221,6 +260,10 @@ public class PlaylistService implements PlaylistModuleApi {
 
         if (playlist.getIsSystem()) {
             throw new IllegalArgumentException("System playlists cannot be deleted.");
+        }
+
+        if (playlist.getCoverMinioPath() != null) {
+            storageService.deleteCover(playlist.getCoverMinioPath());
         }
 
         playlistRepository.delete(playlist);
@@ -239,9 +282,7 @@ public class PlaylistService implements PlaylistModuleApi {
 
         PlaylistTrackId linkId = new PlaylistTrackId(playlistId, trackId);
 
-        if (playlistTrackRepository.existsById(linkId)) {
-            return;
-        }
+        if (playlistTrackRepository.existsById(linkId)) return;
 
         // Fetch duration from Media module API
         TrackMetadata track = mediaModuleApi.getTrackMetadata(trackId);
@@ -364,7 +405,7 @@ public class PlaylistService implements PlaylistModuleApi {
 
     @Transactional
     public void followPlaylist(UUID playlistId, UUID userId) {
-        Playlist playlist = playlistRepository.findById(playlistId)
+        Playlist playlist = playlistRepository.findByIdWithPessimisticWrite(playlistId)
                 .orElseThrow(() -> new PlaylistNotFoundException(playlistId));
 
         if (!playlist.getIsPublic()) {
@@ -374,17 +415,40 @@ public class PlaylistService implements PlaylistModuleApi {
             }
         }
 
+        PlaylistFollowerId followerId = new PlaylistFollowerId(userId, playlistId);
+        if (followerRepository.existsById(followerId)) {
+            return; // Idempotency check prevents duplicate increments
+        }
+
         PlaylistFollower follower = PlaylistFollower.builder()
-                .id(new PlaylistFollowerId(userId, playlistId))
+                .id(followerId)
                 .build();
 
         followerRepository.save(follower);
+
+        playlist.setFollowersCount(playlist.getFollowersCount() + 1);
+        playlistRepository.save(playlist);
+
         events.publishEvent(new PlaylistFollowedEvent(userId, playlistId, Instant.now()));
     }
 
+    /**
+     * Unbinds a user and decrements the aggregate safely.
+     */
     @Transactional
     public void unfollowPlaylist(UUID playlistId, UUID userId) {
-        followerRepository.deleteById(new PlaylistFollowerId(userId, playlistId));
+        Playlist playlist = playlistRepository.findByIdWithPessimisticWrite(playlistId)
+                .orElseThrow(() -> new PlaylistNotFoundException(playlistId));
+
+        PlaylistFollowerId followerId = new PlaylistFollowerId(userId, playlistId);
+        if (!followerRepository.existsById(followerId)) {
+            return;
+        }
+
+        followerRepository.deleteById(followerId);
+
+        playlist.setFollowersCount(Math.max(0, playlist.getFollowersCount() - 1));
+        playlistRepository.save(playlist);
     }
 
     // --- Private Guards ---
@@ -396,14 +460,11 @@ public class PlaylistService implements PlaylistModuleApi {
     }
 
     private void enforceModificationAccess(Playlist playlist, UUID userId) {
-        if (playlist.getOwnerId().equals(userId)) {
-            return;
-        }
+        if (playlist.getOwnerId().equals(userId)) return;
+
         if (playlist.getIsCollaborative()) {
             boolean isCollaborator = collaboratorRepository.existsByIdPlaylistIdAndIdUserId(playlist.getId(), userId);
-            if (isCollaborator) {
-                return;
-            }
+            if (isCollaborator) return;
         }
         throw new AccessDeniedException("Modification access denied. Must be owner or collaborator.");
     }
@@ -426,6 +487,7 @@ public class PlaylistService implements PlaylistModuleApi {
                 playlist.getIsCollaborative(),
                 playlist.getTrackCount(),
                 playlist.getTotalDurationSeconds(),
+                playlist.getFollowersCount(),
                 playlist.getCreatedAt(),
                 playlist.getUpdatedAt()
         );
