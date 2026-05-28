@@ -41,13 +41,15 @@ export const EditPlaylistModal = ({
     const isPublicValue = watch('isPublic');
 
     useEffect(() => {
-        if (selectedFile) {
-            const url = URL.createObjectURL(selectedFile);
-            setPreviewUrl(url);
-            return () => URL.revokeObjectURL(url);
-        } else {
+        if (!selectedFile) {
             setPreviewUrl(null);
+            return;
         }
+
+        const url = URL.createObjectURL(selectedFile);
+        setPreviewUrl(url);
+
+        return () => URL.revokeObjectURL(url);
     }, [selectedFile]);
 
     const onSubmit = async (data: EditFormValues) => {
