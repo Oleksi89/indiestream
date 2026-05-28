@@ -47,11 +47,42 @@ export const useUpdatePlaylist = () => {
     return useMutation({
         mutationFn: ({id, payload}: { id: string; payload: UpdatePlaylistPayload }) =>
             playlistApi.updatePlaylist(id, payload),
-        onSuccess: (_, variables) => {
+        onMutate: async ({id, payload}) => {
+            await queryClient.cancelQueries({queryKey: playlistKeys.detail(id)});
+            const previousPlaylist = queryClient.getQueryData<PlaylistDto>(playlistKeys.detail(id));
+
+            if (previousPlaylist) {
+                queryClient.setQueryData<PlaylistDto>(playlistKeys.detail(id), {
+                    ...previousPlaylist,
+                    ...payload,
+                });
+            }
+            return {previousPlaylist, id};
+        },
+        onError: (_err, _variables, context) => {
+            if (context?.previousPlaylist) {
+                queryClient.setQueryData(playlistKeys.detail(context.id), context.previousPlaylist);
+            }
+            toast.error('Failed to update playlist details');
+        },
+        onSettled: (_data, _error, variables) => {
             queryClient.invalidateQueries({queryKey: libraryKeys.me()});
             queryClient.invalidateQueries({queryKey: playlistKeys.detail(variables.id)});
         },
-        onError: () => toast.error('Failed to update playlist'),
+    });
+};
+
+export const useUploadPlaylistCover = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({id, file}: { id: string; file: FormData }) => playlistApi.uploadPlaylistCover(id, file),
+        onSuccess: (_, variables) => {
+            toast.success('Cover image updated');
+            queryClient.invalidateQueries({queryKey: playlistKeys.detail(variables.id)});
+            queryClient.invalidateQueries({queryKey: libraryKeys.me()});
+        },
+        onError: () => toast.error('Failed to process cover image upload'),
     });
 };
 
