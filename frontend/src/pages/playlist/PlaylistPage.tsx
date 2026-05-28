@@ -1,24 +1,29 @@
-import {useMemo} from 'react';
+import {useMemo, useState, useEffect} from 'react';
 import {Link, useParams} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
+import {FastAverageColor} from 'fast-average-color';
 import {playlistApi} from '@/features/playlist/api/playlist.api';
 import {playlistKeys, useFollowPlaylist, useUnfollowPlaylist} from '@/features/playlist/hooks/usePlaylists';
 import {useLibrary} from '@/features/library/hooks/useLibrary';
-import {Clock, Play, MoreHorizontal, Disc3, Check} from 'lucide-react';
+import {Clock, Play, MoreHorizontal, Disc3, Check, Pencil} from 'lucide-react';
 import {Button} from '@/shared/ui/button';
 import {cn} from '@/shared/lib/utils';
 import {TrackContextMenu} from '@/features/media/ui/TrackContextMenu';
 import {usePlayerStore} from '@/shared/store/playerStore';
 import {useAuthStore} from '@/shared/store/authStore';
-import type {TrackDto} from "@/features/media/types";
+import {useSecureUrl} from '@/shared/hooks/useSecureUrl';
 import {TrackCard} from "@/features/media/ui/TrackCard.tsx";
-
+import {EditPlaylistModal} from "@/features/playlist/ui/EditPlaylistModal";
+import type {TrackDto} from "@/features/media/types";
 
 export const PlaylistPage = () => {
     const {id} = useParams<{ id: string }>();
     const {playContext} = usePlayerStore();
     const {user: currentUser} = useAuthStore();
     const {data: library} = useLibrary();
+
+    const [dominantColor, setDominantColor] = useState<string>('#1e293b'); // Fallback slate-800
+    const [isEditModalOpen, setEditModalOpen] = useState(false);
 
     const {data: playlist, isLoading: isPlaylistLoading} = useQuery({
         queryKey: playlistKeys.detail(id!),
@@ -31,6 +36,28 @@ export const PlaylistPage = () => {
         queryFn: () => playlistApi.getPlaylistTracks(id!),
         enabled: !!id
     });
+
+    // Secure blob proxy fetching
+    const {url: coverUrl} = useSecureUrl(
+        `playlist-cover-${id}`,
+        () => playlistApi.getPlaylistCoverBlob(id!),
+        !!playlist?.coverMinioPath && !!id
+    );
+
+    // Extraction Engine for Tailwind UI Gradients
+    useEffect(() => {
+        if (!coverUrl) {
+            queueMicrotask(() => setDominantColor('#1e293b'));
+            return;
+        }
+
+        const fac = new FastAverageColor();
+        fac.getColorAsync(coverUrl, {algorithm: 'dominant'})
+            .then(color => setDominantColor(color.hex))
+            .catch(e => console.error('Color extraction failed', e));
+
+        return () => fac.destroy();
+    }, [coverUrl]);
 
     const followMutation = useFollowPlaylist();
     const unfollowMutation = useUnfollowPlaylist();
@@ -67,95 +94,133 @@ export const PlaylistPage = () => {
     };
 
     return (
-        <div className="flex flex-col min-h-full">
-            {/* Hero Header */}
-            <header
-                className="relative flex items-end gap-6 p-8 pb-6 bg-gradient-to-b from-slate-800/50 to-transparent">
-                <div className="w-52 h-52 shrink-0 shadow-2xl rounded-xl overflow-hidden bg-slate-800">
-                    {playlist.coverMinioPath ? (
-                        <img src={playlist.coverMinioPath} className="w-full h-full object-cover" alt=""/>
+        <div
+            className="flex flex-col min-h-full transition-colors duration-1000 ease-in-out"
+            style={{background: `linear-gradient(to bottom, ${dominantColor} 0%, #121212 )`}}
+        >
+            <header className="relative flex items-end gap-6 p-8 pb-6 mt-16 lg:mt-24">
+                <div
+                    className="group relative w-52 h-52 shrink-0 shadow-2xl rounded-xl overflow-hidden bg-slate-800/50 cursor-pointer"
+                    onClick={() => isOwner && !playlist.isSystem && setEditModalOpen(true)}
+                >
+                    {coverUrl ? (
+                        <img src={coverUrl}
+                             className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                             alt="Cover"/>
                     ) : (
+                        <div className="w-full h-full bg-black/20 flex items-center justify-center">
+                            <span className="text-6xl font-bold opacity-50">{playlist.name[0]}</span>
+                        </div>
+                    )}
+
+                    {isOwner && !playlist.isSystem && (
                         <div
-                            className="w-full h-full bg-gradient-to-br from-indigo-600 to-purple-800 flex items-center justify-center">
-                            <span className="text-6xl font-bold">{playlist.name[0]}</span>
+                            className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 text-white">
+                            <Pencil size={32}/>
+                            <span className="text-sm font-semibold tracking-wide">Edit Cover</span>
                         </div>
                     )}
                 </div>
-                <div className="flex flex-col gap-2">
-                    <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Playlist</span>
-                    <h1 className="text-7xl font-black tracking-tighter text-white mb-4">{playlist.name}</h1>
-                    <div className="flex items-center gap-2 text-sm font-medium text-slate-300">
+
+                <div className="flex flex-col gap-2 z-10 text-white">
+                    <span className="text-xs font-bold uppercase tracking-widest text-white/80">
+                        {playlist.isPublic ? 'Public Playlist' : 'Private Playlist'}
+                    </span>
+                    <h1
+                        className="text-6xl lg:text-7xl font-black tracking-tighter mb-4 cursor-pointer hover:underline"
+                        onClick={() => isOwner && !playlist.isSystem && setEditModalOpen(true)}
+                    >
+                        {playlist.name}
+                    </h1>
+                    {playlist.description && (
+                        <p className="text-sm font-medium text-white/70 max-w-2xl">{playlist.description}</p>
+                    )}
+                    <div className="flex items-center gap-2 text-sm font-medium text-white/90 mt-2">
                         <Link to={`/user/${playlist.ownerUsername}`}
-                              className="text-white hover:underline cursor-pointer">
+                              className="hover:underline cursor-pointer font-bold">
                             {playlist.ownerAlias}
                         </Link>
                         <span>•</span>
+                        {playlist.followersCount > 0 && (
+                            <>
+                                <span>{playlist.followersCount} saves</span>
+                                <span>•</span>
+                            </>
+                        )}
                         <span>{playlist.trackCount} tracks</span>
                         <span>•</span>
-                        <span className="text-slate-500">{Math.floor(playlist.totalDurationSeconds / 60)} min</span>
+                        <span className="text-white/60">{Math.floor(playlist.totalDurationSeconds / 60)} min</span>
                     </div>
                 </div>
             </header>
-
-            {/* Action Bar */}
-            <section className="px-8 py-4 flex items-center gap-6">
-                <Button onClick={handlePlayPlaylist} size="icon"
-                        className="w-14 h-14 rounded-full bg-violet-600 hover:bg-violet-500 shadow-xl hover:scale-105 transition-transform">
-                    <Play size={24} fill="currentColor" className="ml-1"/>
-                </Button>
-
-                {!isOwner && !playlist.isSystem && (
-                    <Button
-                        onClick={handleFollowToggle}
-                        variant={isFollowed ? "outline" : "default"}
-                        className={cn(
-                            "rounded-full px-6 font-bold tracking-wide transition-all",
-                            isFollowed
-                                ? "border-white/20 text-white hover:border-white/40 bg-transparent"
-                                : "bg-white text-black hover:bg-slate-200"
-                        )}
-                    >
-                        {isFollowed ? <><Check className="w-4 h-4 mr-2"/> Following</> : 'Follow'}
+            <div className="flex flex-col backdrop-blur-3xl">
+                {/* Action Bar */}
+                <section className="px-8 py-6 flex items-center gap-6">
+                    <Button onClick={handlePlayPlaylist} size="icon"
+                            className="w-14 h-14 rounded-full bg-violet-600 hover:bg-violet-500 shadow-xl hover:scale-105 transition-transform">
+                        <Play size={24} fill="currentColor" className="ml-1"/>
                     </Button>
-                )}
 
-                <button className="text-slate-400 hover:text-white transition-colors">
-                    <MoreHorizontal size={32}/>
-                </button>
-            </section>
-
-            {/* Tracks List */}
-            <section className="px-8 mt-4 pb-20">
-                {/* Header Row */}
-                <div
-                    className="grid grid-cols-[48px_minmax(120px,1fr)_120px_60px] md:grid-cols-[48px_minmax(120px,1fr)_150px_60px] gap-4 px-4 py-2 mb-2 text-xs font-semibold text-slate-500 border-b border-slate-800/50 uppercase tracking-wider">
-                    <div>#</div>
-                    <div>Title</div>
-                    <div className="hidden md:block">Added At</div>
-                    <div className="text-right pr-2"><Clock size={16} className="inline-block"/></div>
-                </div>
-
-                {/* Body Rows */}
-                <div className="flex flex-col">
-                    {isTracksLoading ? (
-                        <div className="py-10 text-center text-slate-600 flex justify-center items-center gap-2">
-                            <Disc3 className="animate-spin h-5 w-5"/> Syncing tracks...
-                        </div>
-                    ) : (
-                        mappedTracks.map((track, index) => (
-                            <TrackContextMenu key={track.id} track={track}>
-                                <TrackCard
-                                    track={track}
-                                    variant="playlist-row"
-                                    index={index + 1}
-                                    addedAt={tracksData?.content[index].addedAt}
-                                    onPlayOverride={() => playContext(mappedTracks, `playlist:${id}`, index)}
-                                />
-                            </TrackContextMenu>
-                        ))
+                    {!isOwner && !playlist.isSystem && (
+                        <Button
+                            onClick={handleFollowToggle}
+                            variant={isFollowed ? "outline" : "default"}
+                            className={cn(
+                                "rounded-full px-6 font-bold tracking-wide transition-all border-2",
+                                isFollowed
+                                    ? "border-white/30 text-white hover:border-white/60 bg-transparent"
+                                    : "bg-white text-black hover:bg-slate-200 border-transparent"
+                            )}
+                        >
+                            {isFollowed ? <><Check className="w-5 h-5 mr-2"/> Saved</> : 'Save'}
+                        </Button>
                     )}
-                </div>
-            </section>
+
+                    <button className="text-white/60 hover:text-white transition-colors">
+                        <MoreHorizontal size={32}/>
+                    </button>
+                </section>
+
+                {/* Tracks List */}
+                <section className="px-8 mt-4 pb-20 backdrop-blur-3xl">
+                    {/* Header Row */}
+                    <div
+                        className="grid grid-cols-[48px_minmax(120px,1fr)_120px_60px] md:grid-cols-[48px_minmax(120px,1fr)_150px_60px] gap-4 px-4 py-2 mb-2 text-xs font-semibold text-slate-400 border-b border-white/10 uppercase tracking-wider">
+                        <div>#</div>
+                        <div>Title</div>
+                        <div className="hidden md:block">Added At</div>
+                        <div className="text-right pr-2"><Clock size={16} className="inline-block"/></div>
+                    </div>
+
+                    {/* Body Rows */}
+                    <div className="flex flex-col">
+                        {isTracksLoading ? (
+                            <div className="py-10 text-center text-slate-500 flex justify-center items-center gap-2">
+                                <Disc3 className="animate-spin h-5 w-5"/> Syncing library...
+                            </div>
+                        ) : (
+                            mappedTracks.map((track, index) => (
+                                <TrackContextMenu key={track.id} track={track}>
+                                    <TrackCard
+                                        track={track}
+                                        variant="playlist-row"
+                                        index={index + 1}
+                                        addedAt={tracksData?.content[index].addedAt}
+                                        onPlayOverride={() => playContext(mappedTracks, `playlist:${id}`, index)}
+                                    />
+                                </TrackContextMenu>
+                            ))
+                        )}
+                    </div>
+                </section>
+            </div>
+            {isOwner && (
+                <EditPlaylistModal
+                    playlist={playlist}
+                    isOpen={isEditModalOpen}
+                    onClose={() => setEditModalOpen(false)}
+                />
+            )}
         </div>
     );
 };
