@@ -4,13 +4,16 @@ import com.indiestream.playlist.dto.PlaylistDto;
 import com.indiestream.playlist.dto.PlaylistTrackDetailsDto;
 import com.indiestream.playlist.service.PlaylistService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.InputStream;
 import java.security.Principal;
 import java.util.UUID;
 
@@ -117,6 +120,30 @@ public class PlaylistController {
                 playlistId, userId, request.name(), request.description(), request.isPublic()
         );
         return ResponseEntity.ok(updated);
+    }
+
+    /**
+     * Secures direct MinIO uploads behind the Modulith boundary.
+     */
+    @PostMapping(value = "/{playlistId}/cover", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<PlaylistDto> uploadPlaylistCover(
+            @PathVariable UUID playlistId,
+            @RequestParam("file") MultipartFile file,
+            Principal principal) {
+        UUID userId = UUID.fromString(principal.getName());
+        PlaylistDto updated = playlistService.updatePlaylistCover(playlistId, userId, file);
+        return ResponseEntity.ok(updated);
+    }
+
+    /**
+     * Secure blob proxy to prevent direct client access to MinIO CDN paths.
+     */
+    @GetMapping("/{playlistId}/cover")
+    public ResponseEntity<InputStreamResource> getPlaylistCover(@PathVariable UUID playlistId) {
+        InputStream stream = playlistService.getPlaylistCoverStream(playlistId);
+        return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_JPEG)
+                .body(new InputStreamResource(stream));
     }
 
     @DeleteMapping("/{playlistId}")

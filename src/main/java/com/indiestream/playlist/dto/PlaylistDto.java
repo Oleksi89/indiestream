@@ -16,6 +16,7 @@ public record PlaylistDto(
         Boolean isCollaborative,
         Integer trackCount,
         Integer totalDurationSeconds,
+        Integer followersCount,
         Instant createdAt,
         Instant updatedAt
 ) {

@@ -212,6 +212,42 @@ public class PlaylistService implements PlaylistModuleApi {
     }
 
     /**
+     * Replaces the playlist cover image in MinIO, aggressively preventing orphan blobs.
+     */
+    @Transactional
+    public PlaylistDto updatePlaylistCover(UUID playlistId, UUID userId, MultipartFile file) {
+        Playlist playlist = playlistRepository.findById(playlistId)
+                .orElseThrow(() -> new PlaylistNotFoundException(playlistId));
+
+        enforceModificationAccess(playlist, userId);
+
+        if (playlist.getIsSystem()) {
+            throw new IllegalArgumentException("System playlists cannot have custom covers.");
+        }
+
+        if (playlist.getCoverMinioPath() != null) {
+            storageService.deleteCover(playlist.getCoverMinioPath());
+        }
+
+        String newPath = storageService.uploadCover(file, playlistId);
+        playlist.setCoverMinioPath(newPath);
+
+        return mapToDto(playlistRepository.save(playlist));
+    }
+
+    @Transactional(readOnly = true)
+    public InputStream getPlaylistCoverStream(UUID playlistId) {
+        Playlist playlist = playlistRepository.findById(playlistId)
+                .orElseThrow(() -> new PlaylistNotFoundException(playlistId));
+
+        if (playlist.getCoverMinioPath() == null) {
+            throw new IllegalStateException("Playlist has no cover configured.");
+        }
+
+        return storageService.getCoverStream(playlist.getCoverMinioPath());
+    }
+
+    /**
      * Deletes a custom playlist.
      * Cascading deletes on the DB level will automatically clear playlist_tracks.
      */
@@ -224,6 +260,10 @@ public class PlaylistService implements PlaylistModuleApi {
 
         if (playlist.getIsSystem()) {
             throw new IllegalArgumentException("System playlists cannot be deleted.");
+        }
+
+        if (playlist.getCoverMinioPath() != null) {
+            storageService.deleteCover(playlist.getCoverMinioPath());
         }
 
         playlistRepository.delete(playlist);
