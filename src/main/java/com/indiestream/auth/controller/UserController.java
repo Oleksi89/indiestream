@@ -1,5 +1,6 @@
 package com.indiestream.auth.controller;
 
+import com.indiestream.auth.UserPublicProfile;
 import com.indiestream.auth.dto.UpdateUserProfileRequestDto;
 import com.indiestream.auth.dto.UserDto;
 import com.indiestream.auth.dto.UserProfileResponse;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.security.Principal;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -50,6 +52,14 @@ public class UserController {
         return userService.getProfileByUsername(username, requesterId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/autocomplete")
+    public ResponseEntity<List<UserPublicProfile>> autocompleteUsers(@RequestParam("q") String query) {
+        if (query == null || query.isBlank()) {
+            return ResponseEntity.ok(List.of());
+        }
+        return ResponseEntity.ok(userService.searchUsersAutocomplete(query));
     }
 
     @PutMapping("/me/profile")

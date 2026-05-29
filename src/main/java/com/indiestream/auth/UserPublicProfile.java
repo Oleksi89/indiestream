@@ -9,6 +9,7 @@ import java.util.UUID;
 public record UserPublicProfile(
         UUID id,
         String username,
-        String alias
+        String alias,
+        String avatarPath
 ) {
 }
