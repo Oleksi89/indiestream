@@ -57,7 +57,7 @@ public interface PlaylistRepository extends JpaRepository<Playlist, UUID> {
     /**
      * Strict JPQL projection. Bypasses standard Entity lifecycle and tracking entirely.
      */
-    @Query("SELECT new com.indiestream.playlist.PlaylistLibraryProjection(p.id, p.name, p.coverMinioPath, p.ownerId, p.createdAt) " +
+    @Query("SELECT new com.indiestream.playlist.PlaylistLibraryProjection(p.id, p.name, p.coverMinioPath, p.ownerId, p.createdAt, p.isCollaborative) " +
             "FROM Playlist p WHERE p.ownerId = :ownerId")
     List<PlaylistLibraryProjection> findOwnedPlaylistsForLibrary(@Param("ownerId") UUID ownerId);
 }

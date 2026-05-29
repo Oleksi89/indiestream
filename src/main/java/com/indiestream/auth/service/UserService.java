@@ -20,10 +20,7 @@ import com.indiestream.auth.exception.EmailAlreadyInUseException;
 import com.indiestream.auth.exception.UsernameAlreadyInUseException;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -195,8 +192,8 @@ public class UserService implements AuthModuleApi {
 
     @Override
     @Transactional(readOnly = true)
-    public java.util.Map<UUID, String> getUserAliases(Set<UUID> userIds) {
-        if (userIds == null || userIds.isEmpty()) return java.util.Collections.emptyMap();
+    public Map<UUID, String> getUserAliases(Set<UUID> userIds) {
+        if (userIds == null || userIds.isEmpty()) return Collections.emptyMap();
 
         List<Object[]> results = userRepository.findAliasesByIds(userIds);
         return results.stream().collect(Collectors.toMap(
