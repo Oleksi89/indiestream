@@ -1,8 +1,11 @@
+import type {UserPublicProfileDto} from "@/features/auth/types";
+
 export interface PlaylistDto {
     id: string;
     ownerId: string;
     ownerUsername: string;
     ownerAlias: string;
+    ownerAvatarPath: string | null;
     name: string;
     description: string | null;
     coverMinioPath: string | null;
@@ -12,6 +15,7 @@ export interface PlaylistDto {
     trackCount: number;
     totalDurationSeconds: number;
     followersCount: number;
+    collaborators: UserPublicProfileDto[];
     createdAt: string;
     updatedAt: string | null;
 }

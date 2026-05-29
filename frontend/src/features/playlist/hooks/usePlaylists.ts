@@ -11,6 +11,7 @@ import type {
 } from '../types';
 import {libraryKeys} from "@/features/library/hooks/useLibrary";
 import type {LibraryItemDto} from "@/features/library/types";
+import type {UserPublicProfileDto} from "@/features/auth/types";
 
 export const playlistKeys = {
     all: ['playlists'] as const,
@@ -313,5 +314,71 @@ export const useUnfollowPlaylist = () => {
             queryClient.invalidateQueries({queryKey: libraryKeys.me()});
             queryClient.invalidateQueries({queryKey: playlistKeys.detail(variables)});
         },
+    });
+};
+
+// --- Collaboration State Engine ---
+
+export const useAddCollaboratorMutation = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({playlistId, targetProfile}: { playlistId: string; targetProfile: UserPublicProfileDto }) =>
+            playlistApi.addCollaboratorByUsername(playlistId, targetProfile.username),
+        onMutate: async ({playlistId, targetProfile}) => {
+            await queryClient.cancelQueries({queryKey: playlistKeys.detail(playlistId)});
+
+            const previousPlaylist = queryClient.getQueryData<PlaylistDto>(playlistKeys.detail(playlistId));
+
+            if (previousPlaylist) {
+                queryClient.setQueryData<PlaylistDto>(playlistKeys.detail(playlistId), {
+                    ...previousPlaylist,
+                    collaborators: [...(previousPlaylist.collaborators || []), targetProfile]
+                });
+            }
+
+            return {previousPlaylist, playlistId};
+        },
+        onError: (_err, _variables, context) => {
+            if (context?.previousPlaylist) {
+                queryClient.setQueryData(playlistKeys.detail(context.playlistId), context.previousPlaylist);
+            }
+            toast.error('Failed to add collaborator.');
+        },
+        onSettled: (_data, _error, variables) => {
+            queryClient.invalidateQueries({queryKey: playlistKeys.detail(variables.playlistId)});
+        }
+    });
+};
+
+export const useRemoveCollaboratorMutation = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({playlistId, collaboratorId}: { playlistId: string; collaboratorId: string }) =>
+            playlistApi.removeCollaborator(playlistId, collaboratorId),
+        onMutate: async ({playlistId, collaboratorId}) => {
+            await queryClient.cancelQueries({queryKey: playlistKeys.detail(playlistId)});
+
+            const previousPlaylist = queryClient.getQueryData<PlaylistDto>(playlistKeys.detail(playlistId));
+
+            if (previousPlaylist) {
+                queryClient.setQueryData<PlaylistDto>(playlistKeys.detail(playlistId), {
+                    ...previousPlaylist,
+                    collaborators: previousPlaylist.collaborators.filter(c => c.id !== collaboratorId)
+                });
+            }
+
+            return {previousPlaylist, playlistId};
+        },
+        onError: (_err, _variables, context) => {
+            if (context?.previousPlaylist) {
+                queryClient.setQueryData(playlistKeys.detail(context.playlistId), context.previousPlaylist);
+            }
+            toast.error('Failed to remove collaborator.');
+        },
+        onSettled: (_data, _error, variables) => {
+            queryClient.invalidateQueries({queryKey: playlistKeys.detail(variables.playlistId)});
+        }
     });
 };
