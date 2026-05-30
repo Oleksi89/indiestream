@@ -258,7 +258,10 @@ export const useFollowPlaylist = () => {
                     title: playlistInfo.name,
                     imageUrl: playlistInfo.coverMinioPath,
                     subtitle: `Playlist • ${playlistInfo.ownerAlias}`,
-                    addedAt: new Date().toISOString()
+                    addedAt: new Date().toISOString(),
+                    ownerId: playlistInfo.ownerId,
+                    isCollaborative: playlistInfo.isCollaborative,
+                    isCollaborator: false
                 };
                 queryClient.setQueryData<LibraryItemDto[]>(libraryKeys.me(), [optimisticItem, ...previousLibrary]);
             }

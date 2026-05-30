@@ -1,4 +1,4 @@
-import {Lock, Users, Heart, User as UserIcon, ShieldCheck} from 'lucide-react';
+import {Lock, Users, Heart, User as UserIcon} from 'lucide-react';
 import {cn} from '@/shared/lib/utils';
 import {PlaylistContextMenu} from '@/features/playlist/ui/PlaylistContextMenu';
 import {useSecureUrl} from '@/shared/hooks/useSecureUrl';
