@@ -52,7 +52,10 @@ export const useFollowMutation = (username: string) => {
                         title: previousProfile.alias,
                         imageUrl: previousProfile.profile?.avatarPath || null,
                         subtitle: `Profile • @${previousProfile.username}`,
-                        addedAt: new Date().toISOString()
+                        addedAt: new Date().toISOString(),
+                        ownerId: null,
+                        isCollaborative: false,
+                        isCollaborator: false
                     };
                     queryClient.setQueryData<LibraryItemDto[]>(libraryKeys.me(), [optimisticLibraryItem, ...previousLibrary]);
                 }

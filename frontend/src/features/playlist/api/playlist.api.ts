@@ -76,12 +76,16 @@ export const playlistApi = {
         await apiClient.delete(`/playlists/${playlistId}/tracks/${trackId}`);
     },
 
-    // --- Social Collaboration Features ---
-
-    addCollaborator: async (playlistId: string, collaboratorId: string): Promise<void> => {
-        await apiClient.post(`/playlists/${playlistId}/collaborators/${collaboratorId}`);
+    /**
+     * Secures assignment via explicit string username mapping, bypassing ID leakages.
+     */
+    addCollaboratorByUsername: async (playlistId: string, username: string): Promise<void> => {
+        await apiClient.post(`/playlists/${playlistId}/collaborators`, {username});
     },
 
+    /**
+     * Executes explicit removal. Can be triggered by Owner (for anyone) or Collaborator (for self).
+     */
     removeCollaborator: async (playlistId: string, collaboratorId: string): Promise<void> => {
         await apiClient.delete(`/playlists/${playlistId}/collaborators/${collaboratorId}`);
     },

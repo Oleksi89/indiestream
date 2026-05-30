@@ -37,6 +37,7 @@ import java.io.InputStream;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -186,6 +187,12 @@ public class PlaylistService implements PlaylistModuleApi {
     @Transactional(readOnly = true)
     public List<PlaylistLibraryProjection> getFollowedPlaylistsForLibrary(UUID userId) {
         return followerRepository.findFollowedPlaylistsForLibrary(userId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PlaylistLibraryProjection> getCollaboratedPlaylistsForLibrary(UUID userId) {
+        return collaboratorRepository.findCollaboratedPlaylistsForLibrary(userId);
     }
 
     /**
@@ -377,7 +384,7 @@ public class PlaylistService implements PlaylistModuleApi {
     // --- Social Collaboration Features ---
 
     @Transactional
-    public void addCollaborator(UUID playlistId, UUID ownerId, UUID newCollaboratorId) {
+    public void addCollaboratorByUsername(UUID playlistId, UUID ownerId, String targetUsername) {
         Playlist playlist = playlistRepository.findById(playlistId)
                 .orElseThrow(() -> new PlaylistNotFoundException(playlistId));
 
@@ -387,19 +394,34 @@ public class PlaylistService implements PlaylistModuleApi {
             throw new IllegalArgumentException("Playlist is not marked as collaborative.");
         }
 
+        UserPublicProfile targetProfile = authModuleApi.getUserPublicProfileByUsername(targetUsername)
+                .orElseThrow(() -> new IllegalArgumentException("Target user not found: " + targetUsername));
+
+        PlaylistCollaboratorId collabId = new PlaylistCollaboratorId(playlistId, targetProfile.id());
+
+        if (collaboratorRepository.existsById(collabId)) {
+            return; // Idempotent validation
+        }
+
         PlaylistCollaborator collaborator = PlaylistCollaborator.builder()
-                .id(new PlaylistCollaboratorId(playlistId, newCollaboratorId))
+                .id(collabId)
                 .build();
 
         collaboratorRepository.save(collaborator);
     }
 
     @Transactional
-    public void removeCollaborator(UUID playlistId, UUID ownerId, UUID collaboratorId) {
+    public void removeCollaborator(UUID playlistId, UUID requesterId, UUID collaboratorId) {
         Playlist playlist = playlistRepository.findById(playlistId)
                 .orElseThrow(() -> new PlaylistNotFoundException(playlistId));
 
-        enforceOwnerAccess(playlist, ownerId);
+        // Strict RBAC: Owner can remove anyone. Collaborator can only remove themselves (leave).
+        if (!playlist.getOwnerId().equals(requesterId)) {
+            if (!requesterId.equals(collaboratorId)) {
+                throw new AccessDeniedException("Only the owner can remove other collaborators.");
+            }
+        }
+
         collaboratorRepository.deleteById(new PlaylistCollaboratorId(playlistId, collaboratorId));
     }
 
@@ -451,7 +473,7 @@ public class PlaylistService implements PlaylistModuleApi {
         playlistRepository.save(playlist);
     }
 
-    // --- Private Guards ---
+    // --- Private Guards & Aggregation ---
 
     private void enforceOwnerAccess(Playlist playlist, UUID userId) {
         if (!playlist.getOwnerId().equals(userId)) {
@@ -473,12 +495,21 @@ public class PlaylistService implements PlaylistModuleApi {
         Optional<UserPublicProfile> profile = authModuleApi.getUserPublicProfile(playlist.getOwnerId());
         String ownerAlias = profile.map(UserPublicProfile::alias).orElse("Unknown User");
         String ownerUsername = profile.map(UserPublicProfile::username).orElse("unknown");
+        String ownerAvatarPath = profile.map(UserPublicProfile::avatarPath).orElse(null);
+
+        // Dynamically bind collaborator graph profiles
+        List<PlaylistCollaborator> collaboratorEntities = collaboratorRepository.findAllByIdPlaylistId(playlist.getId());
+        Set<UUID> collaboratorIds = collaboratorEntities.stream()
+                .map(c -> c.getId().getUserId())
+                .collect(Collectors.toSet());
+        List<UserPublicProfile> collaborators = authModuleApi.getPublicProfiles(collaboratorIds);
 
         return new PlaylistDto(
                 playlist.getId(),
                 playlist.getOwnerId(),
                 ownerUsername,
                 ownerAlias,
+                ownerAvatarPath,
                 playlist.getName(),
                 playlist.getDescription(),
                 playlist.getCoverMinioPath(),
@@ -488,6 +519,7 @@ public class PlaylistService implements PlaylistModuleApi {
                 playlist.getTrackCount(),
                 playlist.getTotalDurationSeconds(),
                 playlist.getFollowersCount(),
+                collaborators,
                 playlist.getCreatedAt(),
                 playlist.getUpdatedAt()
         );

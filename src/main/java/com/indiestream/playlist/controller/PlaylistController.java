@@ -33,6 +33,9 @@ public class PlaylistController {
     public record UpdatePlaylistRequest(String name, String description, Boolean isPublic) {
     }
 
+    public record AddCollaboratorRequest(String username) {
+    }
+
     @PostMapping
     public ResponseEntity<PlaylistDto> createPlaylist(Principal principal, @RequestBody CreatePlaylistRequest request) {
         UUID ownerId = UUID.fromString(principal.getName());
@@ -158,13 +161,17 @@ public class PlaylistController {
 
     // --- Collaboration & Social Endpoints ---
 
-    @PostMapping("/{playlistId}/collaborators/{collaboratorId}")
+    /**
+     * String username assignment to facilitate user-friendly search
+     * and strict encapsulation logic within the Auth Module API.
+     */
+    @PostMapping("/{playlistId}/collaborators")
     public ResponseEntity<Void> addCollaborator(
             @PathVariable UUID playlistId,
-            @PathVariable UUID collaboratorId,
+            @RequestBody AddCollaboratorRequest request,
             Principal principal) {
         UUID ownerId = UUID.fromString(principal.getName());
-        playlistService.addCollaborator(playlistId, ownerId, collaboratorId);
+        playlistService.addCollaboratorByUsername(playlistId, ownerId, request.username());
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
@@ -173,8 +180,8 @@ public class PlaylistController {
             @PathVariable UUID playlistId,
             @PathVariable UUID collaboratorId,
             Principal principal) {
-        UUID ownerId = UUID.fromString(principal.getName());
-        playlistService.removeCollaborator(playlistId, ownerId, collaboratorId);
+        UUID requesterId = UUID.fromString(principal.getName());
+        playlistService.removeCollaborator(playlistId, requesterId, collaboratorId);
         return ResponseEntity.noContent().build();
     }
 

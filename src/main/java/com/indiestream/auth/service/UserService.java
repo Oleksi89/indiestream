@@ -12,6 +12,7 @@ import com.indiestream.auth.repository.UserFollowerRepository;
 import com.indiestream.auth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,8 +20,8 @@ import com.indiestream.auth.exception.EmailAlreadyInUseException;
 import com.indiestream.auth.exception.UsernameAlreadyInUseException;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -156,11 +157,23 @@ public class UserService implements AuthModuleApi {
     @Transactional(readOnly = true)
     public Optional<UserPublicProfile> getUserPublicProfile(UUID userId) {
         return userRepository.findById(userId)
-                .map(user -> new UserPublicProfile(
-                        user.getId(),
-                        user.getUsername(),
-                        user.getAlias()
-                ));
+                .map(this::mapToPublicProfile);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<UserPublicProfile> getUserPublicProfileByUsername(String username) {
+        return userRepository.findByUsername(username)
+                .map(this::mapToPublicProfile);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UserPublicProfile> getPublicProfiles(Set<UUID> userIds) {
+        if (userIds == null || userIds.isEmpty()) return List.of();
+        return userRepository.findAllByIdIn(userIds).stream()
+                .map(this::mapToPublicProfile)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -173,20 +186,41 @@ public class UserService implements AuthModuleApi {
 
     @Override
     @Transactional(readOnly = true)
-    public java.util.List<FollowedUserProfileProjection> getFollowedProfilesForLibrary(UUID followerId) {
+    public List<FollowedUserProfileProjection> getFollowedProfilesForLibrary(UUID followerId) {
         return followerRepository.findFollowedProfilesForLibrary(followerId);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public java.util.Map<UUID, String> getUserAliases(java.util.Set<UUID> userIds) {
-        if (userIds == null || userIds.isEmpty()) return java.util.Collections.emptyMap();
+    public Map<UUID, String> getUserAliases(Set<UUID> userIds) {
+        if (userIds == null || userIds.isEmpty()) return Collections.emptyMap();
 
-        java.util.List<Object[]> results = userRepository.findAliasesByIds(userIds);
-        return results.stream().collect(java.util.stream.Collectors.toMap(
+        List<Object[]> results = userRepository.findAliasesByIds(userIds);
+        return results.stream().collect(Collectors.toMap(
                 row -> (UUID) row[0],
                 row -> (String) row[1]
         ));
+    }
+
+    /**
+     * Core Autocomplete engine executed securely behind the module boundary.
+     * Limits to 5 hits to prevent UI layout breakage and DB strain.
+     */
+    @Transactional(readOnly = true)
+    public List<UserPublicProfile> searchUsersAutocomplete(String query) {
+        return userRepository.searchByUsernameOrAliasWithProfile(query, PageRequest.of(0, 5))
+                .stream()
+                .map(this::mapToPublicProfile)
+                .collect(Collectors.toList());
+    }
+
+    private UserPublicProfile mapToPublicProfile(User user) {
+        return new UserPublicProfile(
+                user.getId(),
+                user.getUsername(),
+                user.getAlias(),
+                user.getProfile() != null ? user.getProfile().getAvatarPath() : null
+        );
     }
 
     private UserDto mapToBasicDto(User user) {

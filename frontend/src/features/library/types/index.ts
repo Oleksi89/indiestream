@@ -1,4 +1,4 @@
-export type LibraryItemType = 'OWNED_PLAYLIST' | 'FOLLOWED_PLAYLIST' | 'FOLLOWED_PROFILE';
+export type LibraryItemType = 'OWNED_PLAYLIST' | 'FOLLOWED_PLAYLIST' | 'FOLLOWED_PROFILE' | 'COLLABORATED_PLAYLIST';
 
 export interface LibraryItemDto {
     id: string;
@@ -7,4 +7,7 @@ export interface LibraryItemDto {
     imageUrl: string | null;
     subtitle: string;
     addedAt: string;
+    ownerId: string | null;
+    isCollaborative: boolean;
+    isCollaborator: boolean;
 }
