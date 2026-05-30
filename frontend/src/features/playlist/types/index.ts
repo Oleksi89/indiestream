@@ -31,6 +31,7 @@ export interface UpdatePlaylistPayload {
     name?: string;
     description?: string;
     isPublic?: boolean;
+    isCollaborative?: boolean;
 }
 
 // Generic interface to map Spring Data Page<T> response

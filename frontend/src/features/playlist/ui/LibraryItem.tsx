@@ -19,7 +19,9 @@ interface LibraryItemProps {
 export const LibraryItem = ({item, playlist, viewMode, isActive, onClick}: LibraryItemProps) => {
     const {user: currentUser} = useAuthStore();
 
-    const isSystemLiked = playlist?.isSystem && playlist?.name === 'Liked Tracks';
+    const isSystemLiked = (playlist?.isSystem && playlist?.name === 'Liked Tracks') ||
+        (item?.type === 'OWNED_PLAYLIST' && item?.title === 'Liked Tracks');
+
     const isProfile = item?.type === 'FOLLOWED_PROFILE';
 
     const title = item?.title || playlist?.name || 'Unknown';
@@ -138,7 +140,8 @@ export const LibraryItem = ({item, playlist, viewMode, isActive, onClick}: Libra
 
     const content = renderContent();
 
-    if (isProfile || isSystemLiked) return content;
+    // Profiles skip the playlist context menu
+    if (isProfile) return content;
 
     // Polymorphic delegation
     if (playlist || item) {
