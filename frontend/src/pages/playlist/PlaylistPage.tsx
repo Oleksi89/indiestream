@@ -18,6 +18,7 @@ import {TrackCard} from "@/features/media/ui/TrackCard";
 import {EditPlaylistModal} from "@/features/playlist/ui/EditPlaylistModal";
 import {CollaboratorsModal} from "@/features/playlist/ui/CollaboratorsModal";
 import type {TrackDto} from "@/features/media/types";
+import {PlaylistDropdownMenu} from "@/features/playlist/ui/PlaylistDropdownMenu.tsx";
 
 export const PlaylistPage = () => {
     const {id} = useParams<{ id: string }>();
@@ -128,6 +129,7 @@ export const PlaylistPage = () => {
                 <div className="flex flex-col gap-2 z-10 text-white w-full">
                     <span className="text-xs font-bold uppercase tracking-widest text-white/80 flex items-center gap-2">
                         {playlist.isPublic ? 'Public Playlist' : 'Private Playlist'}
+                        {playlist.isSystem ? ' (System)' : ''}
                         {playlist.isCollaborative &&
                             <span className="bg-white/20 px-2 py-0.5 rounded-full">Collaborative</span>}
                     </span>
@@ -225,9 +227,12 @@ export const PlaylistPage = () => {
                     </Button>
                 )}
 
-                <button className="text-white/60 hover:text-white transition-colors">
-                    <MoreHorizontal size={32}/>
-                </button>
+                {/* Clean Dropdown Encapsulation */}
+                <PlaylistDropdownMenu playlist={playlist}>
+                    <button className="text-white/60 hover:text-white transition-colors focus:outline-none">
+                        <MoreHorizontal size={32}/>
+                    </button>
+                </PlaylistDropdownMenu>
             </section>
 
             <section className="px-8 mt-4 pb-20">

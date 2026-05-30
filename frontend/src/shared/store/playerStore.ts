@@ -9,11 +9,10 @@ interface PlayerState {
     // Media State
     currentTrack: TrackDto | null;
     isPlaying: boolean;
-    volume: number; // Global master volume (0.0 to 1.0)
-    progress: number; // In seconds
-    duration: number; // In seconds
+    volume: number;
+    progress: number;
+    duration: number;
 
-    // Queue Engine
     queue: TrackDto[];
     originalQueue: TrackDto[];
     history: TrackDto[];
@@ -22,7 +21,6 @@ interface PlayerState {
     repeatMode: RepeatMode;
     isQueueOpen: boolean;
 
-    // Stems state
     playbackMode: PlaybackMode;
     stemVolumes: Record<string, number>;
 
@@ -37,6 +35,7 @@ interface PlayerState {
 
     // Queue Actions
     addToQueue: (track: TrackDto) => void;
+    addContextToQueue: (tracks: TrackDto[]) => void;
     playNext: () => void;
     playPrevious: () => void;
     toggleShuffle: () => void;
@@ -126,6 +125,16 @@ export const usePlayerStore = create<PlayerState>()(
             addToQueue: (track) => set((state) => ({
                 queue: [track, ...state.queue]
             })),
+
+            /**
+             * Appends an entire array of tracks to the END of the current queue.
+             * Filters out duplicates if they already exist in the upcoming queue.
+             */
+            addContextToQueue: (tracks) => set((state) => {
+                const existingIds = new Set(state.queue.map(t => t.id));
+                const newTracks = tracks.filter(t => !existingIds.has(t.id));
+                return {queue: [...state.queue, ...newTracks]};
+            }),
 
             reorderQueue: (startIndex, endIndex) => set((state) => {
                 const newQueue = Array.from(state.queue);

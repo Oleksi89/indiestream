@@ -30,7 +30,7 @@ public class PlaylistController {
     public record CreatePlaylistRequest(String name, String description, boolean isPublic, boolean isCollaborative) {
     }
 
-    public record UpdatePlaylistRequest(String name, String description, Boolean isPublic) {
+    public record UpdatePlaylistRequest(String name, String description, Boolean isPublic, Boolean isCollaborative) {
     }
 
     public record AddCollaboratorRequest(String username) {
@@ -102,6 +102,9 @@ public class PlaylistController {
         return ResponseEntity.noContent().build();
     }
 
+    /**
+     * Executes a deep copy of a playlist into the authenticated user's library.
+     */
     @PostMapping("/{playlistId}/duplicate")
     public ResponseEntity<PlaylistDto> duplicatePlaylist(
             @PathVariable UUID playlistId,
@@ -120,7 +123,7 @@ public class PlaylistController {
 
         UUID userId = UUID.fromString(principal.getName());
         PlaylistDto updated = playlistService.updatePlaylist(
-                playlistId, userId, request.name(), request.description(), request.isPublic()
+                playlistId, userId, request.name(), request.description(), request.isPublic(), request.isCollaborative()
         );
         return ResponseEntity.ok(updated);
     }

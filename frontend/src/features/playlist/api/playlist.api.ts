@@ -63,6 +63,10 @@ export const playlistApi = {
         await apiClient.delete(`/playlists/${playlistId}`);
     },
 
+    /**
+     * Executes a deep copy of a playlist (cloning track relationships).
+     * Returns the newly generated PlaylistDto.
+     */
     duplicatePlaylist: async (playlistId: string): Promise<PlaylistDto> => {
         const {data} = await apiClient.post<unknown, AxiosResponse<PlaylistDto>>(`/playlists/${playlistId}/duplicate`);
         return data;
