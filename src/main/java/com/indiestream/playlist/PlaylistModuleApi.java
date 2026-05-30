@@ -7,4 +7,6 @@ public interface PlaylistModuleApi {
     List<PlaylistLibraryProjection> getOwnedPlaylistsForLibrary(UUID userId);
 
     List<PlaylistLibraryProjection> getFollowedPlaylistsForLibrary(UUID userId);
+
+    List<PlaylistLibraryProjection> getCollaboratedPlaylistsForLibrary(UUID userId);
 }

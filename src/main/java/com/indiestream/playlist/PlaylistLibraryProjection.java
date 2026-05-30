@@ -8,6 +8,7 @@ public record PlaylistLibraryProjection(
         String name,
         String coverMinioPath,
         UUID ownerId,
-        Instant addedAt
+        Instant addedAt,
+        boolean isCollaborative
 ) {
 }

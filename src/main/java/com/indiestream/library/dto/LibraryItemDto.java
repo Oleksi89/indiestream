@@ -15,6 +15,9 @@ public record LibraryItemDto(
         String title,
         String imageUrl,
         String subtitle,
-        Instant addedAt
+        Instant addedAt,
+        String ownerId,
+        boolean isCollaborative,
+        boolean isCollaborator
 ) {
 }

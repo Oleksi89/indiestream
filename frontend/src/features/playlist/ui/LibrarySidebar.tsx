@@ -22,7 +22,7 @@ export const LibrarySidebar = () => {
         const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesFilter =
             activeFilter === 'ALL' ||
-            (activeFilter === 'PLAYLISTS' && (item.type === 'OWNED_PLAYLIST' || item.type === 'FOLLOWED_PLAYLIST')) ||
+            (activeFilter === 'PLAYLISTS' && (item.type === 'OWNED_PLAYLIST' || item.type === 'FOLLOWED_PLAYLIST' || item.type === 'COLLABORATED_PLAYLIST')) ||
             (activeFilter === 'PROFILES' && item.type === 'FOLLOWED_PROFILE');
         return matchesSearch && matchesFilter;
     });

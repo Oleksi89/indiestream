@@ -3,9 +3,10 @@ import {cn} from '@/shared/lib/utils';
 import {PlaylistContextMenu} from '@/features/playlist/ui/PlaylistContextMenu';
 import {useSecureUrl} from '@/shared/hooks/useSecureUrl';
 import {profileApi} from '@/features/profile/api/profile.api';
+import {playlistApi} from "@/features/playlist/api/playlist.api";
+import {useAuthStore} from '@/shared/store/authStore';
 import type {PlaylistDto} from "@/features/playlist/types";
 import type {LibraryItemDto} from "@/features/library/types";
-import {playlistApi} from "@/features/playlist/api/playlist.api";
 
 interface LibraryItemProps {
     item?: LibraryItemDto;
@@ -16,13 +17,23 @@ interface LibraryItemProps {
 }
 
 export const LibraryItem = ({item, playlist, viewMode, isActive, onClick}: LibraryItemProps) => {
+    const {user: currentUser} = useAuthStore();
+
     const isSystemLiked = playlist?.isSystem && playlist?.name === 'Liked Tracks';
     const isProfile = item?.type === 'FOLLOWED_PROFILE';
 
     const title = item?.title || playlist?.name || 'Unknown';
-    const subtitle = item?.subtitle || (playlist ? `Playlist • ${playlist.ownerAlias} • ${playlist.trackCount} tracks` : '');
+    const subtitle = item?.subtitle || (playlist ? `Playlist • ${playlist.ownerAlias}` : '');
     const rawImageUrl = item?.imageUrl || playlist?.coverMinioPath;
     const targetId = item?.id || playlist?.id;
+
+    // --- Strict RBAC Visualization Logic ---
+    const isOwner = currentUser?.id === item?.ownerId || currentUser?.id === playlist?.ownerId;
+    const isCollaborative = item?.isCollaborative || playlist?.isCollaborative;
+    const isActiveCollaborator = item?.isCollaborator || playlist?.collaborators?.some(c => c.id === currentUser?.id);
+
+    const showOwnership = isCollaborative && isOwner;
+    const showParticipantIcon = isCollaborative && isActiveCollaborator && !isOwner;
 
     const username = isProfile && item?.subtitle ? item.subtitle.split('@')[1] : null;
 
@@ -86,7 +97,8 @@ export const LibraryItem = ({item, playlist, viewMode, isActive, onClick}: Libra
                         <h4 className={cn("text-sm font-semibold truncate flex items-center justify-center gap-1.5", isActive ? "text-indigo-400" : "text-slate-100")}>
                             {title}
                             {playlist?.isSystem && !isSystemLiked && <Lock className="w-3 h-3 opacity-60"/>}
-                            {playlist?.isCollaborative && <Users className="w-3 h-3 text-emerald-400"/>}
+                            {showOwnership && <Users className="w-3.5 h-3.5 text-indigo-400 shrink-0"/>}
+                            {showParticipantIcon && <Users className="w-3.5 h-3.5 text-emerald-400 shrink-0"/>}
                         </h4>
                         <p className="text-xs text-slate-500 font-medium mt-0.5 truncate">{isSystemLiked ? 'System Playlist' : subtitle}</p>
                     </div>
@@ -114,7 +126,8 @@ export const LibraryItem = ({item, playlist, viewMode, isActive, onClick}: Libra
                         <h4 className={cn("text-sm font-semibold truncate flex items-center gap-1.5", isActive ? "text-indigo-400" : "text-slate-100")}>
                             {title}
                             {playlist?.isSystem && !isSystemLiked && <Lock className="w-3 h-3 opacity-60"/>}
-                            {playlist?.isCollaborative && <Users className="w-3 h-3 text-emerald-400"/>}
+                            {showOwnership && <Users className="w-3.5 h-3.5 text-indigo-400 shrink-0"/>}
+                            {showParticipantIcon && <Users className="w-3.5 h-3.5 text-emerald-400 shrink-0"/>}
                         </h4>
                         <p className="text-xs text-slate-500 font-medium truncate">{isSystemLiked ? 'System Playlist' : subtitle}</p>
                     </div>
@@ -125,10 +138,7 @@ export const LibraryItem = ({item, playlist, viewMode, isActive, onClick}: Libra
 
     const content = renderContent();
 
-    // Do not attach Context Menu to System "Liked Tracks" playlist
-    if (isProfile || isSystemLiked) {
-        return content;
-    }
+    if (isProfile || isSystemLiked) return content;
 
     // Polymorphic delegation
     if (playlist || item) {

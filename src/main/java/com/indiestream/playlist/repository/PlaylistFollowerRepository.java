@@ -14,7 +14,7 @@ import java.util.UUID;
 @Repository
 public interface PlaylistFollowerRepository extends JpaRepository<PlaylistFollower, PlaylistFollowerId> {
 
-    @Query("SELECT new com.indiestream.playlist.PlaylistLibraryProjection(p.id, p.name, p.coverMinioPath, p.ownerId, pf.followedAt) " +
+    @Query("SELECT new com.indiestream.playlist.PlaylistLibraryProjection(p.id, p.name, p.coverMinioPath, p.ownerId, pf.followedAt, p.isCollaborative) " +
             "FROM PlaylistFollower pf JOIN Playlist p ON pf.id.playlistId = p.id " +
             "WHERE pf.id.userId = :userId AND p.isPublic = true")
     List<PlaylistLibraryProjection> findFollowedPlaylistsForLibrary(@Param("userId") UUID userId);

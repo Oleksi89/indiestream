@@ -65,6 +65,17 @@ export interface UserSummaryDto {
     avatarPath: string | null;
 }
 
+/**
+ * Shared Public Profile DTO matching the backend AuthModuleApi projection.
+ * Strictly lightweight for autocomplete and collaboration assignments.
+ */
+export interface UserPublicProfileDto {
+    id: string;
+    username: string;
+    alias: string;
+    avatarPath: string | null;
+}
+
 export interface PageResponse<T> {
     content: T[];
     pageNumber: number;
