@@ -200,19 +200,21 @@ public class PlaylistService implements PlaylistModuleApi {
      * Guards prevent renaming or altering the core identity of system playlists.
      */
     @Transactional
-    public PlaylistDto updatePlaylist(UUID playlistId, UUID userId, String name, String description, Boolean isPublic) {
+    public PlaylistDto updatePlaylist(UUID playlistId, UUID userId, String name, String description, Boolean isPublic, Boolean isCollaborative) {
         Playlist playlist = playlistRepository.findById(playlistId)
                 .orElseThrow(() -> new PlaylistNotFoundException(playlistId));
 
         enforceModificationAccess(playlist, userId);
 
-        // System playlists like "Liked Tracks" must remain immutable in name/publicity
+        // System playlists like "Liked Tracks" must remain immutable in name/descr/collaborative
         if (playlist.getIsSystem()) {
-            throw new IllegalArgumentException("System playlists cannot be modified directly.");
+            if ((name != null && !name.equals(playlist.getName())) || (description != null && !description.equals(playlist.getDescription()))) {
+                throw new IllegalArgumentException("System playlist identity and metadata text descriptions are immutable.");
+            }
         }
 
-        if (name != null && !name.isBlank()) playlist.setName(name);
-        if (description != null) playlist.setDescription(description);
+        if (name != null && !name.isBlank() && !playlist.getIsSystem()) playlist.setName(name);
+        if (description != null && !playlist.getIsSystem()) playlist.setDescription(description);
         if (isPublic != null) playlist.setIsPublic(isPublic);
 
         return mapToDto(playlistRepository.save(playlist));
@@ -338,18 +340,25 @@ public class PlaylistService implements PlaylistModuleApi {
         playlistRepository.save(playlist);
     }
 
+    /**
+     * Executes a high-performance deep copy of a public or collaborated playlist.
+     * Replaces standard JPA iteration with a direct native SQL bulk insert
+     * to prevent memory exhaustion and connection pool timeouts on large datasets.
+     */
     @Transactional
     public PlaylistDto duplicatePlaylist(UUID sourcePlaylistId, UUID newOwnerId) {
         Playlist source = playlistRepository.findById(sourcePlaylistId)
                 .orElseThrow(() -> new PlaylistNotFoundException(sourcePlaylistId));
 
+        // Visibility & Access Guard
         if (!source.getIsPublic() && !source.getOwnerId().equals(newOwnerId)) {
             boolean isCollaborator = collaboratorRepository.existsByIdPlaylistIdAndIdUserId(sourcePlaylistId, newOwnerId);
             if (!isCollaborator) {
-                throw new AccessDeniedException("Cannot duplicate a private playlist.");
+                throw new AccessDeniedException("Cannot duplicate a private playlist without collaborator access.");
             }
         }
 
+        // 1. Create the new root Playlist entity
         Playlist cloned = Playlist.builder()
                 .ownerId(newOwnerId)
                 .name(source.getName() + " (Copy)")
@@ -364,19 +373,16 @@ public class PlaylistService implements PlaylistModuleApi {
 
         Playlist savedClone = playlistRepository.save(cloned);
 
-        // Bulk insert corresponding tracks
-        List<PlaylistTrack> sourceTracks = playlistTrackRepository.findAllByIdPlaylistId(sourcePlaylistId);
-        List<PlaylistTrack> clonedTracks = sourceTracks.stream().map(st ->
-                PlaylistTrack.builder()
-                        .id(new PlaylistTrackId(savedClone.getId(), st.getId().getTrackId()))
-                        .addedById(newOwnerId) // The person cloning claims the "added by" identity
-                        .positionIndex(st.getPositionIndex())
-                        .build()
-        ).collect(Collectors.toList());
+        // 2. Execute O(1) Native SQL Bulk Insert
+        playlistTrackRepository.cloneTracksBulk(sourcePlaylistId, savedClone.getId(), newOwnerId);
 
-        playlistTrackRepository.saveAll(clonedTracks);
-
-        events.publishEvent(new PlaylistCopiedEvent(newOwnerId, sourcePlaylistId, savedClone.getId(), Instant.now()));
+        // 3. Publish Telemetry
+        events.publishEvent(new PlaylistCopiedEvent(
+                newOwnerId,
+                sourcePlaylistId,
+                savedClone.getId(),
+                Instant.now()
+        ));
 
         return mapToDto(savedClone);
     }

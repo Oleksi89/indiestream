@@ -13,6 +13,7 @@ const editSchema = z.object({
     name: z.string().min(1, 'Name is required').max(100, 'Name is too long'),
     description: z.string().max(300, 'Description is too long').optional(),
     isPublic: z.boolean(),
+    isCollaborative: z.boolean(), // Додано в схему
 });
 
 type EditFormValues = z.infer<typeof editSchema>;
@@ -34,11 +35,13 @@ export const EditPlaylistModal = ({
         defaultValues: {
             name: playlist.name,
             description: playlist.description || '',
-            isPublic: playlist.isPublic
+            isPublic: playlist.isPublic,
+            isCollaborative: playlist.isCollaborative
         }
     });
 
     const isPublicValue = watch('isPublic');
+    const isCollaborativeValue = watch('isCollaborative');
 
     useEffect(() => {
         if (!selectedFile) {
@@ -93,8 +96,6 @@ export const EditPlaylistModal = ({
                                 {previewUrl ? (
                                     <img src={previewUrl} className="w-full h-full object-cover" alt="Preview"/>
                                 ) : playlist.coverMinioPath ? (
-                                    // Normally we use secure fetching, but for layout constraints in a fast edit modal,
-                                    // rely on the inherited state or a temporary preview icon.
                                     <ImageIcon size={48} className="text-slate-600"/>
                                 ) : (
                                     <div className="flex flex-col items-center text-slate-500 gap-2">
@@ -129,13 +130,25 @@ export const EditPlaylistModal = ({
                             </div>
                         </div>
 
-                        {/* Privacy Toggle */}
-                        <div className="flex items-center justify-between p-4 rounded-xl bg-slate-800/50">
-                            <div className="space-y-0.5">
-                                <label className="text-sm font-medium text-white">Public Playlist</label>
-                                <p className="text-xs text-slate-400">Make this playlist visible on your profile.</p>
+                        {/* Toggles Container */}
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between p-4 rounded-xl bg-slate-800/50">
+                                <div className="space-y-0.5">
+                                    <label className="text-sm font-medium text-white">Public Playlist</label>
+                                    <p className="text-xs text-slate-400">Make this playlist visible on your
+                                        profile.</p>
+                                </div>
+                                <Switch checked={isPublicValue} onCheckedChange={(c) => setValue('isPublic', c)}/>
                             </div>
-                            <Switch checked={isPublicValue} onCheckedChange={(c) => setValue('isPublic', c)}/>
+
+                            <div className="flex items-center justify-between p-4 rounded-xl bg-slate-800/50">
+                                <div className="space-y-0.5">
+                                    <label className="text-sm font-medium text-white">Collaborative</label>
+                                    <p className="text-xs text-slate-400">Allow invited users to add tracks.</p>
+                                </div>
+                                <Switch checked={isCollaborativeValue}
+                                        onCheckedChange={(c) => setValue('isCollaborative', c)}/>
+                            </div>
                         </div>
 
                         <div className="flex justify-end gap-3 pt-2">

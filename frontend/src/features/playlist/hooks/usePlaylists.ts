@@ -100,16 +100,41 @@ export const useDeletePlaylist = () => {
     });
 };
 
+/**
+ * Executes a Deep Copy of a playlist and instantly injects the result into the Library sidebar.
+ */
 export const useDuplicatePlaylist = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
         mutationFn: (playlistId: string) => playlistApi.duplicatePlaylist(playlistId),
-        onSuccess: () => {
-            toast.success('Playlist duplicated');
-            queryClient.invalidateQueries({queryKey: libraryKeys.me()});
+        onSuccess: (newPlaylist) => {
+            // Optimistically map the returned PlaylistDto to a LibraryItemDto
+            const newLibraryItem: LibraryItemDto = {
+                id: newPlaylist.id,
+                type: 'OWNED_PLAYLIST',
+                title: newPlaylist.name,
+                imageUrl: newPlaylist.coverMinioPath,
+                subtitle: `Playlist • ${newPlaylist.ownerAlias}`,
+                addedAt: new Date().toISOString(),
+                ownerId: newPlaylist.ownerId,
+                isCollaborative: false,
+                isCollaborator: false
+            };
+
+            // Inject directly into the top of the 'library, me' cache
+            const previousLibrary = queryClient.getQueryData<LibraryItemDto[]>(libraryKeys.me());
+            if (previousLibrary) {
+                queryClient.setQueryData<LibraryItemDto[]>(libraryKeys.me(), [newLibraryItem, ...previousLibrary]);
+            }
+
+            toast.success('Playlist duplicated to your library');
         },
         onError: () => toast.error('Failed to duplicate playlist'),
+        onSettled: () => {
+            // Background sync to ensure DB consistency
+            queryClient.invalidateQueries({queryKey: libraryKeys.me()});
+        }
     });
 };
 
