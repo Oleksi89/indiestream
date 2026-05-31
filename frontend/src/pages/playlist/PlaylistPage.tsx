@@ -78,7 +78,11 @@ export const PlaylistPage = () => {
             durationSeconds: track.durationSeconds,
             coverMinioPath: track.coverMinioPath,
             stemsMetadata: track.stemsMetadata,
-            minioBucketPath: ''
+            minioBucketPath: '',
+            status: 'READY',
+            genre: track.genre,
+            isExplicit: track.isExplicit ?? false,
+            tags: track.tags ?? {custom: [], moods: [], aiGenerated: []}
         }));
     }, [tracksData]);
 

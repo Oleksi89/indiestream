@@ -1,4 +1,5 @@
 import type {UserPublicProfileDto} from "@/features/auth/types";
+import type {TrackTagsDto} from "@/features/media/types";
 
 export interface PlaylistDto {
     id: string;
@@ -56,6 +57,10 @@ export interface PlaylistTrackDto {
     stemsMetadata: Record<string, string>;
     addedByUserId: string;
     addedAt: string;
+    // Semantic Metadata
+    genre?: string;
+    isExplicit?: boolean;
+    tags?: TrackTagsDto;
 }
 
 
@@ -68,4 +73,8 @@ export interface TrackMetadataPayload {
     durationSeconds: number;
     stemsMetadata: Record<string, string>;
     coverMinioPath: string | null;
+    // Semantic Metadata
+    genre?: string;
+    isExplicit?: boolean;
+    tags?: TrackTagsDto;
 }

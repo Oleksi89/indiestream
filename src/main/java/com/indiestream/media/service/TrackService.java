@@ -118,6 +118,7 @@ public class TrackService implements MediaModuleApi {
 
     /**
      * Retrieves a paginated page of TrackDto objects for a specific artist.
+     * * @param artistId The ID of the artist requesting their tracks
      *
      * @param artistId The ID of the artist requesting their tracks
      * @param pageable Page request metadata (size, page number)

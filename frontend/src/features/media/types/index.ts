@@ -18,8 +18,8 @@ export interface TrackDto {
     hlsManifestPath?: string;
     // Semantic Metadata
     genre?: string;
-    isExplicit: boolean;
-    tags: TrackTagsDto;
+    isExplicit?: boolean;
+    tags?: TrackTagsDto;
 }
 
 export interface UploadTrackRequest {

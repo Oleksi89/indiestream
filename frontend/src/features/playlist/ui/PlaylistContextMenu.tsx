@@ -85,9 +85,19 @@ export const PlaylistContextMenu = ({playlist, item, children}: PlaylistContextM
         try {
             const tracksData = await playlistApi.getPlaylistTracks(id, 0, 500);
             const mappedTracks: TrackDto[] = tracksData.content.map(t => ({
-                id: t.trackId, title: t.title, artistId: t.artistId, artistUsername: t.artistUsername,
-                artistAlias: t.artistAlias, durationSeconds: t.durationSeconds, coverMinioPath: t.coverMinioPath,
-                stemsMetadata: t.stemsMetadata, minioBucketPath: ''
+                id: t.trackId,
+                title: t.title,
+                artistId: t.artistId,
+                artistUsername: t.artistUsername,
+                artistAlias: t.artistAlias,
+                durationSeconds: t.durationSeconds,
+                coverMinioPath: t.coverMinioPath,
+                stemsMetadata: t.stemsMetadata,
+                minioBucketPath: '',
+                status: 'READY',
+                genre: t.genre,
+                isExplicit: t.isExplicit ?? false,
+                tags: t.tags ?? {custom: [], moods: [], aiGenerated: []}
             }));
             if (mappedTracks.length === 0) {
                 toast.error('Playlist is empty', {id: toastId});
