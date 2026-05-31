@@ -7,7 +7,9 @@ import com.indiestream.media.TrackMetadata;
 import com.indiestream.media.TrackUploadedEvent;
 import com.indiestream.media.domain.Track;
 import com.indiestream.media.domain.TrackStatus;
+import com.indiestream.media.domain.TrackTags;
 import com.indiestream.media.dto.TrackDto;
+import com.indiestream.media.dto.TrackTagsDto;
 import com.indiestream.media.repository.TrackRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -34,11 +36,14 @@ public class TrackService implements MediaModuleApi {
     private final AuthModuleApi authModuleApi;
 
     /**
-     * Orchestrates the upload of a master track, optional cover, and dynamic stems.
+     * Orchestrates the upload of a master track, optional cover, stems, and semantic metadata.
      * Ensures atomic database saving after all MinIO uploads succeed.
      */
     @Transactional
-    public TrackDto uploadTrack(UUID artistId, String title, MultipartFile file, MultipartFile cover, MultipartFile[] stemFiles, List<String> stemNames) {
+    public TrackDto uploadTrack(UUID artistId, String title, MultipartFile file, MultipartFile cover,
+                                MultipartFile[] stemFiles, List<String> stemNames,
+                                String genre, boolean isExplicit, Set<String> customTags) {
+
         String bucketPath = minioStorageService.uploadTrackFile(file, artistId);
 
         String coverPath = null;
@@ -62,6 +67,9 @@ public class TrackService implements MediaModuleApi {
             throw new IllegalArgumentException("Mismatched stem files and stem names.");
         }
 
+        // Initialize tags; moods and aiGenerated are left empty for future pipeline ingestion
+        TrackTags tags = new TrackTags(customTags, null, null);
+
         Track track = Track.builder()
                 .artistId(artistId)
                 .title(title)
@@ -70,6 +78,9 @@ public class TrackService implements MediaModuleApi {
                 .stemsMetadata(stemsMetadata)
                 .durationSeconds(0)
                 .status(TrackStatus.PROCESSING) // Default state
+                .genre(genre)
+                .isExplicit(isExplicit)
+                .tags(tags)
                 .build();
 
         Track savedTrack = trackRepository.save(track);
@@ -107,8 +118,8 @@ public class TrackService implements MediaModuleApi {
 
     /**
      * Retrieves a paginated page of TrackDto objects for a specific artist.
-     * * @param artistId The ID of the artist requesting their tracks
      *
+     * @param artistId The ID of the artist requesting their tracks
      * @param pageable Page request metadata (size, page number)
      */
     @Transactional(readOnly = true)
@@ -149,7 +160,7 @@ public class TrackService implements MediaModuleApi {
 
     /**
      * Implementation of the public module API.
-     * Maps internal entity to a public metadata record.
+     * Projects the internal entity to a public metadata record, now including semantic tags.
      */
     @Override
     public TrackMetadata getTrackMetadata(UUID trackId) {
@@ -160,7 +171,11 @@ public class TrackService implements MediaModuleApi {
                         t.getArtistId(),
                         t.getDurationSeconds(),
                         t.getStemsMetadata(),
-                        t.getCoverMinioPath()
+                        t.getCoverMinioPath(),
+                        t.getGenre(),
+                        t.isExplicit(),
+                        t.getTags().custom(),
+                        t.getTags().aiGenerated()
                 ))
                 .orElseThrow(() -> new IllegalArgumentException("Track not found"));
     }
@@ -169,6 +184,13 @@ public class TrackService implements MediaModuleApi {
         Optional<UserPublicProfile> profile = authModuleApi.getUserPublicProfile(track.getArtistId());
         String artistAlias = profile.map(UserPublicProfile::alias).orElse("Unknown Artist");
         String artistUsername = profile.map(UserPublicProfile::username).orElse("unknown");
+
+        TrackTags domainTags = track.getTags();
+        TrackTagsDto tagsDto = new TrackTagsDto(
+                domainTags.custom(),
+                domainTags.moods(),
+                domainTags.aiGenerated()
+        );
 
         return new TrackDto(
                 track.getId(),
@@ -181,7 +203,10 @@ public class TrackService implements MediaModuleApi {
                 track.getStemsMetadata(),
                 track.getDurationSeconds(),
                 track.getStatus(),
-                track.getHlsManifestPath()
+                track.getHlsManifestPath(),
+                track.getGenre(),
+                track.isExplicit(),
+                tagsDto
         );
     }
 }
