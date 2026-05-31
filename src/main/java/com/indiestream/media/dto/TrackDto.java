@@ -1,6 +1,7 @@
 package com.indiestream.media.dto;
 
 import com.indiestream.media.domain.TrackStatus;
+import jakarta.validation.Valid;
 
 import java.util.Map;
 import java.util.UUID;
@@ -16,6 +17,11 @@ public record TrackDto(
         Map<String, String> stemsMetadata,
         Integer durationSeconds,
         TrackStatus status,
-        String hlsManifestPath
+        String hlsManifestPath,
+
+        // Semantic Metadata
+        String genre,
+        boolean isExplicit,
+        @Valid TrackTagsDto tags
 ) {
 }

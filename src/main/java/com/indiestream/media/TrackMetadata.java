@@ -1,6 +1,7 @@
 package com.indiestream.media;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -13,6 +14,12 @@ public record TrackMetadata(
         UUID artistId,
         Integer durationSeconds,
         Map<String, String> stemsMetadata,
-        String coverMinioPath
+        String coverMinioPath,
+
+        // Semantic Metadata
+        String genre,
+        boolean isExplicit,
+        Set<String> customTags,
+        Set<String> aiGeneratedTags
 ) {
 }
