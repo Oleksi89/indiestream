@@ -5,6 +5,8 @@ import com.indiestream.media.service.MinioStorageService;
 import com.indiestream.media.service.TrackService;
 import io.minio.StatObjectResponse;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
@@ -15,25 +17,28 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.util.AntPathMatcher;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.security.Principal;
 import java.util.UUID;
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/v1/tracks")
 @RequiredArgsConstructor
+@Validated // Required to enable method-level validation for @RequestParam constraints
 public class TrackController {
 
     private final TrackService trackService;
     private final MinioStorageService minioStorageService;
 
     /**
-     * Uploads a new track with optional stems. Consumes multipart/form-data.
+     * Uploads a new track with optional stems and semantic metadata.
      * Extracts artistId directly from the validated JWT Principal to prevent spoofing.
+     * Enforces strict regex and size boundaries on custom tags to prevent injection and bloat.
      */
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<TrackDto> uploadTrack(
@@ -42,10 +47,17 @@ public class TrackController {
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "cover", required = false) MultipartFile cover,
             @RequestParam(value = "stemFiles", required = false) MultipartFile[] stemFiles,
-            @RequestParam(value = "stemNames", required = false) List<String> stemNames
+            @RequestParam(value = "stemNames", required = false) List<String> stemNames,
+            @RequestParam(value = "genre", required = false) @Size(max = 100) String genre,
+            @RequestParam(value = "isExplicit", defaultValue = "false") boolean isExplicit,
+            @RequestParam(value = "customTags", required = false)
+            @Size(max = 10, message = "Maximum 10 custom tags allowed")
+            Set<@Pattern(regexp = "^[a-z0-9]+$", message = "Tags must be lowercase alphanumeric") String> customTags
     ) {
         UUID artistId = UUID.fromString(principal.getName());
-        TrackDto uploadedTrack = trackService.uploadTrack(artistId, title, file, cover, stemFiles, stemNames);
+        TrackDto uploadedTrack = trackService.uploadTrack(
+                artistId, title, file, cover, stemFiles, stemNames, genre, isExplicit, customTags
+        );
         return ResponseEntity.status(HttpStatus.CREATED).body(uploadedTrack);
     }
 
@@ -195,5 +207,4 @@ public class TrackController {
                 .contentLength(metadata.size())
                 .body(resource);
     }
-
 }

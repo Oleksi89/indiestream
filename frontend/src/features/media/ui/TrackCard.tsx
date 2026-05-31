@@ -6,6 +6,7 @@ import {useSecureUrl} from '@/shared/hooks/useSecureUrl';
 import {cn} from '@/shared/lib/utils';
 import React from 'react';
 import {Link} from 'react-router-dom';
+import {ExplicitBadge} from "@/features/media/ui/ExplicitBadge.tsx";
 
 export interface TrackCardProps {
     track: TrackDto;
@@ -29,6 +30,7 @@ export const TrackCard = ({track, variant, className, index, addedAt, onClick, o
     );
 
     const hasStems = track.stemsMetadata && Object.keys(track.stemsMetadata).length > 0;
+    const isExplicit = track.isExplicit;
 
     const handlePlayClick = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -109,11 +111,12 @@ export const TrackCard = ({track, variant, className, index, addedAt, onClick, o
                     </div>
                     <div className="flex flex-col min-w-0">
                         <span
-                            className={cn("text-[15px] font-medium truncate flex items-center gap-2", isCurrentTrack ? "text-violet-400" : "text-white")}>
-                            {track.title}
+                            className={cn("text-[15px] font-medium truncate flex items-center", isCurrentTrack ? "text-violet-400" : "text-white")}>
+                            <span className="truncate">{track.title}</span>
+                            {isExplicit && <ExplicitBadge/>}
                             {hasStems && (
                                 <span
-                                    className="bg-slate-800 text-violet-400 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded flex items-center gap-1">
+                                    className="bg-slate-800 text-violet-400 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded flex items-center gap-1 ml-2">
                                     <Layers size={10}/>
                                 </span>
                             )}
@@ -158,10 +161,11 @@ export const TrackCard = ({track, variant, className, index, addedAt, onClick, o
                 </div>
                 <div className="flex flex-col overflow-hidden">
                     <span className={cn(
-                        "text-sm font-medium truncate",
+                        "text-sm font-medium truncate flex items-center",
                         isCurrentTrack ? "text-violet-400" : "text-slate-100"
                     )}>
-                        {track.title}
+                        <span className="truncate">{track.title}</span>
+                        {isExplicit && <ExplicitBadge/>}
                     </span>
                     <span className="text-xs text-slate-400 truncate">{track.artistAlias}</span>
                 </div>
@@ -195,13 +199,14 @@ export const TrackCard = ({track, variant, className, index, addedAt, onClick, o
                     </div>
                     <div className="flex flex-col overflow-hidden">
                         <span className={cn(
-                            "text-[15px] font-medium truncate flex items-center gap-2",
+                            "text-[15px] font-medium truncate flex items-center",
                             isCurrentTrack ? "text-violet-400" : "text-slate-100"
                         )}>
-                            {track.title}
+                            <span className="truncate">{track.title}</span>
+                            {isExplicit && <ExplicitBadge/>}
                             {hasStems && (
                                 <span
-                                    className="bg-slate-800 text-violet-400 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded flex items-center gap-1">
+                                    className="bg-slate-800 text-violet-400 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded flex items-center gap-1 ml-2">
                                     <Layers size={10}/> Stems
                                 </span>
                             )}
@@ -255,10 +260,11 @@ export const TrackCard = ({track, variant, className, index, addedAt, onClick, o
             <div className="p-4 flex items-center justify-between gap-3">
                 <div className="flex flex-col min-w-0 flex-1">
                     <h3 className={cn(
-                        "text-base font-semibold truncate transition-colors",
+                        "text-base font-semibold flex items-center transition-colors",
                         isCurrentTrack ? "text-violet-400" : "text-slate-100"
                     )}>
-                        {track.title}
+                        <span className="truncate">{track.title}</span>
+                        {isExplicit && <ExplicitBadge/>}
                     </h3>
                     {/* Added Artist Alias */}
                     <div
@@ -279,7 +285,7 @@ export const TrackCard = ({track, variant, className, index, addedAt, onClick, o
                     </div>
                 </div>
 
-                {/* Controls moved to the bottom */}
+                {/* Controls */}
                 <button
                     onClick={handlePlayClick}
                     className={cn(

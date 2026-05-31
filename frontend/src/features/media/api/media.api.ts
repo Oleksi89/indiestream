@@ -4,7 +4,7 @@ import type {AxiosResponse} from 'axios';
 
 export const mediaApi = {
     /**
-     * Uploads an audio file, cover image, and dynamic stems to the storage layer.
+     * Uploads an audio file, cover image, semantic metadata, and dynamic stems to the storage layer.
      * FormData handles parallel arrays natively by appending multiple values to the same key.
      */
     uploadTrack: async (
@@ -12,7 +12,10 @@ export const mediaApi = {
         title: string,
         file: File,
         cover?: File,
-        stems: StemUploadPayload[] = []
+        stems: StemUploadPayload[] = [],
+        genre?: string,
+        isExplicit?: boolean,
+        customTags?: string[]
     ): Promise<TrackDto> => {
         const formData = new FormData();
         formData.append('artistId', artistId);
@@ -27,6 +30,13 @@ export const mediaApi = {
             formData.append('stemFiles', stem.file);
             formData.append('stemNames', stem.name);
         });
+
+        // Semantic Metadata
+        if (genre) formData.append('genre', genre);
+        if (isExplicit !== undefined) formData.append('isExplicit', String(isExplicit));
+        if (customTags && customTags.length > 0) {
+            customTags.forEach(tag => formData.append('customTags', tag));
+        }
 
         const {data} = await apiClient.post<unknown, AxiosResponse<TrackDto>>(
             '/tracks',

@@ -35,6 +35,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -134,6 +135,12 @@ public class PlaylistService implements PlaylistModuleApi {
                     String artistAlias = profile.map(UserPublicProfile::alias).orElse("Unknown Artist");
                     String artistUsername = profile.map(UserPublicProfile::username).orElse("unknown");
 
+                    PlaylistTrackDetailsDto.PlaylistTrackTagsDto tagsDto = new PlaylistTrackDetailsDto.PlaylistTrackTagsDto(
+                            metadata.customTags() != null ? metadata.customTags() : Collections.emptySet(),
+                            Collections.emptySet(), // Moods remain empty until AI auto-tagging
+                            metadata.aiGeneratedTags() != null ? metadata.aiGeneratedTags() : Collections.emptySet()
+                    );
+
                     return new PlaylistTrackDetailsDto(
                             pt.getId().getTrackId(),
                             metadata.title(),
@@ -144,7 +151,10 @@ public class PlaylistService implements PlaylistModuleApi {
                             metadata.stemsMetadata(),
                             metadata.coverMinioPath(),
                             pt.getAddedById(),
-                            pt.getAddedAt()
+                            pt.getAddedAt(),
+                            metadata.genre(),
+                            metadata.isExplicit(),
+                            tagsDto
                     );
                 });
     }
