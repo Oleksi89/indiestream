@@ -22,8 +22,7 @@ import com.indiestream.playlist.repository.PlaylistTrackRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.*;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -204,6 +203,28 @@ public class PlaylistService implements PlaylistModuleApi {
     public List<PlaylistLibraryProjection> getCollaboratedPlaylistsForLibrary(UUID userId) {
         return collaboratorRepository.findCollaboratedPlaylistsForLibrary(userId);
     }
+
+    /**
+     * Cross-module robust search implementation.
+     * Enforces visibility guarantees by exclusively querying public, non-system playlists.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public Page<PlaylistDto> searchPublicPlaylists(String query, Pageable pageable) {
+        if (query == null || query.isBlank()) {
+            return Page.empty(pageable);
+        }
+
+        Pageable effectivePageable = pageable.getSort().isUnsorted()
+                ? PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(Sort.Direction.DESC, "followersCount"))
+                : pageable;
+
+        List<Playlist> playlists = playlistRepository.searchPublicPlaylistsByName(query, effectivePageable);
+        List<PlaylistDto> dtos = playlists.stream().map(this::mapToDto).toList();
+
+        return new PageImpl<>(dtos, effectivePageable, dtos.size());
+    }
+
 
     /**
      * Updates playlist metadata.
