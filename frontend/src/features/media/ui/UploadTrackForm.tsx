@@ -5,8 +5,20 @@ import {z} from 'zod';
 import {mediaApi} from '../api/media.api';
 import {useAuthStore} from '@/shared/store/authStore';
 import {isAxiosError} from 'axios';
-import {UploadCloud, FileAudio, Image as ImageIcon, AlertCircle, CheckCircle2, Plus, X, FolderPlus} from 'lucide-react';
+import {
+    UploadCloud,
+    FileAudio,
+    Image as ImageIcon,
+    AlertCircle,
+    CheckCircle2,
+    Plus,
+    X,
+    FolderPlus,
+    Tag
+} from 'lucide-react';
 import type {StemUploadPayload} from "@/features/media/types";
+import {AVAILABLE_GENRES} from "@/features/media/types";
+import {Switch} from '@/shared/ui/switch';
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -15,6 +27,8 @@ const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 const uploadSchema = z.object({
     title: z.string().min(1, "Track title is required").max(100, "Title is too long"),
+    genre: z.string().optional(),
+    isExplicit: z.boolean().default(false)
 });
 
 type FormValues = z.infer<typeof uploadSchema>;
@@ -25,6 +39,11 @@ export const UploadTrackForm = () => {
     const [selectedCover, setSelectedCover] = useState<File | null>(null);
     const [stems, setStems] = useState<StemUploadPayload[]>([]);
 
+    // Semantic Tags State
+    const [customTags, setCustomTags] = useState<string[]>([]);
+    const [tagInput, setTagInput] = useState('');
+    const [tagError, setTagError] = useState<string | null>(null);
+
     const [fileError, setFileError] = useState<string | null>(null);
     const [serverError, setServerError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
@@ -33,11 +52,19 @@ export const UploadTrackForm = () => {
         register,
         handleSubmit,
         reset,
+        setValue,
+        watch,
         formState: {errors, isSubmitting},
     } = useForm({
         resolver: zodResolver(uploadSchema),
-        defaultValues: {title: ''}
+        defaultValues: {
+            title: '',
+            genre: '',
+            isExplicit: false
+        }
     });
+
+    const isExplicit = watch('isExplicit');
 
     const validateAudioFile = (file: File): boolean => {
         if (!ACCEPTED_AUDIO_TYPES.includes(file.type)) {
@@ -51,6 +78,7 @@ export const UploadTrackForm = () => {
         return true;
     };
 
+    // --- File Handlers ---
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFileError(null);
         setSuccess(false);
@@ -84,14 +112,9 @@ export const UploadTrackForm = () => {
         }
     };
 
-    const addStem = () => {
-        setStems([...stems, {name: '', file: null as unknown as File}]);
-    };
-
-    const removeStem = (index: number) => {
-        setStems(stems.filter((_, i) => i !== index));
-    };
-
+    // --- Stem Handlers ---
+    const addStem = () => setStems([...stems, {name: '', file: null as unknown as File}]);
+    const removeStem = (index: number) => setStems(stems.filter((_, i) => i !== index));
     const handleStemNameChange = (index: number, name: string) => {
         const updatedStems = [...stems];
         updatedStems[index].name = name;
@@ -130,6 +153,38 @@ export const UploadTrackForm = () => {
         e.target.value = '';
     };
 
+    // --- Tag Handlers ---
+    const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter' || e.key === ',') {
+            e.preventDefault();
+            const tag = tagInput.trim().toLowerCase();
+            setTagError(null);
+
+            if (!tag) return;
+            if (customTags.length >= 10) {
+                setTagError("Maximum 10 custom tags allowed.");
+                return;
+            }
+            if (!/^[a-z0-9]+$/.test(tag)) {
+                setTagError("Tags must be lowercase alphanumeric only.");
+                return;
+            }
+            if (customTags.includes(tag)) {
+                setTagInput('');
+                return; // Іgnore duplicates
+            }
+
+            setCustomTags([...customTags, tag]);
+            setTagInput('');
+        }
+    };
+
+    const removeTag = (tagToRemove: string) => {
+        setCustomTags(customTags.filter(tag => tag !== tagToRemove));
+        setTagError(null);
+    };
+
+    // --- Submit ---
     const onSubmit: SubmitHandler<FormValues> = async (data) => {
         if (!selectedFile) {
             setFileError("Please select a master audio file to upload.");
@@ -150,13 +205,24 @@ export const UploadTrackForm = () => {
 
         try {
             setServerError(null);
-            await mediaApi.uploadTrack(String(user.id), data.title, selectedFile, selectedCover || undefined, stems);
+            await mediaApi.uploadTrack(
+                String(user.id),
+                data.title,
+                selectedFile,
+                selectedCover || undefined,
+                stems,
+                data.genre,
+                data.isExplicit,
+                customTags
+            );
 
             setSuccess(true);
             reset();
             setSelectedFile(null);
             setSelectedCover(null);
             setStems([]);
+            setCustomTags([]);
+            setTagInput('');
         } catch (error: unknown) {
             if (isAxiosError(error)) {
                 setServerError(error.response?.data?.detail || 'Failed to upload track.');
@@ -170,15 +236,15 @@ export const UploadTrackForm = () => {
         <div className="w-full max-w-4xl rounded-2xl border border-slate-800 bg-slate-900 p-8 shadow-xl">
             <div className="mb-6">
                 <h2 className="text-2xl font-bold text-white">Upload Track & Stems</h2>
-                <p className="text-slate-400 text-sm mt-1">Upload your master track, cover art, and separate stems for
-                    interactive playback.</p>
+                <p className="text-slate-400 text-sm mt-1">Upload your master track, cover art, semantic metadata, and
+                    stems.</p>
             </div>
 
             {success && (
                 <div
                     className="mb-6 flex items-center gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4 text-emerald-400">
                     <CheckCircle2 size={20}/>
-                    <p className="text-sm font-medium">Track and stems uploaded successfully to storage.</p>
+                    <p className="text-sm font-medium">Track uploaded successfully to storage.</p>
                 </div>
             )}
 
@@ -194,7 +260,7 @@ export const UploadTrackForm = () => {
                 {/* Basic Info */}
                 <div className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">Track Title</label>
+                        <label className="block text-sm font-medium text-slate-300 mb-2">Track Title *</label>
                         <input
                             {...register('title')}
                             type="text"
@@ -254,6 +320,70 @@ export const UploadTrackForm = () => {
                     </div>
                 </div>
 
+                {/* Metadata Section */}
+                <div className="pt-6 border-t border-slate-800 space-y-5">
+                    <h3 className="text-lg font-medium text-slate-200">Semantic Metadata</h3>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">Primary Genre</label>
+                            <select
+                                {...register('genre')}
+                                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 placeholder-slate-500 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all appearance-none"
+                            >
+                                <option value="" disabled>Select a genre...</option>
+                                {AVAILABLE_GENRES.map(g => (
+                                    <option key={g} value={g}>{g}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div
+                            className="flex items-center justify-between p-4 rounded-xl border border-slate-700 bg-slate-800/30 h-full mt-7 md:mt-0">
+                            <div>
+                                <p className="text-sm font-medium text-slate-200">Explicit Content</p>
+                                <p className="text-xs text-slate-500">Track contains profanity or explicit themes</p>
+                            </div>
+                            <Switch
+                                checked={isExplicit ?? false}
+                                onCheckedChange={(val) => setValue('isExplicit', val)}
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-2">Custom Tags</label>
+                        <div
+                            className="w-full rounded-lg border border-slate-700 bg-slate-950 p-2 focus-within:border-violet-500 focus-within:ring-1 focus-within:ring-violet-500 transition-all flex flex-wrap gap-2">
+                            {customTags.map(tag => (
+                                <span key={tag}
+                                      className="flex items-center gap-1 bg-slate-800 text-slate-200 text-xs px-2.5 py-1.5 rounded-md">
+                                    <Tag size={10} className="text-violet-400"/>
+                                    {tag}
+                                    <button type="button" onClick={() => removeTag(tag)}
+                                            className="ml-1 text-slate-500 hover:text-red-400 transition-colors">
+                                        <X size={12}/>
+                                    </button>
+                                </span>
+                            ))}
+                            <input
+                                type="text"
+                                value={tagInput}
+                                onChange={(e) => setTagInput(e.target.value)}
+                                onKeyDown={handleTagKeyDown}
+                                placeholder={customTags.length < 10 ? "Type a tag and press Enter..." : "Max tags reached"}
+                                disabled={customTags.length >= 10}
+                                className="flex-1 min-w-[150px] bg-transparent text-sm text-slate-100 placeholder-slate-500 outline-none px-2 py-1"
+                            />
+                        </div>
+                        {tagError ? (
+                            <p className="text-red-400 text-xs mt-2">{tagError}</p>
+                        ) : (
+                            <p className="text-slate-500 text-xs mt-2">Alphanumeric, lowercase only. Up to 10 tags.</p>
+                        )}
+                    </div>
+                </div>
+
                 {/* Stems Section */}
                 <div className="pt-6 border-t border-slate-800">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
@@ -267,13 +397,8 @@ export const UploadTrackForm = () => {
                             <label
                                 className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-300 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors cursor-pointer">
                                 <FolderPlus size={16}/> Bulk Add
-                                <input
-                                    type="file"
-                                    multiple
-                                    accept=".mp3,.wav,.flac"
-                                    className="hidden"
-                                    onChange={handleBulkStemUpload}
-                                />
+                                <input type="file" multiple accept=".mp3,.wav,.flac" className="hidden"
+                                       onChange={handleBulkStemUpload}/>
                             </label>
                             <button type="button" onClick={addStem}
                                     className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-violet-400 bg-violet-400/10 rounded-lg hover:bg-violet-400/20 transition-colors">
