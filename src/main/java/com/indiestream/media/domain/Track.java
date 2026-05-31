@@ -16,6 +16,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 
@@ -61,6 +62,22 @@ public class Track {
 
     @Column(name = "hls_manifest_path")
     private String hlsManifestPath;
+
+    // --- Semantic Metadata ---
+
+    @Column(length = 100)
+    private String genre;
+
+    @Column(name = "is_explicit", nullable = false)
+    @Builder.Default
+    private boolean isExplicit = false;
+
+    @Builder.Default
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb", nullable = false)
+    private TrackTags tags = TrackTags.empty();
+
+    // --- Audit ---
 
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;
