@@ -54,6 +54,13 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     List<User> searchByUsernameOrAliasWithProfile(@Param("query") String query, Pageable pageable);
 
     /**
+     * Global Search: Filters out users whose profiles are marked as private.
+     */
+    @EntityGraph(attributePaths = {"profile"})
+    @Query("SELECT u FROM User u JOIN u.profile p WHERE (LOWER(u.username) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(u.alias) LIKE LOWER(CONCAT('%', :query, '%'))) AND p.isPrivate = false")
+    List<User> searchPublicProfilesByUsernameOrAlias(@Param("query") String query, Pageable pageable);
+
+    /**
      * Bulk fetch complete user entities with profile data to prevent N+1 during mapping.
      */
     @EntityGraph(attributePaths = {"profile"})
