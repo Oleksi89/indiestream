@@ -14,8 +14,7 @@ import com.indiestream.media.repository.TrackRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.io.InputStreamResource;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.*;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -179,6 +178,40 @@ public class TrackService implements MediaModuleApi {
                         t.getTags().aiGenerated()
                 ))
                 .orElseThrow(() -> new IllegalArgumentException("Track not found"));
+    }
+
+    /**
+     * Cross-module robust search implementation.
+     * Orchestrates between semantic native queries and standard ILIKE checks based on provided parameters.
+     * Maps results to DTO explicitly avoiding N+1 lookup loops.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public Page<TrackMetadata> searchPublicTracks(String query, String genre, String tagsCsv, Pageable pageable) {
+        Pageable effectivePageable = pageable.getSort().isUnsorted()
+                ? PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(Sort.Direction.DESC, "createdAt"))
+                : pageable;
+
+        List<Track> tracks;
+        String safeQuery = query == null ? "" : query;
+
+        if (tagsCsv != null && !tagsCsv.isBlank()) {
+            tracks = trackRepository.searchByTagsNative(tagsCsv, TrackStatus.READY.name(), effectivePageable);
+        } else if (genre != null && !genre.isBlank()) {
+            tracks = trackRepository.searchByTitleAndGenreAndStatus(safeQuery, genre, TrackStatus.READY, effectivePageable);
+        } else {
+            tracks = trackRepository.searchByTitleAndStatus(safeQuery, TrackStatus.READY, effectivePageable);
+        }
+
+        List<TrackMetadata> metadataList = tracks.stream()
+                .map(t -> new TrackMetadata(
+                        t.getId(), t.getTitle(), t.getArtistId(), t.getDurationSeconds(),
+                        t.getStemsMetadata(), t.getCoverMinioPath(), t.getGenre(),
+                        t.isExplicit(), t.getTags().custom(), t.getTags().aiGenerated()
+                ))
+                .toList();
+
+        return new PageImpl<>(metadataList, effectivePageable, metadataList.size());
     }
 
     private TrackDto mapToDto(Track track) {

@@ -60,4 +60,10 @@ public interface PlaylistRepository extends JpaRepository<Playlist, UUID> {
     @Query("SELECT new com.indiestream.playlist.PlaylistLibraryProjection(p.id, p.name, p.coverMinioPath, p.ownerId, p.createdAt, p.isCollaborative) " +
             "FROM Playlist p WHERE p.ownerId = :ownerId")
     List<PlaylistLibraryProjection> findOwnedPlaylistsForLibrary(@Param("ownerId") UUID ownerId);
+
+    /**
+     * Global Search: Strictly enforces visibility by demanding isPublic = true and isSystem = false.
+     */
+    @Query("SELECT p FROM Playlist p WHERE LOWER(p.name) LIKE LOWER(CONCAT('%', :query, '%')) AND p.isPublic = true AND p.isSystem = false ORDER BY p.followersCount DESC")
+    List<Playlist> searchPublicPlaylistsByName(@Param("query") String query, Pageable pageable);
 }

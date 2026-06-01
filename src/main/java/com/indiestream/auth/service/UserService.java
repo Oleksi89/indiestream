@@ -12,7 +12,7 @@ import com.indiestream.auth.repository.UserFollowerRepository;
 import com.indiestream.auth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -212,6 +212,29 @@ public class UserService implements AuthModuleApi {
                 .stream()
                 .map(this::mapToPublicProfile)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Cross-module robust search implementation.
+     * Enforces sorting via lexicographical Role comparison (ARTIST < USER),
+     * followed by audience size (followersCount).
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public Page<UserPublicProfile> searchPublicProfiles(String query, Pageable pageable) {
+        if (query == null || query.isBlank()) {
+            return Page.empty(pageable);
+        }
+
+        Pageable effectivePageable = pageable.getSort().isUnsorted()
+                ? PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+                Sort.by(Sort.Order.asc("role"), Sort.Order.desc("profile.followersCount")))
+                : pageable;
+
+        List<User> users = userRepository.searchPublicProfilesByUsernameOrAlias(query, effectivePageable);
+        List<UserPublicProfile> profiles = users.stream().map(this::mapToPublicProfile).toList();
+
+        return new PageImpl<>(profiles, effectivePageable, profiles.size());
     }
 
     private UserPublicProfile mapToPublicProfile(User user) {
