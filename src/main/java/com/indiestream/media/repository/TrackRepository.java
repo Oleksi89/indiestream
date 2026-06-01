@@ -48,19 +48,28 @@ public interface TrackRepository extends JpaRepository<Track, UUID> {
     List<Track> searchByTitleAndGenreAndStatus(@Param("query") String query, @Param("genre") String genre, @Param("status") TrackStatus status, Pageable pageable);
 
     /**
-     * Native PostgreSQL query exploiting the GIN index for O(1) performance.
-     * Uses the ?| operator to find tracks where ANY of the provided search tags exist
-     * in the custom, moods, OR aiGenerated JSONB arrays.
+     * Single, comprehensive search query handling text, genre, and GIN-indexed tags simultaneously.
+     * Bypasses Hibernate 6 auto-translation bugs by explicitly binding limit and offset parameters.
      */
     @Query(value = """
-                SELECT * FROM tracks t
+            SELECT t.* FROM tracks t
             WHERE t.status = :statusString
-            AND (
-                t.tags->'custom' ?| string_to_array(:tagsCsv, ',') OR
-                t.tags->'moods' ?| string_to_array(:tagsCsv, ',') OR
-                t.tags->'aiGenerated' ?| string_to_array(:tagsCsv, ',')
+            AND (:query IS NULL OR :query = '' OR LOWER(t.title) LIKE LOWER(CONCAT('%', :query, '%')))
+            AND (:genre IS NULL OR :genre = '' OR t.genre = :genre)
+            AND (:tagsCsv IS NULL OR :tagsCsv = '' OR 
+                jsonb_exists_any(t.tags->'custom', string_to_array(LOWER(:tagsCsv), ',')) OR
+                jsonb_exists_any(t.tags->'moods', string_to_array(LOWER(:tagsCsv), ',')) OR
+                jsonb_exists_any(t.tags->'aiGenerated', string_to_array(LOWER(:tagsCsv), ','))
             )
             ORDER BY t.created_at DESC
+            LIMIT :limit OFFSET :offset
             """, nativeQuery = true)
-    List<Track> searchByTagsNative(@Param("tagsCsv") String tagsCsv, @Param("statusString") String statusString, Pageable pageable);
+    List<Track> searchTracksUnifiedNative(
+            @Param("query") String query,
+            @Param("genre") String genre,
+            @Param("tagsCsv") String tagsCsv,
+            @Param("statusString") String statusString,
+            @Param("limit") int limit,
+            @Param("offset") int offset
+    );
 }

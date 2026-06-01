@@ -34,6 +34,15 @@ public class TrackService implements MediaModuleApi {
     // Cross-module strict API dependency
     private final AuthModuleApi authModuleApi;
 
+    // Strict validation set matching the frontend
+    public static final Set<String> ALLOWED_GENRES = Set.of(
+            "Alternative", "Ambient", "Blues", "Classical", "Country",
+            "Dance", "Electronic", "Folk", "Hip Hop", "Indie",
+            "Jazz", "Latin", "Metal", "Pop", "Punk",
+            "R&B", "Reggae", "Rock", "Soul", "Soundtrack",
+            "Synthwave", "Techno", "Trance", "World", "Other"
+    );
+
     /**
      * Orchestrates the upload of a master track, optional cover, stems, and semantic metadata.
      * Ensures atomic database saving after all MinIO uploads succeed.
@@ -42,6 +51,11 @@ public class TrackService implements MediaModuleApi {
     public TrackDto uploadTrack(UUID artistId, String title, MultipartFile file, MultipartFile cover,
                                 MultipartFile[] stemFiles, List<String> stemNames,
                                 String genre, boolean isExplicit, Set<String> customTags) {
+
+        // Strict Backend Validation
+        if (genre != null && !genre.isBlank() && !ALLOWED_GENRES.contains(genre)) {
+            throw new IllegalArgumentException("Invalid or unsupported genre provided.");
+        }
 
         String bucketPath = minioStorageService.uploadTrackFile(file, artistId);
 
@@ -181,27 +195,24 @@ public class TrackService implements MediaModuleApi {
     }
 
     /**
-     * Cross-module robust search implementation.
-     * Orchestrates between semantic native queries and standard ILIKE checks based on provided parameters.
-     * Maps results to DTO explicitly avoiding N+1 lookup loops.
+     * Cross-module unified search engine.
+     * Extracts pagination metadata into primitive types to bypass Hibernate translation constraints.
      */
     @Override
     @Transactional(readOnly = true)
     public Page<TrackMetadata> searchPublicTracks(String query, String genre, String tagsCsv, Pageable pageable) {
-        Pageable effectivePageable = pageable.getSort().isUnsorted()
-                ? PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(Sort.Direction.DESC, "createdAt"))
-                : pageable;
+        int limit = pageable.getPageSize();
+        int offset = (int) pageable.getOffset();
 
-        List<Track> tracks;
-        String safeQuery = query == null ? "" : query;
-
-        if (tagsCsv != null && !tagsCsv.isBlank()) {
-            tracks = trackRepository.searchByTagsNative(tagsCsv, TrackStatus.READY.name(), effectivePageable);
-        } else if (genre != null && !genre.isBlank()) {
-            tracks = trackRepository.searchByTitleAndGenreAndStatus(safeQuery, genre, TrackStatus.READY, effectivePageable);
-        } else {
-            tracks = trackRepository.searchByTitleAndStatus(safeQuery, TrackStatus.READY, effectivePageable);
-        }
+        // One single call handling every combination of active filters smoothly
+        List<Track> tracks = trackRepository.searchTracksUnifiedNative(
+                query,
+                genre,
+                tagsCsv,
+                TrackStatus.READY.name(),
+                limit,
+                offset
+        );
 
         List<TrackMetadata> metadataList = tracks.stream()
                 .map(t -> new TrackMetadata(
@@ -211,7 +222,7 @@ public class TrackService implements MediaModuleApi {
                 ))
                 .toList();
 
-        return new PageImpl<>(metadataList, effectivePageable, metadataList.size());
+        return new PageImpl<>(metadataList, pageable, metadataList.size());
     }
 
     private TrackDto mapToDto(Track track) {
