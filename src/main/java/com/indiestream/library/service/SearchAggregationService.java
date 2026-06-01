@@ -3,6 +3,7 @@ package com.indiestream.library.service;
 import com.indiestream.auth.AuthModuleApi;
 import com.indiestream.auth.UserPublicProfile;
 import com.indiestream.library.dto.GlobalSearchResponseDto;
+import com.indiestream.library.dto.SearchTrackDto;
 import com.indiestream.media.MediaModuleApi;
 import com.indiestream.media.TrackMetadata;
 import com.indiestream.playlist.PlaylistModuleApi;
@@ -13,11 +14,11 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -47,31 +48,37 @@ public class SearchAggregationService {
      * Implements Fail-Safe pattern: module failures or timeouts return empty lists
      * rather than crashing the entire global search operation.
      */
-    public GlobalSearchResponseDto globalSearch(String query, int limit) {
-        if (query == null || query.isBlank()) {
+    public GlobalSearchResponseDto globalSearch(String query, String genre, String tagsCsv, int limit) {
+        boolean hasQuery = query != null && !query.isBlank();
+        boolean hasTags = tagsCsv != null && !tagsCsv.isBlank();
+        boolean hasGenre = genre != null && !genre.isBlank();
+
+        if (!hasQuery && !hasTags && !hasGenre) {
             return new GlobalSearchResponseDto(Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
         }
 
         Pageable pageable = PageRequest.of(0, limit);
 
         CompletableFuture<List<UserPublicProfile>> profilesFuture = CompletableFuture.supplyAsync(() ->
-                authModuleApi.searchPublicProfiles(query, pageable).getContent(), taskExecutor
+                        hasQuery ? authModuleApi.searchPublicProfiles(query, pageable).getContent() : Collections.<UserPublicProfile>emptyList(),
+                taskExecutor
         ).exceptionally(ex -> {
-            log.error("Auth module search failed during global aggregation: {}", ex.getMessage());
-            return Collections.emptyList();
-        }).completeOnTimeout(Collections.emptyList(), TIMEOUT_SECONDS, TimeUnit.SECONDS);
-
-        CompletableFuture<List<TrackMetadata>> tracksFuture = CompletableFuture.supplyAsync(() ->
-                mediaModuleApi.searchPublicTracks(query, null, null, pageable).getContent(), taskExecutor
-        ).exceptionally(ex -> {
-            log.error("Media module search failed during global aggregation: {}", ex.getMessage());
+            log.error("Auth module search failed: {}", ex.getMessage());
             return Collections.emptyList();
         }).completeOnTimeout(Collections.emptyList(), TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
         CompletableFuture<List<PlaylistDto>> playlistsFuture = CompletableFuture.supplyAsync(() ->
-                playlistModuleApi.searchPublicPlaylists(query, pageable).getContent(), taskExecutor
+                        hasQuery ? playlistModuleApi.searchPublicPlaylists(query, pageable).getContent() : Collections.<PlaylistDto>emptyList(),
+                taskExecutor
         ).exceptionally(ex -> {
-            log.error("Playlist module search failed during global aggregation: {}", ex.getMessage());
+            log.error("Playlist module search failed: {}", ex.getMessage());
+            return Collections.emptyList();
+        }).completeOnTimeout(Collections.emptyList(), TIMEOUT_SECONDS, TimeUnit.SECONDS);
+
+        CompletableFuture<List<TrackMetadata>> tracksFuture = CompletableFuture.supplyAsync(() ->
+                mediaModuleApi.searchPublicTracks(query, genre, tagsCsv, pageable).getContent(), taskExecutor
+        ).exceptionally(ex -> {
+            log.error("Media module search failed: {}", ex.getMessage());
             return Collections.emptyList();
         }).completeOnTimeout(Collections.emptyList(), TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
@@ -79,7 +86,7 @@ public class SearchAggregationService {
         CompletableFuture.allOf(profilesFuture, tracksFuture, playlistsFuture).join();
 
         return new GlobalSearchResponseDto(
-                tracksFuture.join(),
+                enrichTracksWithArtistProfiles(tracksFuture.join()),
                 playlistsFuture.join(),
                 profilesFuture.join()
         );
@@ -106,9 +113,37 @@ public class SearchAggregationService {
         // Playlists and Profiles do not currently support GIN tag semantics.
         // Returning empty lists for them instantly.
         return new GlobalSearchResponseDto(
-                tracksFuture.join(),
+                enrichTracksWithArtistProfiles(tracksFuture.join()),
                 Collections.emptyList(),
                 Collections.emptyList()
         );
+    }
+
+    /**
+     * Bulk resolves artist profiles.
+     */
+    private List<SearchTrackDto> enrichTracksWithArtistProfiles(List<TrackMetadata> rawTracks) {
+        if (rawTracks.isEmpty()) return Collections.emptyList();
+
+        Set<UUID> artistIds = rawTracks.stream()
+                .map(TrackMetadata::artistId)
+                .collect(Collectors.toSet());
+
+        Map<UUID, UserPublicProfile> profilesMap = authModuleApi.getPublicProfiles(artistIds)
+                .stream()
+                .collect(Collectors.toMap(UserPublicProfile::id, p -> p));
+
+        return rawTracks.stream().map(t -> {
+            UserPublicProfile profile = profilesMap.get(t.artistId());
+            String alias = profile != null ? profile.alias() : "Unknown Artist";
+            String username = profile != null ? profile.username() : "unknown";
+
+            return new SearchTrackDto(
+                    t.id(), t.title(), t.artistId(), username, alias,
+                    t.durationSeconds(), t.stemsMetadata(), t.coverMinioPath(),
+                    t.genre(), t.isExplicit(),
+                    new SearchTrackDto.SearchTrackTagsDto(t.customTags(), Collections.emptySet(), t.aiGeneratedTags())
+            );
+        }).toList();
     }
 }

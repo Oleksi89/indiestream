@@ -14,33 +14,22 @@ public class SearchController {
     private final SearchAggregationService searchAggregationService;
 
     /**
-     * Executes a global text search across tracks, playlists, and user profiles.
+     * Unified Global Search endpoint.
+     * Flexibly handles text queries, explicit genre filters, and semantic tags.
      *
      * @param query The search term
+     * @param genre The search genre
+     * @param tags The search tags
      * @param limit Maximum number of items to return PER CATEGORY
      * @return Unified aggregation of results
      */
     @GetMapping
     public ResponseEntity<GlobalSearchResponseDto> search(
-            @RequestParam(name = "q") String query,
+            @RequestParam(name = "q", required = false) String query,
+            @RequestParam(name = "genre", required = false) String genre,
+            @RequestParam(name = "tags", required = false) String tags,
             @RequestParam(name = "limit", defaultValue = "10") int limit
     ) {
-        return ResponseEntity.ok(searchAggregationService.globalSearch(query, limit));
-    }
-
-    /**
-     * Executes a strict semantic search matching exact GIN-indexed tags.
-     * Used primarily for mood, genre, and AI-generated metadata discovery.
-     *
-     * @param tags  Comma-separated list of tags (e.g., "electronic,upbeat,synth")
-     * @param limit Maximum number of items to return
-     * @return Unified aggregation of results
-     */
-    @GetMapping("/tags")
-    public ResponseEntity<GlobalSearchResponseDto> searchByTags(
-            @RequestParam(name = "tags") String tags,
-            @RequestParam(name = "limit", defaultValue = "20") int limit
-    ) {
-        return ResponseEntity.ok(searchAggregationService.searchByTags(tags, limit));
+        return ResponseEntity.ok(searchAggregationService.globalSearch(query, genre, tags, limit));
     }
 }

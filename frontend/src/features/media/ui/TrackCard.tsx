@@ -154,10 +154,16 @@ export const TrackCard = ({track, variant, className, index, addedAt, onClick, o
             >
                 <div className="h-10 w-10 flex-shrink-0 rounded overflow-hidden relative">
                     {renderCover()}
-                    <div
-                        className="absolute inset-0 bg-slate-900/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Play size={16} fill="currentColor" className="text-white ml-0.5"/>
-                    </div>
+                    <button
+                        onClick={handlePlayClick}
+                        className="absolute inset-0 bg-slate-900/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-slate-900/80"
+                    >
+                        {isCurrentTrack && isPlaying ? (
+                            <Pause size={20} fill="currentColor" className="text-violet-400"/>
+                        ) : (
+                            <Play size={20} fill="currentColor" className="text-white ml-0.5"/>
+                        )}
+                    </button>
                 </div>
                 <div className="flex flex-col overflow-hidden">
                     <span className={cn(
