@@ -7,6 +7,7 @@ import {apiClient} from "@/shared/api/apiClient";
 import type {UserDto} from "@/features/auth/types";
 import {useSecureUrl} from "@/shared/hooks/useSecureUrl";
 import {profileApi} from "@/features/profile/api/profile.api";
+import {QuickSearchPopover} from "@/features/search/ui/QuickSearchPopover";
 
 export const Navbar = () => {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -63,20 +64,26 @@ export const Navbar = () => {
 
     return (
         <nav className="sticky top-0 z-50 w-full border-b border-slate-800 bg-slate-950/80 backdrop-blur-md">
-            <div className="mx-auto flex h-16 max-w-screen-2xl items-center justify-between px-6">
-                <div className="flex items-center gap-8">
+            <div className="mx-auto flex h-16 max-w-screen-2xl items-center justify-between px-6 gap-8">
+                {/* Logo Area */}
+                <div className="flex items-center flex-shrink-0">
                     <Link to="/" className="flex items-center gap-2">
                         <div className="h-8 w-8 rounded-lg bg-slate-900/50 shadow-lg shadow-violet-500/20"/>
                         <span className="text-xl font-bold tracking-tight text-white">IndieStream</span>
                     </Link>
                 </div>
 
-                <div className="relative" ref={dropdownRef}>
+                {/* Search Area - takes up available middle space */}
+                <div className="flex-1 max-w-xl flex justify-center lg:justify-start">
+                    <QuickSearchPopover/>
+                </div>
+
+                {/* Profile Area */}
+                <div className="relative flex-shrink-0" ref={dropdownRef}>
                     <button
                         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                         className="group flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900/50 p-1 pr-3 transition-all hover:border-violet-500/50"
                     >
-                        {/* --- ВИПРАВЛЕНО ВІДОБРАЖЕННЯ АВАТАРУ НА КНОПЦІ --- */}
                         <div
                             className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-800 text-violet-400">
                             {user?.profile?.avatarPath ? (
@@ -91,13 +98,13 @@ export const Navbar = () => {
                             )}
                         </div>
 
-                        <div className="flex flex-col items-start leading-none">
+                        <div className="hidden sm:flex flex-col items-start leading-none">
                             <span className="text-xs font-medium text-slate-400">Account</span>
                             <span className="text-sm font-semibold text-white max-w-[120px] truncate">
                                 {user?.alias || 'Loading...'}
                             </span>
                         </div>
-                        <ChevronDown size={14} className="text-slate-500"/>
+                        <ChevronDown size={14} className="text-slate-500 hidden sm:block"/>
                     </button>
 
                     {isDropdownOpen && (
@@ -105,7 +112,6 @@ export const Navbar = () => {
                             className="absolute right-0 mt-2 w-64 origin-top-right rounded-xl border border-slate-800 bg-slate-900 p-2 shadow-2xl ring-1 ring-violet-500/10">
                             <div className="px-3 py-3">
                                 <div className="flex items-center gap-3">
-                                    {/* --- ВИПРАВЛЕНО ВІДОБРАЖЕННЯ АВАТАРУ ВСЕРЕДИНІ ДРОПДАУНУ --- */}
                                     <div
                                         className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-violet-500/20 text-violet-400 font-bold uppercase">
                                         {user?.profile?.avatarPath ? (
@@ -133,7 +139,6 @@ export const Navbar = () => {
                             <div className="my-1 h-px bg-slate-800"/>
 
                             <div className="space-y-1">
-                                {/* --- ВИПРАВЛЕНО ПОСИЛАННЯ НА ПРОФІЛЬ --- */}
                                 <Link to={`/user/${user?.username}`}
                                       onClick={() => setIsDropdownOpen(false)}
                                       className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
