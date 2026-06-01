@@ -10,6 +10,7 @@ import {RoleRoute} from "@/shared/components/RoleRoute";
 import {NotFoundPage} from "@/pages/error/NotFoundPage";
 import {PlaylistPage} from "@/pages/playlist/PlaylistPage.tsx";
 import {ProfilePage} from "@/pages/profile/ProfilePage.tsx";
+import {SearchPage} from "@/pages/search/SearchPage.tsx";
 
 const routes = [
     // Guest Only Routes
@@ -36,6 +37,10 @@ const routes = [
                     {
                         path: '/',
                         element: <DashboardPage/>,
+                    },
+                    {
+                        path: '/search',
+                        element: <SearchPage/>,
                     },
                     {
                         path: '/playlist/:id',
