@@ -1,6 +1,6 @@
 package com.indiestream.playlist.controller;
 
-import com.indiestream.playlist.dto.PlaylistDto;
+import com.indiestream.playlist.PlaylistDto;
 import com.indiestream.playlist.dto.PlaylistTrackDetailsDto;
 import com.indiestream.playlist.service.PlaylistService;
 import lombok.RequiredArgsConstructor;
