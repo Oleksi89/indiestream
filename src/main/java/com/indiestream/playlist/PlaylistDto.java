@@ -1,4 +1,4 @@
-package com.indiestream.playlist.dto;
+package com.indiestream.playlist;
 
 import com.indiestream.auth.UserPublicProfile;
 

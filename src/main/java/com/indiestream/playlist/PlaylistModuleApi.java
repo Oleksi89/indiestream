@@ -1,6 +1,5 @@
 package com.indiestream.playlist;
 
-import com.indiestream.playlist.dto.PlaylistDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
