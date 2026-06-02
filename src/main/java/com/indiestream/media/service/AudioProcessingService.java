@@ -24,9 +24,24 @@ public class AudioProcessingService {
 
     private final TrackService trackService;
     private final MinioStorageService minioStorageService;
+    private final AudioPipelineOrchestrator pipelineOrchestrator;
 
+    /**
+     * Listens for successful track uploads and delegates to the hardware pipeline.
+     * AFTER_COMMIT to guarantee the Track aggregate exists in the database before processing starts.
+     */
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void handleTrackUploadedEvent(TrackUploadedEvent event) {
+        UUID trackId = event.trackId();
+        log.info("TrackUploadedEvent received. Delegating to AudioPipelineOrchestrator for Track ID: {}", trackId);
+
+        pipelineOrchestrator.executePipeline(trackId);
+    }
+
+    // Note: Legacy HLS segmentation logic should be moved to a downstream worker
+    @Async
+    // @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void processAudioToHls(TrackUploadedEvent event) {
         UUID trackId = event.trackId();
         log.info("Starting HLS processing for track ID: {}", trackId);
