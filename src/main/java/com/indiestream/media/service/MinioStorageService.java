@@ -115,6 +115,26 @@ public class MinioStorageService {
     }
 
     /**
+     * Core upload method for internal server-generated streams (like AI Assets and FFmpeg outputs).
+     */
+    public String uploadInternalStream(InputStream stream, long size, String objectName, String contentType) {
+        try {
+            minioClient.putObject(
+                    PutObjectArgs.builder()
+                            .bucket(minioProperties.bucket())
+                            .object(objectName)
+                            .stream(stream, size, -1)
+                            .contentType(contentType)
+                            .build()
+            );
+            return objectName;
+        } catch (Exception e) {
+            log.error("Failed to upload internal stream to MinIO for object: {}", objectName, e);
+            throw new RuntimeException("Failed to upload internal asset.", e);
+        }
+    }
+
+    /**
      * Retrieves the metadata of an object, crucially its total size (Content-Length).
      */
     public StatObjectResponse getObjectMetadata(String objectName) {
