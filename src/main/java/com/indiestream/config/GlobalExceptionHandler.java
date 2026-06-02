@@ -1,6 +1,7 @@
 package com.indiestream.config;
 
 import com.indiestream.auth.exception.*;
+import com.indiestream.media.exception.InvalidTrackStateException;
 import com.indiestream.playlist.exception.PlaylistNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -63,6 +64,14 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleIllegalArgument(IllegalArgumentException ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
         problemDetail.setTitle("Bad Request");
+        return problemDetail;
+    }
+
+    @ExceptionHandler(InvalidTrackStateException.class)
+    public ProblemDetail handleInvalidTrackState(InvalidTrackStateException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
+        problemDetail.setTitle("State Machine Transition Violation");
+        problemDetail.setType(URI.create("https://indiestream.com/errors/invalid-track-state"));
         return problemDetail;
     }
 }
