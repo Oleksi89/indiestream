@@ -1,7 +1,46 @@
 package com.indiestream.media.domain;
 
+import java.util.Set;
+
+/**
+ * Represents the lifecycle state of a Track within the IndieStream ingestion and moderation pipeline.
+ * Encapsulates the Finite State Machine (FSM) transition matrix.
+ */
 public enum TrackStatus {
+    DRAFT,
     PROCESSING,
-    READY,
-    FAILED
+    AI_ANALYSIS,
+    NEEDS_REVISION,
+    IN_REVIEW,
+    APPROVED,
+    READY,      // Legacy state / Fully processed and available for internal operations
+    REJECTED,
+    BANNED,
+    PUBLISHED,
+    FAILED;
+
+    /**
+     * Validates if a transition from the current state to the target state is allowed.
+     * Enforces strict compliance with the platform's moderation and ingestion rules.
+     *
+     * @param nextState The proposed target state.
+     * @return true if the transition is allowed, false otherwise.
+     */
+    public boolean isValidTransition(TrackStatus nextState) {
+        if (this == nextState) return true; // Idempotent updates are permitted
+
+        return switch (this) {
+            case DRAFT -> Set.of(PROCESSING).contains(nextState);
+            case PROCESSING ->
+                    Set.of(AI_ANALYSIS, READY, FAILED).contains(nextState); // READY allowed for legacy pipeline bypass
+            case AI_ANALYSIS -> Set.of(NEEDS_REVISION, IN_REVIEW, FAILED, DRAFT).contains(nextState);
+            case NEEDS_REVISION -> Set.of(DRAFT, PROCESSING).contains(nextState);
+            case IN_REVIEW -> Set.of(APPROVED, REJECTED).contains(nextState);
+            case APPROVED -> Set.of(PUBLISHED, READY, DRAFT).contains(nextState);
+            case READY -> Set.of(PUBLISHED, DRAFT, BANNED).contains(nextState);
+            case PUBLISHED, REJECTED -> Set.of(DRAFT, BANNED).contains(nextState);
+            case FAILED -> Set.of(DRAFT, PROCESSING).contains(nextState); // Retry mechanisms
+            case BANNED -> false; // Terminal state; no exit permitted
+        };
+    }
 }
