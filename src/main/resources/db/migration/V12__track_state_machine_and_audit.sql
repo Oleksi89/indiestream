@@ -1,8 +1,4 @@
--- 1. Expand status column to accommodate longer FSM state names (e.g., 'NEEDS_REVISION')
-ALTER TABLE tracks
-    ALTER COLUMN status TYPE VARCHAR(50);
-
--- 1. Expand status column to accommodate longer FSM state names (e.g., 'NEEDS_REVISION')
+-- 1. Expand status column to accommodate longer FSM state names
 ALTER TABLE tracks
     ALTER COLUMN status TYPE VARCHAR(50);
 
@@ -16,7 +12,7 @@ CREATE TABLE track_audit_logs
     previous_status VARCHAR(50),
     new_status      VARCHAR(50)                                        NOT NULL,
     reason          TEXT,
-    ai_payload      JSONB, -- Stores the raw Gemini JSON response/staging tags before artist approval
+    ai_payload      JSONB, -- Stores the raw AI JSON response/staging tags before artist approval
     created_at      TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
 
     CONSTRAINT fk_audit_track FOREIGN KEY (track_id) REFERENCES tracks (id) ON DELETE CASCADE

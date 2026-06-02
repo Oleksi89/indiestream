@@ -7,11 +7,13 @@ import com.indiestream.media.exception.InvalidTrackStateException;
 import com.indiestream.media.repository.TrackAuditLogRepository;
 import com.indiestream.media.repository.TrackRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -81,6 +83,22 @@ public class TrackTransitionEngine {
 
         trackRepository.save(track);
         auditLogRepository.save(auditLog);
+    }
+
+    /**
+     * Retrieves the chronological audit trail for a track.
+     * Enforces strict tenancy ownership: restricted to the track's creator or Admins.
+     */
+    @Transactional(readOnly = true)
+    public List<TrackAuditLog> getAuditHistory(UUID trackId, UUID currentUserId, boolean isAdmin) {
+        Track track = trackRepository.findById(trackId)
+                .orElseThrow(() -> new IllegalArgumentException("Track not found"));
+
+        if (!track.getArtistId().equals(currentUserId) && !isAdmin) {
+            throw new AccessDeniedException("You do not have permission to view the audit logs for this asset.");
+        }
+
+        return auditLogRepository.findAllByTrackIdOrderByCreatedAtDesc(trackId);
     }
 
     /**
