@@ -15,10 +15,12 @@ java {
 }
 
 extra["springModulithVersion"] = "1.3.3"
+extra["springAiVersion"] = "1.1.7"
 
 dependencyManagement {
     imports {
         mavenBom("org.springframework.modulith:spring-modulith-bom:${property("springModulithVersion")}")
+        mavenBom("org.springframework.ai:spring-ai-bom:${property("springAiVersion")}")
     }
 }
 
@@ -64,6 +66,11 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
     implementation("io.minio:minio:8.6.0")
     implementation("org.apache.commons:commons-lang3:3.19.0")
+
+    // --- Media Module: Resilience & AI Dependencies ---
+    implementation("org.springframework.retry:spring-retry")
+    implementation("org.springframework.boot:spring-boot-starter-aop")
+    implementation("org.springframework.ai:spring-ai-starter-model-google-genai")
 }
 
 tasks.withType<Test> {

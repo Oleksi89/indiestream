@@ -30,6 +30,12 @@ spring:
         max-size: 4
         queue-capacity: 50
       thread-name-prefix: media-worker-
+  ai:
+    model:
+      chat: google-genai
+    google:
+      genai:
+        api-key: ${GEMINI_API_KEY}
 
 management:
   endpoints:
