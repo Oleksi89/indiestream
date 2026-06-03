@@ -74,4 +74,12 @@ public class GlobalExceptionHandler {
         problemDetail.setType(URI.create("https://indiestream.com/errors/invalid-track-state"));
         return problemDetail;
     }
+
+    @ExceptionHandler(com.indiestream.media.exception.AppealNotAllowedException.class)
+    public ProblemDetail handleAppealNotAllowed(com.indiestream.media.exception.AppealNotAllowedException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+        problemDetail.setTitle("Appeal Not Allowed");
+        problemDetail.setType(URI.create("https://indiestream.com/errors/appeal-denied"));
+        return problemDetail;
+    }
 }
