@@ -4,6 +4,20 @@ export interface TrackTagsDto {
     aiGenerated: string[];
 }
 
+// Strictly aligned with backend TrackStatus enum
+export type TrackStatus =
+    | 'DRAFT'
+    | 'PROCESSING'
+    | 'AI_ANALYSIS'
+    | 'NEEDS_REVISION'
+    | 'IN_REVIEW'
+    | 'APPROVED'
+    | 'READY'
+    | 'REJECTED'
+    | 'BANNED'
+    | 'PUBLISHED'
+    | 'FAILED';
+
 export interface TrackDto {
     id: string;
     artistId: string;
@@ -14,12 +28,16 @@ export interface TrackDto {
     coverMinioPath?: string | null;
     stemsMetadata: Record<string, string>;
     durationSeconds: number;
-    status: 'PROCESSING' | 'READY' | 'FAILED';
+    status: TrackStatus;
     hlsManifestPath?: string;
     // Semantic Metadata
     genre?: string;
     isExplicit?: boolean;
     tags?: TrackTagsDto;
+    // HITL Moderation Fields
+    hasAppealed?: boolean;
+    artistProposedTags?: TrackTagsDto;
+    createdAt?: string;
 }
 
 export interface UploadTrackRequest {
@@ -54,3 +72,13 @@ export const AVAILABLE_GENRES = [
     'R&B', 'Reggae', 'Rock', 'Soul', 'Soundtrack',
     'Synthwave', 'Techno', 'Trance', 'World', 'Other'
 ] as const;
+
+
+export interface TrackResolutionRequest {
+    proposedTags: TrackTagsDto;
+    justification: string;
+}
+
+export interface AppealRequest {
+    reason: string;
+}
