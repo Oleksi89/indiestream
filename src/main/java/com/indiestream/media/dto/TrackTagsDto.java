@@ -11,10 +11,10 @@ import java.util.Set;
  */
 public record TrackTagsDto(
         @Size(max = 10, message = "A maximum of 10 custom tags is allowed")
-        Set<@Pattern(regexp = "^[a-z0-9]+$", message = "Custom tags must be lowercase and alphanumeric") String> custom,
+        Set<@Pattern(regexp = "^[a-z0-9-]+$", message = "Custom tags must be lowercase, alphanumeric, or hyphenated") String> custom,
 
         @Size(max = 10, message = "A maximum of 10 mood tags is allowed")
-        Set<@Pattern(regexp = "^[a-z0-9]+$", message = "Mood tags must be lowercase and alphanumeric") String> moods,
+        Set<@Pattern(regexp = "^[a-z0-9-]+$", message = "Mood tags must be lowercase, alphanumeric, or hyphenated") String> moods,
 
         @Size(max = 20, message = "A maximum of 20 AI tags is allowed")
         Set<String> aiGenerated

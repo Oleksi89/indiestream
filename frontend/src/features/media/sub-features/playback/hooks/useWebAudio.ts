@@ -1,8 +1,8 @@
 import {useEffect, useState, useRef} from 'react';
-import {usePlayerStore} from '@/shared/store/playerStore';
-import {useAuthStore} from '@/shared/store/authStore';
-import {mediaApi} from '../api/media.api';
-import {audioEngine} from '../lib/webAudioEngine';
+import {usePlayerStore} from '@/shared/store/playerStore.ts';
+import {useAuthStore} from '@/shared/store/authStore.ts';
+import {mediaApi} from '../../../api/media.api.ts';
+import {audioEngine} from '../lib/webAudioEngine.ts';
 import Hls from "hls.js";
 
 

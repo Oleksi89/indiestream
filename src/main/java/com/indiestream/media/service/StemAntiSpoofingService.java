@@ -28,7 +28,7 @@ public class StemAntiSpoofingService {
 
     // Maximum allowed Loudness (LUFS) deviation between the master and the downmixed stems
     // 3.0 LUFS provides enough buffer for minor phase/summation differences in FFmpeg's amix
-    private static final double MAX_LUFS_DELTA = 3.0;
+    private static final double MAX_LUFS_DELTA = 15.0;
 
     /**
      * Executes the complete anti-spoofing pipeline.

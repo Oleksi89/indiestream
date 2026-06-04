@@ -79,4 +79,9 @@ public interface TrackRepository extends JpaRepository<Track, UUID> {
      * Orders by oldest first.
      */
     Page<ModerationQueueProjection> findAllByStatusOrderByCreatedAtAsc(TrackStatus status, Pageable pageable);
+
+    /**
+     * Retrieves all tracks for the Artist Studio Dashboard, ignoring status filters.
+     */
+    Page<Track> findAllByArtistIdOrderByCreatedAtDesc(UUID artistId, Pageable pageable);
 }

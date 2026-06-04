@@ -145,6 +145,11 @@ public class TrackService implements MediaModuleApi {
                 .map(this::mapToDto);
     }
 
+    @Transactional(readOnly = true)
+    public Page<TrackDto> getStudioTracks(UUID artistId, Pageable pageable) {
+        return trackRepository.findAllByArtistIdOrderByCreatedAtDesc(artistId, pageable)
+                .map(this::mapToDto);
+    }
 
     /**
      * Retrieves a global paginated feed of all tracks.
@@ -251,7 +256,8 @@ public class TrackService implements MediaModuleApi {
                 track.getHlsManifestPath(),
                 track.getGenre(),
                 track.isExplicit(),
-                tagsDto
+                tagsDto,
+                track.getCreatedAt()
         );
     }
 }

@@ -3,6 +3,7 @@ package com.indiestream.media.dto;
 import com.indiestream.media.domain.TrackStatus;
 import jakarta.validation.Valid;
 
+import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 
@@ -22,6 +23,8 @@ public record TrackDto(
         // Semantic Metadata
         String genre,
         boolean isExplicit,
-        @Valid TrackTagsDto tags
+        @Valid TrackTagsDto tags,
+
+        Instant createdAt
 ) {
 }
