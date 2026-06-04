@@ -3,12 +3,15 @@ package com.indiestream.config;
 import com.indiestream.auth.exception.*;
 import com.indiestream.media.exception.InvalidTrackStateException;
 import com.indiestream.playlist.exception.PlaylistNotFoundException;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.net.URI;
+import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -80,6 +83,36 @@ public class GlobalExceptionHandler {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
         problemDetail.setTitle("Appeal Not Allowed");
         problemDetail.setType(URI.create("https://indiestream.com/errors/appeal-denied"));
+        return problemDetail;
+    }
+
+    /**
+     * Handles validation errors for @RequestParam and @PathVariable (e.g., regex mismatches).
+     */
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ProblemDetail handleConstraintViolation(ConstraintViolationException ex) {
+        String errorMessage = ex.getConstraintViolations().stream()
+                .map(violation -> violation.getMessage())
+                .collect(Collectors.joining(", "));
+
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, errorMessage);
+        problemDetail.setTitle("Invalid Request Parameters");
+        problemDetail.setType(URI.create("https://indiestream.com/errors/validation-failure"));
+        return problemDetail;
+    }
+
+    /**
+     * Handles validation errors for @Valid @RequestBody DTOs.
+     */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ProblemDetail handleMethodArgumentNotValid(MethodArgumentNotValidException ex) {
+        String errorMessage = ex.getBindingResult().getFieldErrors().stream()
+                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                .collect(Collectors.joining("; "));
+
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, errorMessage);
+        problemDetail.setTitle("Malformed Payload");
+        problemDetail.setType(URI.create("https://indiestream.com/errors/payload-validation-failure"));
         return problemDetail;
     }
 }

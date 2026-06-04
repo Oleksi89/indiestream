@@ -1,15 +1,15 @@
 import {useEffect, useRef, useState} from 'react';
-import {usePlayerStore} from '@/shared/store/playerStore';
-import {useAuthStore} from '@/shared/store/authStore';
-import {mediaApi} from '../api/media.api';
-import {useSecureUrl} from '@/shared/hooks/useSecureUrl';
-import {useWebAudio} from '../hooks/useWebAudio';
+import {usePlayerStore} from '@/shared/store/playerStore.ts';
+import {useAuthStore} from '@/shared/store/authStore.ts';
+import {mediaApi} from '../../../api/media.api.ts';
+import {useSecureUrl} from '@/shared/hooks/useSecureUrl.ts';
+import {useWebAudio} from '../hooks/useWebAudio.ts';
 import {
     Play, Pause, SkipForward, SkipBack, Volume2, Disc3, Settings2,
     Loader2, Heart, PlusCircle, Shuffle, Repeat, Repeat1, ListVideo
 } from 'lucide-react';
-import {cn} from '@/shared/lib/utils';
-import {audioEngine} from "@/features/media/lib/webAudioEngine.ts";
+import {cn} from '@/shared/lib/utils.ts';
+import {audioEngine} from "@/features/media/sub-features/playback/lib/webAudioEngine.ts";
 import Hls from "hls.js";
 import {useToggleLike, useUserLibrary} from "@/features/playlist/hooks/usePlaylists.ts";
 import {useQuery} from "@tanstack/react-query";

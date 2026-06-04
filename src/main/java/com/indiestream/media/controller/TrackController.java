@@ -52,7 +52,7 @@ public class TrackController {
             @RequestParam(value = "isExplicit", defaultValue = "false") boolean isExplicit,
             @RequestParam(value = "customTags", required = false)
             @Size(max = 10, message = "Maximum 10 custom tags allowed")
-            Set<@Pattern(regexp = "^[a-z0-9]+$", message = "Tags must be lowercase alphanumeric") String> customTags
+            Set<@Pattern(regexp = "^[a-z0-9-]+$", message = "Tags must be lowercase alphanumeric") String> customTags
     ) {
         UUID artistId = UUID.fromString(principal.getName());
         TrackDto uploadedTrack = trackService.uploadTrack(
@@ -79,6 +79,19 @@ public class TrackController {
             trackPage = trackService.getPublicTracks(pageable);
         }
         return ResponseEntity.ok(trackPage);
+    }
+
+    /**
+     * Dedicated endpoint for the Artist Studio Dashboard.
+     * Returns all tracks belonging to the authenticated artist regardless of their FSM status.
+     */
+    @GetMapping("/studio")
+    public ResponseEntity<Page<TrackDto>> getStudioTracks(
+            @PageableDefault(size = 20) Pageable pageable,
+            Principal principal
+    ) {
+        UUID artistId = UUID.fromString(principal.getName());
+        return ResponseEntity.ok(trackService.getStudioTracks(artistId, pageable));
     }
 
     /**

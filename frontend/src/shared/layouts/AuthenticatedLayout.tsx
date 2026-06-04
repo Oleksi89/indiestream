@@ -1,9 +1,9 @@
 import {Outlet} from 'react-router-dom';
 import {Navbar} from '@/shared/components/Navbar';
-import {PlayerBar} from '@/features/media/ui/PlayerBar';
+import {PlayerBar} from '@/features/media/sub-features/playback/ui/PlayerBar.tsx';
 import {usePlayerStore} from '@/shared/store/playerStore';
 import {LibrarySidebar} from '@/features/playlist/ui/LibrarySidebar';
-import {QueueSlideover} from '@/features/media/ui/QueueSlideover';
+import {QueueSlideover} from '@/features/media/sub-features/playback/ui/QueueSlideover.tsx';
 import {cn} from "@/shared/lib/utils.ts";
 
 /**
