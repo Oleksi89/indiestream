@@ -32,18 +32,15 @@ public enum TrackStatus {
         return switch (this) {
             case DRAFT -> Set.of(PROCESSING).contains(nextState);
             case PROCESSING ->
-                    Set.of(AI_ANALYSIS, READY, FAILED).contains(nextState); // READY allowed for legacy pipeline bypass
-            case AI_ANALYSIS -> Set.of(NEEDS_REVISION, IN_REVIEW, FAILED, DRAFT).contains(nextState);
-            case NEEDS_REVISION ->
-                    Set.of(DRAFT, PROCESSING, APPROVED, IN_REVIEW).contains(nextState);
+                    Set.of(AI_ANALYSIS, READY, FAILED, REJECTED).contains(nextState); // READY allowed for legacy pipeline bypass
+            case AI_ANALYSIS -> Set.of(NEEDS_REVISION, IN_REVIEW, FAILED, DRAFT, APPROVED).contains(nextState);
+            case NEEDS_REVISION -> Set.of(DRAFT, PROCESSING, APPROVED, IN_REVIEW).contains(nextState);
             case IN_REVIEW -> Set.of(APPROVED, REJECTED, BANNED).contains(nextState);
             case APPROVED -> Set.of(PUBLISHED, READY, DRAFT).contains(nextState);
             case READY -> Set.of(PUBLISHED, DRAFT, BANNED).contains(nextState);
-            case PUBLISHED, REJECTED ->
-                    Set.of(DRAFT, BANNED, IN_REVIEW).contains(nextState);
+            case PUBLISHED, REJECTED -> Set.of(DRAFT, BANNED, IN_REVIEW).contains(nextState);
             case FAILED -> Set.of(DRAFT, PROCESSING).contains(nextState); // Retry mechanisms
-            case BANNED ->
-                    Set.of(IN_REVIEW).contains(nextState); // Allow Human-in-the-Loop appeals from BANNED
+            case BANNED -> Set.of(IN_REVIEW).contains(nextState); // Allow Human-in-the-Loop appeals from BANNED
         };
     }
 }
