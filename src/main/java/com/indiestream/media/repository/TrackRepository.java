@@ -2,6 +2,7 @@ package com.indiestream.media.repository;
 
 import com.indiestream.media.domain.Track;
 import com.indiestream.media.domain.TrackStatus;
+import com.indiestream.media.dto.ModerationQueueProjection;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -72,4 +73,10 @@ public interface TrackRepository extends JpaRepository<Track, UUID> {
             @Param("limit") int limit,
             @Param("offset") int offset
     );
+
+    /**
+     * Retrieves the moderation queue using a lightweight projection.
+     * Orders by oldest first.
+     */
+    Page<ModerationQueueProjection> findAllByStatusOrderByCreatedAtAsc(TrackStatus status, Pageable pageable);
 }

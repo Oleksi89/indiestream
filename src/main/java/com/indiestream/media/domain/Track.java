@@ -2,6 +2,8 @@ package com.indiestream.media.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -17,9 +19,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-
 @Entity
 @Table(name = "tracks")
 @Getter
@@ -33,7 +32,6 @@ public class Track {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    // Cross-module dependency avoided by storing UUID instead of User entity
     @Column(name = "artist_id", nullable = false)
     private UUID artistId;
 
@@ -46,7 +44,6 @@ public class Track {
     @Column(name = "cover_minio_path")
     private String coverMinioPath;
 
-    // Native Hibernate 6 support for PostgreSQL JSONB
     @Builder.Default
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "stems_metadata", nullable = false)
@@ -76,6 +73,16 @@ public class Track {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb", nullable = false)
     private TrackTags tags = TrackTags.empty();
+
+    // --- Moderation Human-In-The-Loop Fields ---
+
+    @Column(name = "has_appealed", nullable = false)
+    @Builder.Default
+    private boolean hasAppealed = false;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "artist_proposed_tags", columnDefinition = "jsonb")
+    private TrackTags artistProposedTags;
 
     // --- Audit ---
 
