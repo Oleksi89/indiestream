@@ -1,50 +1,55 @@
 import {apiClient} from '@/shared/api/apiClient';
 import type {TrackDto, PageResponse, StemUploadPayload} from '../types';
-import type {AxiosResponse} from 'axios';
+import type {AxiosResponse, AxiosProgressEvent} from 'axios';
+
+export interface UploadTrackPayload {
+    artistId: string;
+    title: string;
+    file: File;
+    cover?: File | null;
+    stems?: StemUploadPayload[];
+    genre?: string;
+    isExplicit?: boolean;
+    customTags?: string[];
+    onUploadProgress?: (progressEvent: AxiosProgressEvent) => void;
+}
 
 export const mediaApi = {
-    /**
-     * Uploads an audio file, cover image, semantic metadata, and dynamic stems to the storage layer.
-     * FormData handles parallel arrays natively by appending multiple values to the same key.
-     */
-    uploadTrack: async (
-        artistId: string,
-        title: string,
-        file: File,
-        cover?: File,
-        stems: StemUploadPayload[] = [],
-        genre?: string,
-        isExplicit?: boolean,
-        customTags?: string[]
-    ): Promise<TrackDto> => {
+    uploadTrack: async (payload: UploadTrackPayload): Promise<TrackDto> => {
         const formData = new FormData();
-        formData.append('artistId', artistId);
-        formData.append('title', title);
-        formData.append('file', file);
 
-        if (cover) {
-            formData.append('cover', cover);
+        // Safe appending to prevent native FormData errors
+        formData.append('artistId', payload.artistId || '');
+        formData.append('title', payload.title || 'Untitled');
+        formData.append('file', payload.file);
+
+        if (payload.cover instanceof File) {
+            formData.append('cover', payload.cover);
         }
 
-        stems.forEach(stem => {
-            formData.append('stemFiles', stem.file);
-            formData.append('stemNames', stem.name);
-        });
+        if (payload.stems && payload.stems.length > 0) {
+            payload.stems.forEach(stem => {
+                // Double check to ensure empty placeholders aren't sent
+                if (stem.file instanceof File && stem.name.trim()) {
+                    formData.append('stemFiles', stem.file);
+                    formData.append('stemNames', stem.name.trim());
+                }
+            });
+        }
 
-        // Semantic Metadata
-        if (genre) formData.append('genre', genre);
-        if (isExplicit !== undefined) formData.append('isExplicit', String(isExplicit));
-        if (customTags && customTags.length > 0) {
-            customTags.forEach(tag => formData.append('customTags', tag));
+        if (payload.genre) formData.append('genre', payload.genre);
+        if (payload.isExplicit !== undefined) formData.append('isExplicit', String(payload.isExplicit));
+        if (payload.customTags && payload.customTags.length > 0) {
+            payload.customTags.forEach(tag => formData.append('customTags', tag));
         }
 
         const {data} = await apiClient.post<unknown, AxiosResponse<TrackDto>>(
             '/tracks',
             formData,
             {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
+                headers: {'Content-Type': 'multipart/form-data'},
+                onUploadProgress: payload.onUploadProgress,
+                timeout: 0 // For large uploads
             }
         );
         return data;
@@ -58,6 +63,20 @@ export const mediaApi = {
             `/tracks`,
             {params: {artistId, page, size}}
         );
+        return data;
+    },
+
+    getStudioTracks: async (page: number = 0, size: number = 20): Promise<PageResponse<TrackDto>> => {
+        const {data} = await apiClient.get<unknown, AxiosResponse<PageResponse<TrackDto>>>(
+            `/tracks/studio`,
+            {params: {page, size}}
+        );
+        return data;
+    },
+
+    // For Wizard Phase polling
+    getTrack: async (trackId: string): Promise<TrackDto> => {
+        const {data} = await apiClient.get<unknown, AxiosResponse<TrackDto>>(`/tracks/${trackId}`);
         return data;
     },
 
