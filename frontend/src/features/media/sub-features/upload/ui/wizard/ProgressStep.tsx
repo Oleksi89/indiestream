@@ -1,10 +1,10 @@
 import {useEffect, useRef} from 'react';
-import {useUploadWizardStore} from '../../hooks/useUploadWizardStore';
-import {useUploadTrack} from '../../hooks/useTrackMutations';
-import {useTrackStatusPoll} from '../../hooks/useTrackQueries';
-import {useAuthStore} from '@/shared/store/authStore';
+import {useUploadWizardStore} from '../../hooks/useUploadWizardStore.ts';
+import {useUploadTrack} from '../../../../hooks/useTrackMutations.ts';
+import {useTrackStatusPoll} from '../../../../hooks/useTrackQueries.ts';
+import {useAuthStore} from '@/shared/store/authStore.ts';
 import {Loader2, CheckCircle2, Server, BrainCircuit, Check, XCircle} from 'lucide-react';
-import {TrackStatusBadge} from '../TrackStatusBadge';
+import {TrackStatusBadge} from '../../../moderation/ui/TrackStatusBadge.tsx';
 import toast from 'react-hot-toast';
 
 interface ProgressStepProps {

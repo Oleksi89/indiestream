@@ -1,8 +1,8 @@
 import React, {useState} from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import {X, Gavel, AlertTriangle} from 'lucide-react';
-import {useAppealBan} from '../hooks/useTrackMutations';
-import type {TrackDto} from '../types';
+import {useAppealBan} from '../../../hooks/useTrackMutations.ts';
+import type {TrackDto} from '../../../types';
 
 interface AppealBanModalProps {
     track: TrackDto;

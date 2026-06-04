@@ -1,7 +1,7 @@
 import {useMutation, useQueryClient} from '@tanstack/react-query';
 import {mediaApi, type UploadTrackPayload} from '../api/media.api';
 import {trackKeys} from './useTrackQueries';
-import {useUploadWizardStore} from './useUploadWizardStore';
+import {useUploadWizardStore} from '../sub-features/upload/hooks/useUploadWizardStore.ts';
 import toast from 'react-hot-toast';
 import type {AppealRequest, TrackResolutionRequest} from "@/features/media/types";
 import {apiClient} from "@/shared/api/apiClient.ts";

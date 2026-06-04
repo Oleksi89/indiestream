@@ -1,5 +1,5 @@
-import {cn} from '@/shared/lib/utils';
-import type {TrackStatus} from '../types';
+import {cn} from '@/shared/lib/utils.ts';
+import type {TrackStatus} from '../../../types';
 import {CheckCircle2, AlertTriangle, Loader2, Ban, Clock, FileEdit, XCircle} from 'lucide-react';
 
 interface TrackStatusBadgeProps {

@@ -1,8 +1,8 @@
 import React, {useState} from 'react';
-import {useUploadWizardStore} from '../../hooks/useUploadWizardStore';
-import {MEDIA_LIMITS} from '../../types/track.schema';
+import {useUploadWizardStore} from '../../hooks/useUploadWizardStore.ts';
+import {MEDIA_LIMITS} from '../../../../types/track.schema.ts';
 import {UploadCloud, FileAudio, Image as ImageIcon, X, ArrowLeft, ArrowRight, Loader2} from 'lucide-react';
-import {cn} from '@/shared/lib/utils';
+import {cn} from '@/shared/lib/utils.ts';
 import toast from 'react-hot-toast';
 
 export const MediaStep = () => {

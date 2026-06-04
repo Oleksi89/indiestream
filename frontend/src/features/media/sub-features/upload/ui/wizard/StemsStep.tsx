@@ -1,8 +1,8 @@
 import React, {useState} from 'react';
-import {useUploadWizardStore} from '../../hooks/useUploadWizardStore';
-import type {StemUploadPayload} from '../../types';
+import {useUploadWizardStore} from '../../hooks/useUploadWizardStore.ts';
+import type {StemUploadPayload} from '../../../../types';
 import {FileAudio, Plus, X, ArrowLeft, Send, FolderPlus} from 'lucide-react';
-import {MEDIA_LIMITS} from '../../types/track.schema';
+import {MEDIA_LIMITS} from '../../../../types/track.schema.ts';
 import toast from 'react-hot-toast';
 
 export const StemsStep = () => {

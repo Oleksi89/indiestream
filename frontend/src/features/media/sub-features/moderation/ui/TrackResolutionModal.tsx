@@ -1,8 +1,8 @@
 import React, {useState} from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import {X, Sparkles, AlertCircle, ArrowRight} from 'lucide-react';
-import {useAcceptAiTags, useProposeCustomTags} from '../hooks/useTrackMutations';
-import type {TrackDto} from '../types';
+import {useAcceptAiTags, useProposeCustomTags} from '../../../hooks/useTrackMutations.ts';
+import type {TrackDto} from '../../../types';
 
 interface TrackResolutionModalProps {
     track: TrackDto;

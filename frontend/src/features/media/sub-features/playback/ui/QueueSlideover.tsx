@@ -1,7 +1,7 @@
-import {usePlayerStore} from '@/shared/store/playerStore';
-import {TrackCard} from './TrackCard';
+import {usePlayerStore} from '@/shared/store/playerStore.ts';
+import {TrackCard} from '../../../ui/TrackCard.tsx';
 import {X, ListMusic, History, GripVertical} from 'lucide-react';
-import {TrackContextMenu} from './TrackContextMenu';
+import {TrackContextMenu} from '../../../ui/TrackContextMenu.tsx';
 import {
     DndContext,
     closestCenter,
@@ -18,7 +18,7 @@ import {
     useSortable
 } from '@dnd-kit/sortable';
 import {CSS} from '@dnd-kit/utilities';
-import type {TrackDto} from '../types';
+import type {TrackDto} from '../../../types';
 
 interface SortableTrackItemProps {
     track: TrackDto;

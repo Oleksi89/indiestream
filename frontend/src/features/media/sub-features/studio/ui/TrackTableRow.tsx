@@ -1,8 +1,8 @@
-import {TrackStatusBadge} from './TrackStatusBadge';
-import {useSecureUrl} from '@/shared/hooks/useSecureUrl';
-import {mediaApi} from '../api/media.api';
-import type {TrackDto} from '../types';
-import {OwnedTrackDropdownMenu} from "@/features/media/ui/OwnedTrackDropdownMenu.tsx";
+import {TrackStatusBadge} from '../../moderation/ui/TrackStatusBadge.tsx';
+import {useSecureUrl} from '@/shared/hooks/useSecureUrl.ts';
+import {mediaApi} from '../../../api/media.api.ts';
+import type {TrackDto} from '../../../types';
+import {OwnedTrackDropdownMenu} from "@/features/media/sub-features/studio/ui/OwnedTrackDropdownMenu.tsx";
 
 interface TrackTableRowProps {
     track: TrackDto;

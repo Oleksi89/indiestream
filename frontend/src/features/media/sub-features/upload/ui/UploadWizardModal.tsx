@@ -1,12 +1,12 @@
 import {useState} from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
-import {useUploadWizardStore} from '../../hooks/useUploadWizardStore';
-import {MetadataStep} from './MetadataStep';
-import {MediaStep} from './MediaStep';
-import {StemsStep} from './StemsStep';
-import {ProgressStep} from './ProgressStep';
+import {useUploadWizardStore} from '../hooks/useUploadWizardStore.ts';
+import {MetadataStep} from './wizard/MetadataStep.tsx';
+import {MediaStep} from './wizard/MediaStep.tsx';
+import {StemsStep} from './wizard/StemsStep.tsx';
+import {ProgressStep} from './wizard/ProgressStep.tsx';
 import {X} from 'lucide-react';
-import {cn} from '@/shared/lib/utils';
+import {cn} from '@/shared/lib/utils.ts';
 
 export const UploadWizardModal = () => {
     const [isOpen, setIsOpen] = useState(false);

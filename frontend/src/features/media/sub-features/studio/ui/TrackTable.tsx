@@ -1,6 +1,6 @@
-import {useStudioTracks} from '../hooks/useTrackQueries';
+import {useStudioTracks} from '../../../hooks/useTrackQueries.ts';
 import {Loader2} from 'lucide-react';
-import {TrackTableRow} from "@/features/media/ui/TrackTableRow.tsx";
+import {TrackTableRow} from "@/features/media/sub-features/studio/ui/TrackTableRow.tsx";
 
 export const TrackTable = () => {
     const {data, isLoading, error} = useStudioTracks();

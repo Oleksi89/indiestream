@@ -1,9 +1,9 @@
 import {useForm, Controller} from 'react-hook-form';
 import {zodResolver} from '@hookform/resolvers/zod';
-import {trackMetadataSchema, type TrackMetadataFormValues} from '../../types/track.schema';
-import {useUploadWizardStore} from '../../hooks/useUploadWizardStore';
-import {AVAILABLE_GENRES} from '../../types';
-import {Switch} from '@/shared/ui/switch';
+import {trackMetadataSchema, type TrackMetadataFormValues} from '../../../../types/track.schema.ts';
+import {useUploadWizardStore} from '../../hooks/useUploadWizardStore.ts';
+import {AVAILABLE_GENRES} from '../../../../types';
+import {Switch} from '@/shared/ui/switch.tsx';
 import {Tag, X, ArrowRight} from 'lucide-react';
 import React, {useState} from 'react';
 

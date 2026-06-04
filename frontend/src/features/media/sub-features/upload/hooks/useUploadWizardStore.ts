@@ -1,7 +1,7 @@
 import {create} from 'zustand';
 import {persist, createJSONStorage} from 'zustand/middleware';
-import type {TrackMetadataFormValues} from '../types/track.schema';
-import type {StemUploadPayload} from '../types';
+import type {TrackMetadataFormValues} from '../../../types/track.schema.ts';
+import type {StemUploadPayload} from '../../../types';
 
 export type WizardStep = 'METADATA' | 'MEDIA' | 'STEMS' | 'UPLOADING' | 'PROCESSING';
 

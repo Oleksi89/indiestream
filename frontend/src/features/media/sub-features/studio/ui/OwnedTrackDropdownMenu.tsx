@@ -1,6 +1,6 @@
 import {useState} from 'react';
 import {MoreHorizontal, Edit, Gavel, Sparkles, Loader2} from 'lucide-react';
-import type {TrackDto} from '../types';
+import type {TrackDto} from '../../../types';
 import {
     DropdownMenu,
     DropdownMenuTrigger,
@@ -8,9 +8,9 @@ import {
     DropdownMenuItem,
     DropdownMenuLabel,
     DropdownMenuSeparator
-} from '@/shared/ui/DropdownMenu';
-import {AppealBanModal} from './AppealBanModal';
-import {TrackResolutionModal} from './TrackResolutionModal';
+} from '@/shared/ui/DropdownMenu.tsx';
+import {AppealBanModal} from '../../moderation/ui/AppealBanModal.tsx';
+import {TrackResolutionModal} from '../../moderation/ui/TrackResolutionModal.tsx';
 
 interface TrackDropdownMenuProps {
     track: TrackDto;

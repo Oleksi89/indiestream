@@ -1,6 +1,6 @@
-import {TrackTable} from '@/features/media/ui/TrackTable';
+import {TrackTable} from '@/features/media/sub-features/studio/ui/TrackTable.tsx';
 import {useAuthStore} from '@/shared/store/authStore';
-import {UploadWizardModal} from '@/features/media/ui/wizard/UploadWizardModal';
+import {UploadWizardModal} from '@/features/media/sub-features/upload/ui/UploadWizardModal.tsx';
 import {RefreshCw} from 'lucide-react';
 import {useQueryClient} from '@tanstack/react-query';
 import {trackKeys, useStudioTracks} from '@/features/media/hooks/useTrackQueries';
