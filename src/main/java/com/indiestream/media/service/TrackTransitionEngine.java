@@ -33,7 +33,9 @@ public class TrackTransitionEngine {
     private static final Set<TrackStatus> REASON_REQUIRED_STATES = Set.of(
             TrackStatus.REJECTED,
             TrackStatus.BANNED,
-            TrackStatus.NEEDS_REVISION
+            TrackStatus.NEEDS_REVISION,
+            TrackStatus.ARCHIVED,
+            TrackStatus.HIDDEN
     );
 
     /**
@@ -41,7 +43,7 @@ public class TrackTransitionEngine {
      *
      * @param trackId      Target track ID.
      * @param targetStatus The desired next state.
-     * @param reason       Optional explanation (mandatory for punitive or revision states).
+     * @param reason       Optional explanation (mandatory for REASON_REQUIRED_STATES).
      * @param aiPayload    Optional structured metadata from AI analysis pipelines.
      */
     @Transactional

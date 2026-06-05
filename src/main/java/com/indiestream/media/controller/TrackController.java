@@ -1,6 +1,7 @@
 package com.indiestream.media.controller;
 
 import com.indiestream.media.dto.TrackDto;
+import com.indiestream.media.service.ArtistTrackManagementService;
 import com.indiestream.media.service.MinioStorageService;
 import com.indiestream.media.service.TrackService;
 import io.minio.StatObjectResponse;
@@ -17,14 +18,15 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.security.Principal;
-import java.util.UUID;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/tracks")
@@ -33,6 +35,7 @@ import java.util.Set;
 public class TrackController {
 
     private final TrackService trackService;
+    private final ArtistTrackManagementService trackManagementService;
     private final MinioStorageService minioStorageService;
 
     /**
@@ -41,6 +44,7 @@ public class TrackController {
      * Enforces strict regex and size boundaries on custom tags to prevent injection and bloat.
      */
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<TrackDto> uploadTrack(
             Principal principal,
             @RequestParam("title") String title,
@@ -60,6 +64,38 @@ public class TrackController {
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(uploadedTrack);
     }
+
+    // --- Advanced Artist Workflows (Lifecycle Management) ---
+
+    @PostMapping("/{trackId}/publish")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> publishTrack(@PathVariable UUID trackId, Principal principal) {
+        UUID artistId = UUID.fromString(principal.getName());
+        trackManagementService.publishTrack(trackId, artistId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{trackId}/visibility")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> toggleVisibility(@PathVariable UUID trackId, Principal principal) {
+        UUID artistId = UUID.fromString(principal.getName());
+        trackManagementService.toggleTrackVisibility(trackId, artistId);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Maps the RESTful DELETE operation to a secure Soft Delete (ARCHIVED transition) within the FSM.
+     * Preserves audit trails and media blobs for compliance and moderation history.
+     */
+    @DeleteMapping("/{trackId}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> archiveTrack(@PathVariable UUID trackId, Principal principal) {
+        UUID artistId = UUID.fromString(principal.getName());
+        trackManagementService.archiveTrack(trackId, artistId);
+        return ResponseEntity.noContent().build();
+    }
+
+    // --- Query & Streaming Endpoints ---
 
     /**
      * Retrieves a paginated list of tracks.
@@ -86,6 +122,7 @@ public class TrackController {
      * Returns all tracks belonging to the authenticated artist regardless of their FSM status.
      */
     @GetMapping("/studio")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<TrackDto>> getStudioTracks(
             @PageableDefault(size = 20) Pageable pageable,
             Principal principal

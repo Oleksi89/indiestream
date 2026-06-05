@@ -141,13 +141,13 @@ public class TrackService implements MediaModuleApi {
         if (!authModuleApi.isProfileAccessible(artistId, currentUserId)) {
             throw new AccessDeniedException("This profile is private.");
         }
-        return trackRepository.findAllByArtistIdAndStatusOrderByCreatedAtDesc(artistId, TrackStatus.READY, pageable)
+        return trackRepository.findAllByArtistIdAndStatusOrderByCreatedAtDesc(artistId, TrackStatus.PUBLISHED, pageable)
                 .map(this::mapToDto);
     }
 
     @Transactional(readOnly = true)
     public Page<TrackDto> getStudioTracks(UUID artistId, Pageable pageable) {
-        return trackRepository.findAllByArtistIdOrderByCreatedAtDesc(artistId, pageable)
+        return trackRepository.findAllStudioTracksExcludingArchived(artistId, pageable)
                 .map(this::mapToDto);
     }
 
@@ -156,7 +156,7 @@ public class TrackService implements MediaModuleApi {
      */
     @Transactional(readOnly = true)
     public Page<TrackDto> getPublicTracks(Pageable pageable) {
-        return trackRepository.findAllByStatusOrderByCreatedAtDesc(TrackStatus.READY, pageable)
+        return trackRepository.findAllByStatusOrderByCreatedAtDesc(TrackStatus.PUBLISHED, pageable)
                 .map(this::mapToDto);
     }
 
@@ -214,7 +214,7 @@ public class TrackService implements MediaModuleApi {
                 query,
                 genre,
                 tagsCsv,
-                TrackStatus.READY.name(),
+                TrackStatus.PUBLISHED.name(),
                 limit,
                 offset
         );
@@ -237,9 +237,9 @@ public class TrackService implements MediaModuleApi {
 
         TrackTags domainTags = track.getTags();
         TrackTagsDto tagsDto = new TrackTagsDto(
-                domainTags.custom(),
-                domainTags.moods(),
-                domainTags.aiGenerated()
+                domainTags != null ? domainTags.custom() : Set.of(),
+                domainTags != null ? domainTags.moods() : Set.of(),
+                domainTags != null ? domainTags.aiGenerated() : Set.of()
         );
 
         return new TrackDto(
