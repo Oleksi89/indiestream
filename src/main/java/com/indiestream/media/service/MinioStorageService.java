@@ -145,9 +145,12 @@ public class MinioStorageService {
                             .object(objectName)
                             .build()
             );
+        } catch (io.minio.errors.ErrorResponseException e) {
+            log.warn("Media object not found in MinIO: {}", objectName);
+            throw new com.indiestream.media.exception.MediaNotFoundException("Media not found: " + objectName, e);
         } catch (Exception e) {
             log.error("Failed to get object metadata for: {}", objectName, e);
-            throw new RuntimeException("Media not found or inaccessible.");
+            throw new com.indiestream.media.exception.MediaStreamException("Failed to access media metadata.", e);
         }
     }
 
@@ -163,9 +166,12 @@ public class MinioStorageService {
                             .object(objectName)
                             .build()
             );
+        } catch (io.minio.errors.ErrorResponseException e) {
+            log.warn("Media stream requested but object missing: {}", objectName);
+            throw new com.indiestream.media.exception.MediaNotFoundException("Media blob could not be located.", e);
         } catch (Exception e) {
             log.error("Failed to stream complete object: {}", objectName, e);
-            throw new RuntimeException("Failed to stream media.");
+            throw new com.indiestream.media.exception.MediaStreamException("Storage provider is temporarily unavailable.", e);
         }
     }
 
