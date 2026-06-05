@@ -1,6 +1,16 @@
 import {cn} from '@/shared/lib/utils.ts';
 import type {TrackStatus} from '../../../types';
-import {CheckCircle2, AlertTriangle, Loader2, Ban, Clock, FileEdit, XCircle} from 'lucide-react';
+import {
+    CheckCircle2,
+    AlertTriangle,
+    Loader2,
+    Ban,
+    Clock,
+    FileEdit,
+    XCircle,
+    EyeClosedIcon,
+    TrashIcon
+} from 'lucide-react';
 
 interface TrackStatusBadgeProps {
     status: TrackStatus;
@@ -61,6 +71,18 @@ export const TrackStatusBadge = ({status, className}: TrackStatusBadgeProps) => 
             label: 'Failed',
             color: 'bg-red-500/10 text-red-400 border-red-500/20',
             icon: <XCircle size={14}/> as React.ReactNode
+        },
+
+        HIDDEN: {
+            label: 'Hidden',
+            color: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
+            icon: <EyeClosedIcon size={14}/> as React.ReactNode
+        },
+
+        ARCHIVED: {
+            label: 'Deleted',
+            color: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
+            icon: <TrashIcon size={14}/> as React.ReactNode
         },
 
         DRAFT: {

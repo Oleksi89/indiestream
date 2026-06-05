@@ -15,6 +15,8 @@ export type TrackStatus =
     | 'READY'
     | 'REJECTED'
     | 'BANNED'
+    | 'HIDDEN'
+    | 'ARCHIVED'
     | 'PUBLISHED'
     | 'FAILED';
 
