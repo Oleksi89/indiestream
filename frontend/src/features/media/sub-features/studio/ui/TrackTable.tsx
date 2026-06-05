@@ -1,9 +1,32 @@
 import {useStudioTracks} from '../../../hooks/useTrackQueries.ts';
 import {Loader2} from 'lucide-react';
-import {TrackTableRow} from "@/features/media/sub-features/studio/ui/TrackTableRow.tsx";
+import {TrackTableRow} from './TrackTableRow';
+import type {TrackDto} from '../../../types';
+import type {TrackModalType} from './OwnedTrackDropdownMenu';
+
+// Dynamically imported Modals to keep initial bundle size small
+import {EditTrackModal} from './EditTrackModal';
+import {PublishTrackDialog} from './PublishTrackDialog';
+import {ArchiveTrackDialog} from './ArchiveTrackDialog';
+import {AppealBanModal} from '../../moderation/ui/AppealBanModal';
+import {TrackResolutionModal} from '../../moderation/ui/TrackResolutionModal';
+import {useState} from "react";
+
+
+interface ModalState {
+    type: TrackModalType;
+    track: TrackDto;
+}
 
 export const TrackTable = () => {
     const {data, isLoading, error} = useStudioTracks();
+    const [activeModal, setActiveModal] = useState<ModalState | null>(null);
+
+    const handleCloseModal = () => setActiveModal(null);
+
+    const handleOpenModal = (type: TrackModalType, track: TrackDto) => {
+        setActiveModal({type, track});
+    };
 
     if (isLoading) {
         return (
@@ -27,8 +50,8 @@ export const TrackTable = () => {
         return (
             <div
                 className="flex flex-col justify-center items-center h-64 w-full rounded-2xl border border-slate-800 bg-slate-900/50 text-slate-400">
-                <p className="mb-2">Your catalog is empty.</p>
-                <p className="text-sm">Upload your first track using the wizard.</p>
+                <p className="mb-2 font-medium text-slate-300">Your catalog is empty.</p>
+                <p className="text-sm">Upload your first track using the wizard above.</p>
             </div>
         );
     }
@@ -47,11 +70,32 @@ export const TrackTable = () => {
                     </thead>
                     <tbody className="divide-y divide-slate-800">
                     {data.content.map((track) => (
-                        <TrackTableRow key={track.id} track={track}/>
+                        <TrackTableRow key={track.id} track={track} onOpenModal={handleOpenModal}/>
                     ))}
                     </tbody>
                 </table>
             </div>
+
+            {/* --- Centralized Modals --- */}
+            {activeModal?.type === 'EDIT' && (
+                <EditTrackModal track={activeModal.track} isOpen={true} onClose={handleCloseModal}/>
+            )}
+
+            {activeModal?.type === 'PUBLISH' && (
+                <PublishTrackDialog track={activeModal.track} isOpen={true} onClose={handleCloseModal}/>
+            )}
+
+            {activeModal?.type === 'ARCHIVE' && (
+                <ArchiveTrackDialog track={activeModal.track} isOpen={true} onClose={handleCloseModal}/>
+            )}
+
+            {activeModal?.type === 'APPEAL' && (
+                <AppealBanModal track={activeModal.track} isOpen={true} onClose={handleCloseModal}/>
+            )}
+
+            {activeModal?.type === 'RESOLUTION' && (
+                <TrackResolutionModal track={activeModal.track} isOpen={true} onClose={handleCloseModal}/>
+            )}
         </div>
     );
 };

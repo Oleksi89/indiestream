@@ -14,6 +14,14 @@ export interface UploadTrackPayload {
     onUploadProgress?: (progressEvent: AxiosProgressEvent) => void;
 }
 
+export interface UpdateTrackPayload {
+    title?: string;
+    genre?: string;
+    isExplicit?: boolean;
+    customTags?: string[];
+    cover?: File | null; // null explicitly means "remove cover"
+}
+
 export const mediaApi = {
     uploadTrack: async (payload: UploadTrackPayload): Promise<TrackDto> => {
         const formData = new FormData();
@@ -56,6 +64,47 @@ export const mediaApi = {
     },
 
     /**
+     * Updates an existing track's metadata and/or cover art.
+     */
+    updateTrackDetails: async (trackId: string, payload: UpdateTrackPayload): Promise<TrackDto> => {
+        const formData = new FormData();
+
+        if (payload.title) formData.append('title', payload.title);
+        if (payload.genre) formData.append('genre', payload.genre);
+        if (payload.isExplicit !== undefined) formData.append('isExplicit', String(payload.isExplicit));
+        if (payload.customTags && payload.customTags.length > 0) {
+            payload.customTags.forEach(tag => formData.append('customTags', tag));
+        }
+        if (payload.cover instanceof File) {
+            formData.append('cover', payload.cover);
+        }
+
+        const {data} = await apiClient.patch<unknown, AxiosResponse<TrackDto>>(
+            `/tracks/${trackId}`,
+            formData,
+            {headers: {'Content-Type': 'multipart/form-data'}}
+        );
+        return data;
+    },
+
+    // --- Lifecycle Management Endpoints ---
+
+    publishTrack: async (trackId: string): Promise<void> => {
+        await apiClient.post(`/tracks/${trackId}/publish`);
+    },
+
+    toggleVisibility: async (trackId: string): Promise<void> => {
+        await apiClient.patch(`/tracks/${trackId}/visibility`);
+    },
+
+    archiveTrack: async (trackId: string): Promise<void> => {
+        // Maps to the soft delete backend architecture
+        await apiClient.delete(`/tracks/${trackId}`);
+    },
+
+    // --- Query Endpoints ---
+
+     /**
      * Fetches a paginated list of tracks for a specific artist.
      */
     getArtistTracks: async (artistId: string, page: number = 0, size: number = 10): Promise<PageResponse<TrackDto>> => {
