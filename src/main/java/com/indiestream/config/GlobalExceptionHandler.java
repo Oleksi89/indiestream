@@ -2,6 +2,8 @@ package com.indiestream.config;
 
 import com.indiestream.auth.exception.*;
 import com.indiestream.media.exception.InvalidTrackStateException;
+import com.indiestream.media.exception.MediaNotFoundException;
+import com.indiestream.media.exception.MediaStreamException;
 import com.indiestream.playlist.exception.PlaylistNotFoundException;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
@@ -113,6 +115,24 @@ public class GlobalExceptionHandler {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, errorMessage);
         problemDetail.setTitle("Malformed Payload");
         problemDetail.setType(URI.create("https://indiestream.com/errors/payload-validation-failure"));
+        return problemDetail;
+    }
+
+
+    @ExceptionHandler(MediaNotFoundException.class)
+    public ProblemDetail handleMediaNotFound(MediaNotFoundException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        problemDetail.setTitle("Media Blob Not Found");
+        problemDetail.setType(URI.create("https://indiestream.com/errors/media-not-found"));
+        return problemDetail;
+    }
+
+    @ExceptionHandler(MediaStreamException.class)
+    public ProblemDetail handleMediaStream(MediaStreamException ex) {
+        // HTTP 503 for storage provider connection issues
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, "The storage provider is temporarily unavailable or returning errors.");
+        problemDetail.setTitle("Storage Streaming Failure");
+        problemDetail.setType(URI.create("https://indiestream.com/errors/storage-unavailable"));
         return problemDetail;
     }
 }
