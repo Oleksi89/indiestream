@@ -19,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -31,12 +32,36 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/tracks")
 @RequiredArgsConstructor
-@Validated // Required to enable method-level validation for @RequestParam constraints
+@Validated
 public class TrackController {
 
     private final TrackService trackService;
     private final ArtistTrackManagementService trackManagementService;
     private final MinioStorageService minioStorageService;
+
+    // --- Authentication Helper ---
+
+    /**
+     * Lightweight internal record to pass security context cleanly.
+     */
+    private record AuthContext(UUID requesterId, boolean isAdmin) {
+    }
+
+    /**
+     * Extracts UUID and Admin status directly from the in-memory JWT Authentication object.
+     * Prevents database round-trips for role validation.
+     */
+    private AuthContext resolveAuthContext(Authentication authentication) {
+        if (authentication != null && authentication.isAuthenticated() && !authentication.getPrincipal().equals("anonymousUser")) {
+            UUID requesterId = UUID.fromString(authentication.getName());
+            boolean isAdmin = authentication.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ADMIN") || a.getAuthority().equals("ROLE_ADMIN"));
+            return new AuthContext(requesterId, isAdmin);
+        }
+        return new AuthContext(null, false);
+    }
+
+    // --- Upload & Lifecycle Endpoints ---
 
     /**
      * Uploads a new track with optional stems and semantic metadata.
@@ -97,6 +122,16 @@ public class TrackController {
 
     // --- Query & Streaming Endpoints ---
 
+    @GetMapping("/{trackId}")
+    public ResponseEntity<TrackDto> getTrackById(
+            @PathVariable UUID trackId,
+            Authentication authentication
+    ) {
+        AuthContext auth = resolveAuthContext(authentication);
+        TrackDto track = trackService.getTrackById(trackId, auth.requesterId(), auth.isAdmin());
+        return ResponseEntity.ok(track);
+    }
+
     /**
      * Retrieves a paginated list of tracks.
      * If artistId is provided, filters by that artist. Otherwise, returns a global public feed.
@@ -131,6 +166,8 @@ public class TrackController {
         return ResponseEntity.ok(trackService.getStudioTracks(artistId, pageable));
     }
 
+    // --- Secure Media Serving ---
+
     /**
      * Proxy for HLS resources (manifests and segments).
      * Secures media behind JWT instead of exposing MinIO buckets.
@@ -138,9 +175,14 @@ public class TrackController {
     @GetMapping("/{trackId}/hls/**")
     public ResponseEntity<Resource> getHlsResource(
             @PathVariable UUID trackId,
-            HttpServletRequest request
+            HttpServletRequest request,
+            Authentication authentication
     ) {
-        // extract the target path after "/hls/"
+        // Throws exception if user is not authorized to view this track
+        AuthContext auth = resolveAuthContext(authentication);
+        trackService.getTrackById(trackId, auth.requesterId(), auth.isAdmin());
+
+        // Fetch Blob
         String requestUri = request.getRequestURI();
         String path = requestUri.substring(requestUri.indexOf("/hls/") + 5);
 
@@ -162,9 +204,12 @@ public class TrackController {
     @GetMapping(value = "/{trackId}/stream")
     public ResponseEntity<InputStreamResource> streamTrack(
             @PathVariable UUID trackId,
-            @RequestHeader(value = "Range", required = false) String rangeHeader
+            @RequestHeader(value = "Range", required = false) String rangeHeader,
+            Authentication authentication
     ) {
-        TrackDto track = trackService.getTrackById(trackId);
+        AuthContext auth = resolveAuthContext(authentication);
+        // Security check embedded inside the DTO fetch
+        TrackDto track = trackService.getTrackById(trackId, auth.requesterId(), auth.isAdmin());
         return buildStreamResponse(track.minioBucketPath(), rangeHeader);
     }
 
@@ -176,9 +221,12 @@ public class TrackController {
     public ResponseEntity<InputStreamResource> streamStem(
             @PathVariable UUID trackId,
             @PathVariable String stemName,
-            @RequestHeader(value = "Range", required = false) String rangeHeader
+            @RequestHeader(value = "Range", required = false) String rangeHeader,
+            Authentication authentication
     ) {
-        TrackDto track = trackService.getTrackById(trackId);
+        AuthContext auth = resolveAuthContext(authentication);
+        TrackDto track = trackService.getTrackById(trackId, auth.requesterId(), auth.isAdmin());
+
         String stemPath = track.stemsMetadata().get(stemName);
 
         if (stemPath == null) {
@@ -240,8 +288,12 @@ public class TrackController {
      * Allows the frontend to render <img src="/api/v1/tracks/{id}/cover"> without exposing MinIO credentials or making the bucket entirely public.
      */
     @GetMapping(value = "/{trackId}/cover")
-    public ResponseEntity<InputStreamResource> getTrackCover(@PathVariable UUID trackId) {
-        TrackDto track = trackService.getTrackById(trackId);
+    public ResponseEntity<InputStreamResource> getTrackCover(
+            @PathVariable UUID trackId,
+            Authentication authentication
+    ) {
+        AuthContext auth = resolveAuthContext(authentication);
+        TrackDto track = trackService.getTrackById(trackId, auth.requesterId(), auth.isAdmin());
 
         if (track.coverMinioPath() == null) {
             return ResponseEntity.notFound().build();
