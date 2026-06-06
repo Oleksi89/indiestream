@@ -1,7 +1,6 @@
 package com.indiestream.library.dto;
 
 import com.indiestream.auth.UserPublicProfile;
-import com.indiestream.media.TrackMetadata;
 import com.indiestream.playlist.PlaylistDto;
 
 import java.util.List;
