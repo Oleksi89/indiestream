@@ -1,5 +1,6 @@
 package com.indiestream.media.service;
 
+import com.indiestream.media.TrackUploadedEvent;
 import com.indiestream.media.domain.Track;
 import com.indiestream.media.domain.TrackStatus;
 import com.indiestream.media.dto.AiModerationResponse;
@@ -11,6 +12,8 @@ import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.io.File;
 import java.io.InputStream;
@@ -25,7 +28,7 @@ import java.util.stream.Stream;
 
 /**
  * The asynchronous orchestrator for the IndieStream Audio Pipeline.
- * Executes Anti-Spoofing, AI Asset Generation, and AI Moderation workflows.
+ * Executes Anti-Spoofing, HLS Segmentation, AI Asset Generation, and AI Moderation workflows.
  * Runs on a dedicated task executor to isolate IO/CPU intensive operations.
  */
 @Slf4j
@@ -36,17 +39,28 @@ public class AudioPipelineOrchestrator {
     private final TrackRepository trackRepository;
     private final MinioStorageService minioStorageService;
     private final StemAntiSpoofingService antiSpoofingService;
+    private final AudioProcessingService audioProcessingService;
     private final AiAssetGeneratorService aiAssetGeneratorService;
     private final TrackTransitionEngine transitionEngine;
     private final GeminiModerationClient geminiModerationClient;
     private final ModerationDecisionEngine moderationDecisionEngine;
 
+
     /**
-     * Executes the processing pipeline asynchronously.
+     * Entry point: Listens for the successful database commit of a new track.
+     */
+    @Async
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void handleTrackUploadedEvent(TrackUploadedEvent event) {
+        log.info("TrackUploadedEvent received. Delegating to AudioPipelineOrchestrator for Track ID: {}", event.trackId());
+        executePipeline(event.trackId());
+    }
+
+    /**
+     * Executes the linear processing pipeline asynchronously.
      *
      * @param trackId The UUID of the track to process.
      */
-    @Async
     public void executePipeline(UUID trackId) {
         log.info("Initiating Audio Pipeline for Track ID: {}", trackId);
         Path tempWorkspace = null;
@@ -77,17 +91,21 @@ public class AudioPipelineOrchestrator {
                 return; // stop pipeline
             }
 
+            // Execute HLS Segmentation
+            log.info("Anti-Spoofing passed. Generating HLS streams for Track ID: {}", trackId);
+            audioProcessingService.processAudioToHls(trackId);
+
             // Generate AI Assets (OGG / WebP)
-            log.info("Anti-Spoofing passed. Generating AI assets for Track ID: {}", trackId);
+            log.info("HLS generation complete. Generating AI assets for Track ID: {}", trackId);
             String audioAssetPath = aiAssetGeneratorService.generateAudioAsset(masterFile, track.getArtistId(), trackId);
             Optional<String> coverAssetPath = aiAssetGeneratorService.generateCoverAsset(track.getCoverMinioPath(), track.getArtistId(), trackId);
 
-            // Transition to Next FSM Phase
-            log.info("Pipeline complete. Transitioning Track ID: {} to AI_ANALYSIS", trackId);
+            // Transition to Next FSM Phase (Ready for AI)
+            log.info("Hardware Pipeline complete. Transitioning Track ID: {} to AI_ANALYSIS", trackId);
             transitionEngine.transitionTrack(
                     trackId,
                     TrackStatus.AI_ANALYSIS,
-                    "Hardware processing completed successfully. Awaiting Gemini AI evaluation.",
+                    "Hardware processing and HLS segmentation completed. Awaiting AI evaluation.",
                     null
             );
 

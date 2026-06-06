@@ -102,6 +102,22 @@ public class TrackService implements MediaModuleApi {
         return mapToDto(savedTrack);
     }
 
+
+    /**
+     * Updates technical media paths without modifying the FSM status.
+     * Requires a new transaction to commit technical parsing success regardless of downstream FSM failures.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void updateTrackMediaMetadata(UUID trackId, String hlsManifestPath, Integer durationSeconds) {
+        Track track = trackRepository.findById(trackId)
+                .orElseThrow(() -> new IllegalArgumentException("Track not found"));
+
+        if (hlsManifestPath != null) track.setHlsManifestPath(hlsManifestPath);
+        if (durationSeconds != null) track.setDurationSeconds(durationSeconds);
+
+        trackRepository.save(track);
+    }
+
     /**
      * Updates track status autonomously.
      * Requires a new transaction to ensure status is committed even if the caller context fails.

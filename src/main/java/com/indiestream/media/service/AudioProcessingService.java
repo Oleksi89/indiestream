@@ -1,14 +1,9 @@
 package com.indiestream.media.service;
 
-import com.indiestream.media.TrackUploadedEvent;
-import com.indiestream.media.domain.TrackStatus;
 import com.indiestream.media.dto.TrackDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -17,6 +12,10 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+/**
+ * Utility service for transcoding, segmenting, and analyzing audio files.
+ * Stripped of all FSM transition logic to maintain Single Responsibility.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -24,63 +23,41 @@ public class AudioProcessingService {
 
     private final TrackService trackService;
     private final MinioStorageService minioStorageService;
-    private final AudioPipelineOrchestrator pipelineOrchestrator;
 
     /**
-     * Listens for successful track uploads and delegates to the hardware pipeline.
-     * AFTER_COMMIT to guarantee the Track aggregate exists in the database before processing starts.
+     * Executes synchronous FFmpeg HLS segmentation.
+     * Updates the technical manifest paths and duration in the database without altering FSM status.
+     *
+     * @param trackId The UUID of the track to process
      */
-    @Async
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void handleTrackUploadedEvent(TrackUploadedEvent event) {
-        UUID trackId = event.trackId();
-        log.info("TrackUploadedEvent received. Delegating to AudioPipelineOrchestrator for Track ID: {}", trackId);
-
-        pipelineOrchestrator.executePipeline(trackId);
-    }
-
-    // Note: Legacy HLS segmentation logic should be moved to a downstream worker
-    @Async
-    // @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void processAudioToHls(TrackUploadedEvent event) {
-        UUID trackId = event.trackId();
-        log.info("Starting HLS processing for track ID: {}", trackId);
-
+    public void processAudioToHls(UUID trackId) {
+        log.info("Starting synchronous HLS processing for track ID: {}", trackId);
         Path tempDir = null;
+
         try {
             TrackDto track = trackService.getTrackById(trackId);
             tempDir = Files.createTempDirectory("hls_" + trackId);
 
-            log.info("Process Master Track: {}", trackId);
-            // 1. Process Master Track
-            int durationSeconds = processSingleMedia(
-                    track.minioBucketPath(),
-                    "master",
-                    track,
-                    tempDir
-            );
+            log.info("Processing Master Track HLS: {}", trackId);
+            int durationSeconds = processSingleMedia(track.minioBucketPath(), "master", track, tempDir);
 
-            // 2. Process all Stems
-            if (track.stemsMetadata() != null) {
+            if (track.stemsMetadata() != null && !track.stemsMetadata().isEmpty()) {
+                log.info("Processing Stems HLS: {}", trackId);
                 for (Map.Entry<String, String> entry : track.stemsMetadata().entrySet()) {
-                    String stemName = entry.getKey();
-                    String stemMinioPath = entry.getValue();
-                    processSingleMedia(stemMinioPath, "stems/" + stemName, track, tempDir);
-                    log.info("Stem: {}", stemName);
+                    processSingleMedia(entry.getValue(), "stems/" + entry.getKey(), track, tempDir);
                 }
-                log.info("Starting Process all Stems: {}", trackId);
             }
 
             // Path to the master manifest is saved as the primary reference
             String masterManifestPath = "artists/" + track.artistId() + "/hls/" + trackId + "/master/index.m3u8";
 
-            // Finalize transaction
-            trackService.updateTrackStatus(trackId, TrackStatus.READY, masterManifestPath, durationSeconds);
-            log.info("Successfully processed HLS (Master + Stems) for track ID: {}", trackId);
+            // Save the technical metadata decoupled from the FSM status
+            trackService.updateTrackMediaMetadata(trackId, masterManifestPath, durationSeconds);
+            log.info("Successfully processed HLS (Master + Stems) and updated metadata for track ID: {}", trackId);
 
         } catch (Exception e) {
             log.error("HLS processing failed for track ID: {}", trackId, e);
-            trackService.updateTrackStatus(trackId, TrackStatus.FAILED, null, null);
+            throw new RuntimeException("HLS Pipeline failure: " + e.getMessage(), e);
         } finally {
             cleanupTempFiles(tempDir);
         }
@@ -117,7 +94,7 @@ public class AudioProcessingService {
         ffmpegPb.redirectErrorStream(true);
         Process ffmpegProcess = ffmpegPb.start();
 
-        // Read the stream BEFORE waitFor() to empty the OS buffer and prevent deadlocks
+        // Read stream before waitFor() to prevent OS buffer deadlocks
         String output = new String(ffmpegProcess.getInputStream().readAllBytes());
 
         int exitCode = ffmpegProcess.waitFor();
@@ -155,7 +132,9 @@ public class AudioProcessingService {
     private void cleanupTempFiles(Path tempDir) {
         if (tempDir == null) return;
         try (Stream<Path> paths = Files.walk(tempDir)) {
-            paths.map(Path::toFile).forEach(File::delete);
+            paths.sorted((p1, p2) -> -p1.compareTo(p2))
+                    .map(Path::toFile)
+                    .forEach(File::delete);
         } catch (Exception e) {
             log.warn("Failed to clean up temporary directory: {}", tempDir, e);
         }
