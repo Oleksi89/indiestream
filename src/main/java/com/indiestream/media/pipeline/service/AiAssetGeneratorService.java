@@ -20,7 +20,7 @@ import java.util.UUID;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class AiAssetGeneratorService {
+class AiAssetGeneratorService {
 
     private final FFmpegCommandRunner commandRunner;
     private final MinioStorageService minioStorageService;

@@ -23,7 +23,7 @@ import java.util.List;
  */
 @Slf4j
 @Component
-public class GeminiModerationClient {
+class GeminiModerationClient {
 
     private final ChatClient chatClient;
     private final BeanOutputConverter<AiModerationResponse> outputConverter;

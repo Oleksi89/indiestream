@@ -15,7 +15,7 @@ import java.util.regex.Pattern;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class AudioAnalyzerService {
+class AudioAnalyzerService {
 
     private final FFmpegCommandRunner commandRunner;
 

@@ -3,12 +3,10 @@ package com.indiestream.media.pipeline.service;
 import com.indiestream.media.api.TrackUploadedEvent;
 import com.indiestream.media.catalog.domain.Track;
 import com.indiestream.media.catalog.domain.TrackStatus;
-import com.indiestream.media.moderation.dto.AiModerationResponse;
+import com.indiestream.media.moderation.service.AiModerationFacade;
 import com.indiestream.media.pipeline.exception.AiModerationException;
 import com.indiestream.media.catalog.repository.TrackRepository;
-import com.indiestream.media.moderation.service.GeminiModerationClient;
 import com.indiestream.media.storage.service.MinioStorageService;
-import com.indiestream.media.moderation.service.ModerationDecisionEngine;
 import com.indiestream.media.moderation.service.TrackTransitionEngine;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -46,8 +44,7 @@ public class AudioPipelineOrchestrator {
     private final AudioProcessingService audioProcessingService;
     private final AiAssetGeneratorService aiAssetGeneratorService;
     private final TrackTransitionEngine transitionEngine;
-    private final GeminiModerationClient geminiModerationClient;
-    private final ModerationDecisionEngine moderationDecisionEngine;
+    private final AiModerationFacade aiModerationFacade;
 
 
     /**
@@ -145,8 +142,7 @@ public class AudioPipelineOrchestrator {
                     .map(path -> fetchAssetAsByteArrayResource(path, "cover.webp"))
                     .orElse(null);
 
-            AiModerationResponse aiResponse = geminiModerationClient.analyze(track, audioResource, coverResource);
-            moderationDecisionEngine.processAiVerdict(track, aiResponse);
+            aiModerationFacade.executeAiModeration(track, audioResource, coverResource);
 
         } catch (AiModerationException aiEx) {
             log.error("AI Moderation exhausted retries for Track ID: {}. Triggering Human Fallback.", trackId, aiEx);

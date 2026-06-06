@@ -24,7 +24,7 @@ import java.util.Set;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ModerationDecisionEngine {
+class ModerationDecisionEngine {
 
     private final TrackTransitionEngine transitionEngine;
     private final TrackRepository trackRepository;

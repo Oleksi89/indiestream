@@ -18,7 +18,7 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class StemAntiSpoofingService {
+class StemAntiSpoofingService {
 
     private final AudioAnalyzerService audioAnalyzer;
     private final FFmpegCommandRunner commandRunner;
