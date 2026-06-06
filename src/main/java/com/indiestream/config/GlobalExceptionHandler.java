@@ -1,9 +1,10 @@
 package com.indiestream.config;
 
 import com.indiestream.auth.exception.*;
-import com.indiestream.media.exception.InvalidTrackStateException;
-import com.indiestream.media.exception.MediaNotFoundException;
-import com.indiestream.media.exception.MediaStreamException;
+import com.indiestream.media.moderation.exception.InvalidTrackStateException;
+import com.indiestream.media.storage.exception.MediaNotFoundException;
+import com.indiestream.media.storage.exception.MediaStreamException;
+import com.indiestream.media.moderation.exception.AppealNotAllowedException;
 import com.indiestream.playlist.exception.PlaylistNotFoundException;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
@@ -80,8 +81,8 @@ public class GlobalExceptionHandler {
         return problemDetail;
     }
 
-    @ExceptionHandler(com.indiestream.media.exception.AppealNotAllowedException.class)
-    public ProblemDetail handleAppealNotAllowed(com.indiestream.media.exception.AppealNotAllowedException ex) {
+    @ExceptionHandler(AppealNotAllowedException.class)
+    public ProblemDetail handleAppealNotAllowed(AppealNotAllowedException ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
         problemDetail.setTitle("Appeal Not Allowed");
         problemDetail.setType(URI.create("https://indiestream.com/errors/appeal-denied"));
