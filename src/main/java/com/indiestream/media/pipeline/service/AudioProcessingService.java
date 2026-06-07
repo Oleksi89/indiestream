@@ -37,7 +37,7 @@ public class AudioProcessingService {
         Path tempDir = null;
 
         try {
-            TrackDto track = trackService.getTrackById(trackId);
+            TrackDto track = trackService.getTrackById(trackId, null, true);
             tempDir = Files.createTempDirectory("hls_" + trackId);
 
             log.info("Processing Master Track HLS: {}", trackId);

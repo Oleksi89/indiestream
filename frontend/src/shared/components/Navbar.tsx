@@ -2,7 +2,7 @@ import {useState, useRef, useEffect, useCallback} from 'react';
 import {useNavigate, Link} from 'react-router-dom';
 import {useAuthStore} from '@/shared/store/authStore';
 import {authApi} from '@/features/auth/api/auth.api';
-import {User, Settings, LogOut, CreditCard, ChevronDown, Music} from 'lucide-react';
+import {User, Settings, LogOut, CreditCard, ChevronDown, Music, Shield} from 'lucide-react';
 import {apiClient} from "@/shared/api/apiClient";
 import type {UserDto} from "@/features/auth/types";
 import {useSecureUrl} from "@/shared/hooks/useSecureUrl";
@@ -149,6 +149,13 @@ export const Navbar = () => {
                                           onClick={() => setIsDropdownOpen(false)}
                                           className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-violet-400 hover:bg-violet-500/10 transition-colors">
                                         <Music size={16}/> Artist Hub
+                                    </Link>
+                                )}
+                                {user?.role === 'ADMIN' && (
+                                    <Link to="/admin/registry"
+                                          onClick={() => setIsDropdownOpen(false)}
+                                          className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-emerald-400 hover:bg-emerald-500/10 transition-colors">
+                                        <Shield size={16}/> Admin Workspace
                                     </Link>
                                 )}
                                 <Link to="/settings"

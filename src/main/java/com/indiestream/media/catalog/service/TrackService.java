@@ -136,14 +136,36 @@ public class TrackService implements MediaModuleApi {
     }
 
     /**
-     * Finds a track by its UUID.
+     * Finds a track by its UUID with strict Role-Based and FSM-Based Access Control.
+     * Prevents IDOR vulnerabilities by simulating a 404 Not Found for unauthorized states.
      * // TODO: [Media] - Add custom exception TrackNotFoundException mapped to RFC 7807 404
      */
     @Transactional(readOnly = true)
-    public TrackDto getTrackById(UUID trackId) {
-        return trackRepository.findById(trackId)
-                .map(this::mapToDto)
+    public TrackDto getTrackById(UUID trackId, UUID requesterId, boolean isAdmin) {
+        Track track = trackRepository.findById(trackId)
                 .orElseThrow(() -> new IllegalArgumentException("Track not found"));
+
+        // Admins have omnipotent read access for moderation purposes
+        if (isAdmin) {
+            return mapToDto(track);
+        }
+
+        boolean isOwner = track.getArtistId().equals(requesterId);
+
+        // Owners can see their tracks in any FSM state EXCEPT Soft Deleted (ARCHIVED)
+        if (isOwner) {
+            if (track.getStatus() == TrackStatus.ARCHIVED) {
+                throw new IllegalArgumentException("Track not found");
+            }
+            return mapToDto(track);
+        }
+
+        // Anyone else can ONLY see PUBLISHED tracks
+        if (track.getStatus() != TrackStatus.PUBLISHED) {
+            throw new IllegalArgumentException("Track not found");
+        }
+
+        return mapToDto(track);
     }
 
     /**
