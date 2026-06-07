@@ -3,16 +3,19 @@ package com.indiestream.media.moderation.service;
 import com.indiestream.media.catalog.domain.Track;
 import com.indiestream.media.moderation.domain.TrackAuditLog;
 import com.indiestream.media.catalog.domain.TrackStatus;
+import com.indiestream.media.api.TrackArchivedEvent;
 import com.indiestream.media.moderation.exception.InvalidTrackStateException;
 import com.indiestream.media.moderation.repository.TrackAuditLogRepository;
 import com.indiestream.media.catalog.repository.TrackRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -28,6 +31,7 @@ public class TrackTransitionEngine {
 
     private final TrackRepository trackRepository;
     private final TrackAuditLogRepository auditLogRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     // Strict constraints: Transitions that structurally require administrative or system reasoning
     private static final Set<TrackStatus> REASON_REQUIRED_STATES = Set.of(
@@ -85,6 +89,10 @@ public class TrackTransitionEngine {
 
         trackRepository.save(track);
         auditLogRepository.save(auditLog);
+
+        if (targetStatus == TrackStatus.ARCHIVED) {
+            eventPublisher.publishEvent(new TrackArchivedEvent(trackId, Instant.now()));
+        }
     }
 
     /**

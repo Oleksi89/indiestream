@@ -36,6 +36,9 @@ public class User {
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY, optional = false)
     private UserProfile profile;
 
+    @Column(name = "is_banned", nullable = false)
+    private Boolean isBanned = false;
+
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;
 
@@ -53,7 +56,6 @@ public class User {
         this.updatedAt = Instant.now();
     }
 
-    // Helper to ensure bidirectional sync
     public void setProfile(UserProfile profile) {
         if (profile != null) {
             profile.setUser(this);

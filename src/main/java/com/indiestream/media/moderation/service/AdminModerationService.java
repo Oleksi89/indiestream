@@ -206,6 +206,14 @@ public class AdminModerationService {
         log.info("Artist {} ban complete. Automatically suspended {} tracks.", artistId, bannedCount);
     }
 
+    @Transactional
+    public void unbanArtist(UUID artistId, String reason, UUID adminId) {
+        log.info("Initiating global UNBAN for Artist ID: {} by Admin ID: {}", artistId, adminId);
+
+        // Send a request to the Auth module to restore access
+        eventPublisher.publishEvent(new com.indiestream.auth.event.UserUnbanRequestedEvent(artistId, adminId, reason, Instant.now()));
+    }
+
     private AdminTrackSummaryDto mapToSummaryDto(Track track) {
         UserPublicProfile profile = authModuleApi.getUserPublicProfile(track.getArtistId()).orElse(null);
         return AdminTrackSummaryDto.builder()

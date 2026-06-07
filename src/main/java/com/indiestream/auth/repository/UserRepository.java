@@ -46,19 +46,34 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     List<Object[]> findAliasesByIds(@Param("userIds") Set<UUID> userIds);
 
     /**
+     * Lightweight search query for autocomplete matching username or alias, except banned.
+     * Uses EntityGraph to fetch profiles in the same query to access avatar paths safely.
+     */
+    @EntityGraph(attributePaths = {"profile"})
+    @Query("SELECT u FROM User u WHERE u.isBanned = false AND (LOWER(u.username) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(u.alias) LIKE LOWER(CONCAT('%', :query, '%')))")
+    List<User> searchByUsernameOrAliasWithProfile(@Param("query") String query, Pageable pageable);
+
+    /**
+     * Global Search: Filters out users whose profiles are marked as private, except banned.
+     */
+    @EntityGraph(attributePaths = {"profile"})
+    @Query("SELECT u FROM User u JOIN u.profile p WHERE u.isBanned = false AND p.isPrivate = false AND (LOWER(u.username) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(u.alias) LIKE LOWER(CONCAT('%', :query, '%')))")
+    List<User> searchPublicProfilesByUsernameOrAlias(@Param("query") String query, Pageable pageable);
+
+    /**
      * Lightweight search query for autocomplete matching username or alias.
      * Uses EntityGraph to fetch profiles in the same query to access avatar paths safely.
      */
     @EntityGraph(attributePaths = {"profile"})
     @Query("SELECT u FROM User u WHERE LOWER(u.username) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(u.alias) LIKE LOWER(CONCAT('%', :query, '%'))")
-    List<User> searchByUsernameOrAliasWithProfile(@Param("query") String query, Pageable pageable);
+    List<User> searchAllByUsernameOrAliasWithProfile(@Param("query") String query, Pageable pageable);
 
     /**
      * Global Search: Filters out users whose profiles are marked as private.
      */
     @EntityGraph(attributePaths = {"profile"})
-    @Query("SELECT u FROM User u JOIN u.profile p WHERE (LOWER(u.username) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(u.alias) LIKE LOWER(CONCAT('%', :query, '%'))) AND p.isPrivate = false")
-    List<User> searchPublicProfilesByUsernameOrAlias(@Param("query") String query, Pageable pageable);
+    @Query("SELECT u FROM User u JOIN u.profile p WHERE (LOWER(u.username) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(u.alias) LIKE LOWER(CONCAT('%', :query, '%')))")
+    List<User> searchAllProfilesByUsernameOrAlias(@Param("query") String query, Pageable pageable);
 
     /**
      * Bulk fetch complete user entities with profile data to prevent N+1 during mapping.

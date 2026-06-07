@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.UUID;
 
 @Component
 @Slf4j
@@ -54,19 +55,32 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         userEmail = jwtService.extractUsername(jwt);
-        final String userId = jwtService.extractUserId(jwt);
+        final String userIdStr = jwtService.extractUserId(jwt);
+
+        if (userIdStr != null) {
+            try {
+                UUID userId = UUID.fromString(userIdStr);
+                if (tokenBlacklistService.isUserBannedInRedis(userId)) {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    return;
+                }
+            } catch (IllegalArgumentException e) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                return;
+            }
+        }
 
         if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
 
             if (jwtService.isTokenValid(jwt, userDetails.getUsername())) {
 
-                // Modulith compliance: Set the UUID string as the Principal.
+                // Set the UUID string as the Principal.
                 // This allows cross-module controllers to extract it via principal.getName()
                 // without relying on the Auth module's specific User entity.
-                Object principal = (userId != null) ? userId : userDetails.getUsername();
+                Object principal = (userIdStr != null) ? userIdStr : userDetails.getUsername();
 
-                log.info(" ID: {}", userId);
+                log.info(" ID: {}", userIdStr);
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         principal,
                         null,

@@ -37,3 +37,19 @@ export const useBanArtist = () => {
         }
     });
 };
+
+
+export const useUnbanArtist = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({artistId, reason}: {
+            artistId: string;
+            reason: string
+        }) => adminApi.unbanArtist(artistId, reason),
+        onSuccess: () => {
+            toast.success('Artist account has been successfully unbanned.');
+            queryClient.invalidateQueries({queryKey: ['admin']});
+        },
+        onError: () => toast.error('Failed to unban artist account.')
+    });
+};

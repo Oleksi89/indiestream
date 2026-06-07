@@ -62,5 +62,11 @@ export const adminApi = {
         await apiClient.post(`/admin/moderation/tracks/artists/${artistId}/ban`, null, {
             params: {reason}
         });
+    },
+
+    unbanArtist: async (artistId: string, reason: string): Promise<void> => {
+        await apiClient.post(`/admin/moderation/tracks/artists/${artistId}/unban`, null, {
+            params: {reason}
+        });
     }
 };

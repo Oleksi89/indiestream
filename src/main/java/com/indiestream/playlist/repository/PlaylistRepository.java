@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -66,4 +67,8 @@ public interface PlaylistRepository extends JpaRepository<Playlist, UUID> {
      */
     @Query("SELECT p FROM Playlist p WHERE LOWER(p.name) LIKE LOWER(CONCAT('%', :query, '%')) AND p.isPublic = true AND p.isSystem = false ORDER BY p.followersCount DESC")
     List<Playlist> searchPublicPlaylistsByName(@Param("query") String query, Pageable pageable);
+
+    @Modifying
+    @Query("UPDATE Playlist p SET p.isPublic = false, p.isCollaborative = false WHERE p.ownerId = :ownerId")
+    void enforceGlobalBanCascadingPrivacy(@Param("ownerId") UUID ownerId);
 }

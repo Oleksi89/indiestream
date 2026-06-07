@@ -1,24 +1,28 @@
-import {useMemo, useState, useEffect} from 'react';
-import {Link, useParams} from 'react-router-dom';
+import {useMemo, useState} from 'react';
+import {useParams} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
-import {FastAverageColor} from 'fast-average-color';
 import {playlistApi} from '@/features/playlist/api/playlist.api';
-import {playlistKeys, useFollowPlaylist, useUnfollowPlaylist} from '@/features/playlist/hooks/usePlaylists';
+import {
+    playlistKeys,
+    useFollowPlaylist,
+    useUnfollowPlaylist,
+} from '@/features/playlist/hooks/usePlaylists';
 import {usePlaylistPermissions} from '@/features/playlist/hooks/usePlaylistPermissions';
 import {useLibrary} from '@/features/library/hooks/useLibrary';
-import {Clock, Play, MoreHorizontal, Disc3, Check, Pencil, Users} from 'lucide-react';
+import {Clock, Play, MoreHorizontal, Disc3, Check, Users} from 'lucide-react';
 import {Button} from '@/shared/ui/button';
 import {cn} from '@/shared/lib/utils';
 import {TrackContextMenu} from '@/features/media/ui/TrackContextMenu';
 import {usePlayerStore} from '@/shared/store/playerStore';
 import {useAuthStore} from '@/shared/store/authStore';
 import {useSecureUrl} from '@/shared/hooks/useSecureUrl';
-import {UserAvatar} from '@/shared/components/UserAvatar';
 import {TrackCard} from "@/features/media/ui/TrackCard";
 import {EditPlaylistModal} from "@/features/playlist/ui/EditPlaylistModal";
 import {CollaboratorsModal} from "@/features/playlist/ui/CollaboratorsModal";
+import {PlaylistDropdownMenu} from "@/features/playlist/ui/PlaylistDropdownMenu";
+import {PlaylistHeader} from '@/features/playlist/ui/PlaylistHeader';
+import {usePlaylistColor} from '@/features/playlist/hooks/usePlaylistColor';
 import type {TrackDto} from "@/features/media/types";
-import {PlaylistDropdownMenu} from "@/features/playlist/ui/PlaylistDropdownMenu.tsx";
 
 export const PlaylistPage = () => {
     const {id} = useParams<{ id: string }>();
@@ -26,7 +30,6 @@ export const PlaylistPage = () => {
     const {user: currentUser} = useAuthStore();
     const {data: library} = useLibrary();
 
-    const [dominantColor, setDominantColor] = useState<string>('#1e293b'); // Fallback slate-800
     const [isEditModalOpen, setEditModalOpen] = useState(false);
     const [isCollabModalOpen, setCollabModalOpen] = useState(false);
 
@@ -42,27 +45,13 @@ export const PlaylistPage = () => {
         enabled: !!id
     });
 
-    // Secure blob proxy fetching
     const {url: coverUrl} = useSecureUrl(
         `playlist-cover-${id}`,
         () => playlistApi.getPlaylistCoverBlob(id!),
         !!playlist?.coverMinioPath && !!id
     );
 
-    // Extraction Engine for Tailwind UI Gradients
-    useEffect(() => {
-        if (!coverUrl) {
-            queueMicrotask(() => setDominantColor('#1e293b'));
-            return;
-        }
-
-        const fac = new FastAverageColor();
-        fac.getColorAsync(coverUrl, {algorithm: 'dominant'})
-            .then(color => setDominantColor(color.hex))
-            .catch(e => console.error('Color extraction failed', e));
-
-        return () => fac.destroy();
-    }, [coverUrl]);
+    const dominantColor = usePlaylistColor(coverUrl);
 
     const followMutation = useFollowPlaylist();
     const unfollowMutation = useUnfollowPlaylist();
@@ -79,7 +68,7 @@ export const PlaylistPage = () => {
             coverMinioPath: track.coverMinioPath,
             stemsMetadata: track.stemsMetadata,
             minioBucketPath: '',
-            status: 'READY',
+            status: track.artistUsername === 'unavailable' ? 'BANNED' : 'READY',
             genre: track.genre,
             isExplicit: track.isExplicit ?? false,
             tags: track.tags ?? {custom: [], moods: [], aiGenerated: []}
@@ -95,115 +84,24 @@ export const PlaylistPage = () => {
     const isFollowed = library?.some(item => item.id === playlist?.id && item.type === 'FOLLOWED_PLAYLIST') || false;
 
     const handlePlayPlaylist = () => {
-        if (mappedTracks.length > 0) playContext(mappedTracks, `playlist:${id}`, 0);
+        const playableTracks = mappedTracks.filter(t => t.artistUsername !== 'unavailable');
+        if (playableTracks.length > 0) playContext(playableTracks, `playlist:${id}`, 0);
     };
 
-    const handleFollowToggle = () => {
-        if (isFollowed) unfollowMutation.mutate(playlist.id);
-        else followMutation.mutate(playlist.id);
-    };
 
     return (
         <div className="flex flex-col min-h-full transition-colors duration-1000 ease-in-out"
              style={{background: `linear-gradient(to bottom, ${dominantColor} 0%, #121212 400px)`}}>
-            <header className="relative flex items-end gap-6 p-8 pb-6 mt-16 lg:mt-24">
-                <div
-                    className="group relative w-52 h-52 shrink-0 shadow-2xl rounded-xl overflow-hidden bg-slate-800/50 cursor-pointer"
-                    onClick={() => canEditMetadata && !playlist.isSystem && setEditModalOpen(true)}
-                >
-                    {coverUrl ? (
-                        <img src={coverUrl}
-                             className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                             alt="Cover"/>
-                    ) : (
-                        <div className="w-full h-full bg-black/20 flex items-center justify-center">
-                            <span className="text-6xl font-bold opacity-50">{playlist.name[0]}</span>
-                        </div>
-                    )}
 
-                    {canEditMetadata && !playlist.isSystem && (
-                        <div
-                            className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 text-white">
-                            <Pencil size={32}/>
-                            <span className="text-sm font-semibold tracking-wide">Edit Cover</span>
-                        </div>
-                    )}
-                </div>
+            <PlaylistHeader
+                playlist={playlist}
+                coverUrl={coverUrl}
+                canEditMetadata={canEditMetadata}
+                onEditClick={() => setEditModalOpen(true)}
+                onCollabClick={() => setCollabModalOpen(true)}
+            />
 
-                <div className="flex flex-col gap-2 z-10 text-white w-full">
-                    <span className="text-xs font-bold uppercase tracking-widest text-white/80 flex items-center gap-2">
-                        {playlist.isPublic ? 'Public Playlist' : 'Private Playlist'}
-                        {playlist.isSystem ? ' (System)' : ''}
-                        {playlist.isCollaborative &&
-                            <span className="bg-white/20 px-2 py-0.5 rounded-full">Collaborative</span>}
-                    </span>
-
-                    <h1
-                        className="text-6xl lg:text-7xl font-black tracking-tighter mb-4 cursor-pointer hover:underline line-clamp-2"
-                        onClick={() => canEditMetadata && !playlist.isSystem && setEditModalOpen(true)}
-                    >
-                        {playlist.name}
-                    </h1>
-
-                    {playlist.description && (
-                        <p className="text-sm font-medium text-white/70 max-w-2xl">{playlist.description}</p>
-                    )}
-
-                    <div className="flex items-center gap-3 text-sm font-medium text-white/90 mt-2">
-
-                        {/* Avatar Group Engine */}
-                        {playlist.isCollaborative && (
-                            <div
-                                className="flex items-center -space-x-2 mr-1 cursor-pointer hover:scale-105 transition-transform"
-                                onClick={() => setCollabModalOpen(true)}
-                            >
-                                <UserAvatar
-                                    username={playlist.ownerUsername}
-                                    avatarPath={playlist.ownerAvatarPath}
-                                    className="w-8 h-8 border-2 border-slate-900 shadow-sm relative z-30"
-                                />
-                                {playlist.collaborators?.slice(0, 3).map((collab, index) => (
-                                    <div
-                                        key={collab.id}
-                                        style={{zIndex: 20 - index}}
-                                        className="relative"
-                                    >
-                                        <UserAvatar
-                                            username={collab.username}
-                                            avatarPath={collab.avatarPath}
-                                            className="w-8 h-8 border-2 border-slate-900 shadow-sm"
-                                        />
-                                    </div>
-                                ))}
-                                {(playlist.collaborators?.length || 0) > 3 && (
-                                    <div
-                                        className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-white text-[10px] font-bold border-2 border-slate-900 z-0">
-                                        +{(playlist.collaborators?.length || 0) - 3}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        <Link to={`/user/${playlist.ownerUsername}`}
-                              className="hover:underline cursor-pointer font-bold">
-                            {playlist.ownerAlias}
-                        </Link>
-                        <span>•</span>
-                        {playlist.followersCount > 0 && (
-                            <>
-                                <span>{playlist.followersCount} saves</span>
-                                <span>•</span>
-                            </>
-                        )}
-                        <span>{playlist.trackCount} tracks</span>
-                        <span>•</span>
-                        <span className="text-white/60">{Math.floor(playlist.totalDurationSeconds / 60)} min</span>
-                    </div>
-                </div>
-            </header>
-
-            <section
-                className="px-8 py-6 flex items-center gap-6 backdrop-blur-3xl border-b border-white/5">
+            <section className="px-8 py-6 flex items-center gap-6 backdrop-blur-3xl border-b border-white/5">
                 <Button onClick={handlePlayPlaylist} size="icon"
                         className="w-14 h-14 rounded-full bg-violet-600 hover:bg-violet-500 shadow-xl hover:scale-105 transition-transform">
                     <Play size={24} fill="currentColor" className="ml-1"/>
@@ -211,14 +109,10 @@ export const PlaylistPage = () => {
 
                 {!isOwner && !playlist.isSystem && (
                     <Button
-                        onClick={handleFollowToggle}
+                        onClick={() => isFollowed ? unfollowMutation.mutate(playlist.id) : followMutation.mutate(playlist.id)}
                         variant={isFollowed ? "outline" : "default"}
-                        className={cn(
-                            "rounded-full px-6 font-bold tracking-wide transition-all border-2",
-                            isFollowed
-                                ? "border-white/30 text-white hover:border-white/60 bg-transparent"
-                                : "bg-white text-black hover:bg-slate-200 border-transparent"
-                        )}
+                        className={cn("rounded-full px-6 font-bold tracking-wide transition-all border-2",
+                            isFollowed ? "border-white/30 text-white hover:border-white/60 bg-transparent" : "bg-white text-black hover:bg-slate-200 border-transparent")}
                     >
                         {isFollowed ? <><Check className="w-5 h-5 mr-2"/> Saved</> : 'Save'}
                     </Button>
@@ -255,13 +149,16 @@ export const PlaylistPage = () => {
                         </div>
                     ) : (
                         mappedTracks.map((track, index) => (
-                            <TrackContextMenu key={track.id} track={track}>
+                            <TrackContextMenu
+                                key={track.id}
+                                track={track}
+                            >
                                 <TrackCard
                                     track={track}
                                     variant="playlist-row"
                                     index={index + 1}
                                     addedAt={tracksData?.content[index].addedAt}
-                                    onPlayOverride={() => playContext(mappedTracks, `playlist:${id}`, index)}
+                                    onPlayOverride={() => playContext(mappedTracks.filter(t => t.artistUsername !== 'unavailable'), `playlist:${id}`, index)}
                                 />
                             </TrackContextMenu>
                         ))
@@ -269,15 +166,11 @@ export const PlaylistPage = () => {
                 </div>
             </section>
 
-            {canEditMetadata && (
-                <EditPlaylistModal playlist={playlist} isOpen={isEditModalOpen}
-                                   onClose={() => setEditModalOpen(false)}/>
-            )}
-
-            {playlist.isCollaborative && currentUser?.id && (
+            {canEditMetadata && <EditPlaylistModal playlist={playlist} isOpen={isEditModalOpen}
+                                                   onClose={() => setEditModalOpen(false)}/>}
+            {playlist.isCollaborative && currentUser?.id &&
                 <CollaboratorsModal playlist={playlist} currentUserId={currentUser?.id} isOpen={isCollabModalOpen}
-                                    onClose={() => setCollabModalOpen(false)}/>
-            )}
+                                    onClose={() => setCollabModalOpen(false)}/>}
         </div>
     );
 };

@@ -221,6 +221,7 @@ public class TrackService implements MediaModuleApi {
      * Projects the internal entity to a public metadata record, now including semantic tags.
      */
     @Override
+    @Transactional(readOnly = true)
     public TrackMetadata getTrackMetadata(UUID trackId) {
         return trackRepository.findById(trackId)
                 .map(t -> new TrackMetadata(
@@ -233,7 +234,8 @@ public class TrackService implements MediaModuleApi {
                         t.getGenre(),
                         t.isExplicit(),
                         t.getTags().custom(),
-                        t.getTags().aiGenerated()
+                        t.getTags().aiGenerated(),
+                        t.getStatus().name()
                 ))
                 .orElseThrow(() -> new IllegalArgumentException("Track not found"));
     }
@@ -262,7 +264,8 @@ public class TrackService implements MediaModuleApi {
                 .map(t -> new TrackMetadata(
                         t.getId(), t.getTitle(), t.getArtistId(), t.getDurationSeconds(),
                         t.getStemsMetadata(), t.getCoverMinioPath(), t.getGenre(),
-                        t.isExplicit(), t.getTags().custom(), t.getTags().aiGenerated()
+                        t.isExplicit(), t.getTags().custom(), t.getTags().aiGenerated(),
+                        t.getStatus().name()
                 ))
                 .toList();
 

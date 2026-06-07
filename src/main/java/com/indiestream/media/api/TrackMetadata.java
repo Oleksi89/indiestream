@@ -20,6 +20,8 @@ public record TrackMetadata(
         String genre,
         boolean isExplicit,
         Set<String> customTags,
-        Set<String> aiGeneratedTags
+        Set<String> aiGeneratedTags,
+
+        String statusCode
 ) {
 }
