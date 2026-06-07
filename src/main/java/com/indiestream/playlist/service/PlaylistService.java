@@ -2,9 +2,12 @@ package com.indiestream.playlist.service;
 
 import com.indiestream.auth.AuthModuleApi;
 import com.indiestream.auth.UserPublicProfile;
+import com.indiestream.auth.event.UserBannedEvent;
 import com.indiestream.auth.event.UserRegisteredEvent;
 import com.indiestream.media.api.MediaModuleApi;
 import com.indiestream.media.api.TrackMetadata;
+import com.indiestream.media.api.TrackArchivedEvent;
+import com.indiestream.media.catalog.domain.TrackStatus;
 import com.indiestream.playlist.PlaylistLibraryProjection;
 import com.indiestream.playlist.PlaylistModuleApi;
 import com.indiestream.playlist.domain.*;
@@ -34,11 +37,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
 import java.time.Instant;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -56,6 +55,40 @@ public class PlaylistService implements PlaylistModuleApi {
     private final MediaModuleApi mediaModuleApi;
     private final AuthModuleApi authModuleApi;
     private final ApplicationEventPublisher events;
+
+    // --- CASCADING SECURITY LISTENERS ---
+
+    @Async
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void handleUserBannedEvent(UserBannedEvent event) {
+        log.warn("Cascading privacy lockdown initiated for playlists owned by User ID: {}", event.userId());
+        playlistRepository.enforceGlobalBanCascadingPrivacy(event.userId());
+    }
+
+    @Async
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void handleTrackArchivedEvent(TrackArchivedEvent event) {
+        log.info("Cascading data cleanup initiated for archived Track ID: {}", event.trackId());
+
+        List<UUID> affectedPlaylistIds = playlistTrackRepository.findPlaylistIdsContainingTrack(event.trackId());
+
+        for (UUID playlistId : affectedPlaylistIds) {
+            playlistRepository.findByIdWithPessimisticWrite(playlistId).ifPresent(playlist -> {
+                try {
+                    TrackMetadata track = mediaModuleApi.getTrackMetadata(event.trackId());
+                    playlist.setTrackCount(Math.max(0, playlist.getTrackCount() - 1));
+                    playlist.setTotalDurationSeconds(Math.max(0, playlist.getTotalDurationSeconds() - track.durationSeconds()));
+                    playlistRepository.save(playlist);
+                } catch (Exception e) {
+                    log.error("Failed to recalculate aggregates for playlist: {}", playlistId, e);
+                }
+            });
+        }
+
+        playlistTrackRepository.purgeArchivedTrackLinksBulk(event.trackId());
+    }
 
     /**
      * Reacts to a successful user registration by asynchronously generating
@@ -79,6 +112,8 @@ public class PlaylistService implements PlaylistModuleApi {
 
         playlistRepository.save(likedTracks);
     }
+
+    // --- CORE OPERATIONS ---
 
     @Transactional
     public PlaylistDto createCustomPlaylist(UUID ownerId, String name, String description, boolean isPublic, boolean isCollaborative) {
@@ -116,19 +151,41 @@ public class PlaylistService implements PlaylistModuleApi {
         Playlist playlist = playlistRepository.findById(playlistId)
                 .orElseThrow(() -> new PlaylistNotFoundException(playlistId));
 
-        // Visibility guard
-        if (!playlist.getIsPublic() && !playlist.getOwnerId().equals(userId)) {
-            boolean isCollaborator = collaboratorRepository.existsByIdPlaylistIdAndIdUserId(playlistId, userId);
-            if (!isCollaborator) {
-                throw new AccessDeniedException("Access denied to this private playlist.");
-            }
+        boolean isAuthorizedViewer = playlist.getOwnerId().equals(userId) ||
+                collaboratorRepository.existsByIdPlaylistIdAndIdUserId(playlistId, userId);
+
+        if (!playlist.getIsPublic() && !isAuthorizedViewer) {
+            throw new AccessDeniedException("Access denied to this private playlist.");
         }
 
+        Page<PlaylistTrack> trackPage = playlistTrackRepository.findAllByIdPlaylistIdOrderByPositionIndexAsc(playlistId, pageable);
+
         // TODO: [Auth/Performance] - Implement bulk profile resolution in AuthModuleApi to prevent N+1 queries.
-        return playlistTrackRepository.findAllByIdPlaylistIdOrderByPositionIndexAsc(playlistId, pageable)
+        List<PlaylistTrackDetailsDto> filteredContent = trackPage.stream()
                 .map(pt -> {
-                    // Resolve track metadata through cross-module API
                     TrackMetadata metadata = mediaModuleApi.getTrackMetadata(pt.getId().getTrackId());
+
+                    if (metadata.status() != TrackStatus.PUBLISHED) {
+                        if (!isAuthorizedViewer) {
+                            return null;
+                        }
+                        return new PlaylistTrackDetailsDto(
+                                pt.getId().getTrackId(),
+                                "Content Unavailable",
+                                metadata.artistId(),
+                                "unavailable",
+                                "Unavailable Artist",
+                                0,
+                                Collections.emptyMap(),
+                                null,
+                                pt.getAddedById(),
+                                pt.getAddedAt(),
+                                null,
+                                false,
+                                new PlaylistTrackDetailsDto.PlaylistTrackTagsDto(Collections.emptySet(), Collections.emptySet(), Collections.emptySet())
+                        );
+                    }
+
                     Optional<UserPublicProfile> profile = authModuleApi.getUserPublicProfile(metadata.artistId());
 
                     String artistAlias = profile.map(UserPublicProfile::alias).orElse("Unknown Artist");
@@ -136,7 +193,7 @@ public class PlaylistService implements PlaylistModuleApi {
 
                     PlaylistTrackDetailsDto.PlaylistTrackTagsDto tagsDto = new PlaylistTrackDetailsDto.PlaylistTrackTagsDto(
                             metadata.customTags() != null ? metadata.customTags() : Collections.emptySet(),
-                            Collections.emptySet(), // Moods remain empty until AI auto-tagging
+                            Collections.emptySet(),
                             metadata.aiGeneratedTags() != null ? metadata.aiGeneratedTags() : Collections.emptySet()
                     );
 
@@ -155,7 +212,11 @@ public class PlaylistService implements PlaylistModuleApi {
                             metadata.isExplicit(),
                             tagsDto
                     );
-                });
+                })
+                .filter(Objects::nonNull)
+                .toList();
+
+        return new PageImpl<>(filteredContent, pageable, trackPage.getTotalElements());
     }
 
     /**
@@ -327,6 +388,10 @@ public class PlaylistService implements PlaylistModuleApi {
         // Fetch duration from Media module API
         TrackMetadata track = mediaModuleApi.getTrackMetadata(trackId);
 
+        if (track.status() != TrackStatus.PUBLISHED && track.status() != TrackStatus.APPROVED) {
+            throw new IllegalArgumentException("Cannot add non-approved or restricted tracks to playlists.");
+        }
+
         Integer maxPosition = playlistTrackRepository.findMaxPositionIndexByPlaylistId(playlistId);
         int nextPosition = (maxPosition == null || maxPosition == -1) ? 0 : maxPosition + 1;
 
@@ -395,7 +460,7 @@ public class PlaylistService implements PlaylistModuleApi {
                 .name(source.getName() + " (Copy)")
                 .description(source.getDescription())
                 .coverMinioPath(source.getCoverMinioPath())
-                .isPublic(false) // Clones are private by default
+                .isPublic(false)
                 .isSystem(false)
                 .isCollaborative(false)
                 .trackCount(source.getTrackCount())
@@ -437,7 +502,7 @@ public class PlaylistService implements PlaylistModuleApi {
         PlaylistCollaboratorId collabId = new PlaylistCollaboratorId(playlistId, targetProfile.id());
 
         if (collaboratorRepository.existsById(collabId)) {
-            return; // Idempotent validation
+            return;
         }
 
         PlaylistCollaborator collaborator = PlaylistCollaborator.builder()
@@ -476,7 +541,7 @@ public class PlaylistService implements PlaylistModuleApi {
 
         PlaylistFollowerId followerId = new PlaylistFollowerId(userId, playlistId);
         if (followerRepository.existsById(followerId)) {
-            return; // Idempotency check prevents duplicate increments
+            return;
         }
 
         PlaylistFollower follower = PlaylistFollower.builder()
