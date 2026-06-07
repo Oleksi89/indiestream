@@ -11,6 +11,8 @@ import {NotFoundPage} from "@/pages/error/NotFoundPage";
 import {PlaylistPage} from "@/pages/playlist/PlaylistPage.tsx";
 import {ProfilePage} from "@/pages/profile/ProfilePage.tsx";
 import {SearchPage} from "@/pages/search/SearchPage.tsx";
+import {AdminTrackRegistryPage} from "@/pages/admin/AdminTrackRegistryPage.tsx";
+import {AdminReviewInspectorPage} from "@/pages/admin/AdminReviewInspectorPage.tsx";
 
 const routes = [
     // Guest Only Routes
@@ -57,6 +59,20 @@ const routes = [
                             {
                                 path: '/artist/dashboard',
                                 element: <ArtistDashboardPage/>, // Artist upload hub
+                            },
+                        ],
+                    },
+                    // --- ADMIN ONLY ROUTES ---
+                    {
+                        element: <RoleRoute allowedRoles={['ADMIN']}/>,
+                        children: [
+                            {
+                                path: '/admin/registry',
+                                element: <AdminTrackRegistryPage/>,
+                            },
+                            {
+                                path: '/admin/registry/:id',
+                                element: <AdminReviewInspectorPage/>,
                             },
                         ],
                     },
