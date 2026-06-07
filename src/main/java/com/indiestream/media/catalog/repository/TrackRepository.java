@@ -5,16 +5,19 @@ import com.indiestream.media.catalog.domain.TrackStatus;
 import com.indiestream.media.moderation.dto.ModerationQueueProjection;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
 import org.springframework.data.domain.Page;
 
 import java.util.List;
 import java.util.UUID;
 
-@Repository
-public interface TrackRepository extends JpaRepository<Track, UUID> {
+/**
+ * Package-private encapsulation has been temporarily lifted for Modulith shared-kernel access.
+ * Now implements JpaSpecificationExecutor for dynamic Criteria API queries.
+ */
+public interface TrackRepository extends JpaRepository<Track, UUID>, JpaSpecificationExecutor<Track> {
 
     /**
      * Retrieves a paginated list of tracks for a specific artist.
@@ -22,6 +25,7 @@ public interface TrackRepository extends JpaRepository<Track, UUID> {
      */
     Page<Track> findAllByArtistIdAndStatusOrderByCreatedAtDesc(UUID artistId, TrackStatus status, Pageable pageable);
 
+    List<Track> findAllByArtistId(UUID artistId);
     /**
      * Retrieves a paginated list of all public tracks across the platform.
      * Ordered by creation date descending

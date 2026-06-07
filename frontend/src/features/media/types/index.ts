@@ -84,3 +84,57 @@ export interface TrackResolutionRequest {
 export interface AppealRequest {
     reason: string;
 }
+
+// --- Admin & Moderation Types ---
+
+export type AdminVerdict = 'APPROVE' | 'REJECT' | 'BAN' | 'RESTORE' | 'FORCE_ARCHIVE';
+
+export interface AdminTrackSummaryDto {
+    id: string;
+    artistId: string;
+    artistUsername: string;
+    artistAlias: string;
+    title: string;
+    status: TrackStatus;
+    createdAt: string;
+}
+
+export interface TrackAuditLogDto {
+    id: string;
+    trackId: string;
+    actorId: string | null;
+    previousStatus: TrackStatus | null;
+    newStatus: TrackStatus;
+    reason: string | null;
+    aiPayload: Record<string, any> | null;
+    createdAt: string;
+}
+
+export interface AdminTrackDetailsDto {
+    trackId: string;
+    title: string;
+    artistId: string;
+    artistAlias: string;
+    artistUsername: string;
+    artistAvatar: string | null;
+    status: TrackStatus;
+    hasAppealed: boolean;
+    currentTags: TrackTagsDto;
+    artistProposedTags: TrackTagsDto | null;
+    aiPayload: Record<string, any> | null;
+    auditHistory: TrackAuditLogDto[];
+}
+
+export interface ModerationVerdictRequest {
+    verdict: AdminVerdict;
+    finalTags?: TrackTagsDto;
+    reason: string;
+}
+
+export interface ModerationQueueProjection {
+    id: string;
+    title: string;
+    artistId: string;
+    status: TrackStatus;
+    createdAt: string;
+}
