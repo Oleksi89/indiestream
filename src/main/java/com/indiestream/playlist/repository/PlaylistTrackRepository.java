@@ -25,6 +25,14 @@ public interface PlaylistTrackRepository extends JpaRepository<PlaylistTrack, Pl
     // Required for Deep Copy functionality
     List<PlaylistTrack> findAllByIdPlaylistId(UUID playlistId);
 
+
+    @Query("SELECT pt.id.playlistId FROM PlaylistTrack pt WHERE pt.id.trackId = :trackId")
+    List<UUID> findPlaylistIdsContainingTrack(@Param("trackId") UUID trackId);
+
+    @Modifying
+    @Query("DELETE FROM PlaylistTrack pt WHERE pt.id.trackId = :trackId")
+    void purgeArchivedTrackLinksBulk(@Param("trackId") UUID trackId);
+
     /**
      * High-performance Native SQL batch insert for the Deep Copy operation.
      * Prevents OOM errors and N+1 insert bottlenecks when copying massive playlists.

@@ -1,6 +1,6 @@
 import {mediaApi} from '../api/media.api';
 import type {TrackDto} from '../types';
-import {Disc3, Clock, Image as ImageIcon, Play, Pause, Layers, User} from 'lucide-react';
+import {Disc3, Clock, Image as ImageIcon, Play, Pause, Layers, User, Ban} from 'lucide-react';
 import {usePlayerStore} from '@/shared/store/playerStore';
 import {useSecureUrl} from '@/shared/hooks/useSecureUrl';
 import {cn} from '@/shared/lib/utils';
@@ -32,9 +32,12 @@ export const TrackCard = ({track, variant, className, index, addedAt, onClick, o
     const hasStems = track.stemsMetadata && Object.keys(track.stemsMetadata).length > 0;
     const isExplicit = track.isExplicit;
 
+    const isUnavailable = track.artistUsername === 'unavailable' || track.title === 'Content Unavailable';
+
     const handlePlayClick = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
+        if (isUnavailable) return;
         if (isCurrentTrack) {
             togglePlay();
         } else if (onPlayOverride) {
@@ -51,6 +54,14 @@ export const TrackCard = ({track, variant, className, index, addedAt, onClick, o
     };
 
     const renderCover = (sizeClass: string = "w-full h-full") => {
+        if (isUnavailable) {
+            return (
+                <div className={`${sizeClass} flex items-center justify-center bg-slate-900 border border-red-500/20`}>
+                    <Ban size={variant === 'compact' || variant === 'playlist-row' ? 16 : 32}
+                         className="text-red-500/40"/>
+                </div>
+            );
+        }
         if (!track.coverMinioPath) {
             return (
                 <div className={`${sizeClass} flex items-center justify-center bg-slate-800`}>
@@ -79,7 +90,7 @@ export const TrackCard = ({track, variant, className, index, addedAt, onClick, o
     if (variant === 'playlist-row') {
         return (
             <div
-                onDoubleClick={() => onPlayOverride ? onPlayOverride() : setTrack(track)}
+                onDoubleClick={handlePlayClick}
                 className={cn(
                     "group grid grid-cols-[48px_minmax(120px,1fr)_120px_60px] md:grid-cols-[48px_minmax(120px,1fr)_150px_60px] gap-4 px-4 py-2.5 items-center rounded-md hover:bg-white/5 transition-colors cursor-pointer w-full border border-transparent",
                     isCurrentTrack && "bg-slate-800/30 border-slate-800/50",
@@ -87,20 +98,29 @@ export const TrackCard = ({track, variant, className, index, addedAt, onClick, o
                 )}
             >
                 <div className="text-sm font-mono text-slate-500 flex items-center h-full">
-                    {isCurrentTrack && isPlaying ? (
-                        <div className="w-4 h-4 flex items-end justify-between gap-[2px]">
+                    {isCurrentTrack && isPlaying && !isUnavailable ? (
+                        <button
+                            onClick={handlePlayClick}
+                            className="w-4 h-4 flex items-end justify-between gap-[2px]">
                             <div className="w-1 bg-violet-500 h-full animate-[bounce_1s_infinite]"/>
                             <div className="w-1 bg-violet-500 h-2/3 animate-[bounce_1s_infinite_100ms]"/>
                             <div className="w-1 bg-violet-500 h-3/4 animate-[bounce_1s_infinite_200ms]"/>
-                        </div>
-                    ) : isCurrentTrack ? (
-                        <span className="text-violet-500 font-bold">{index}</span>
+                        </button>
+                    ) : isCurrentTrack && !isPlaying && !isUnavailable ? (
+                            <>
+                                <Play size={16} fill="currentColor" onClick={handlePlayClick}
+                                      className="hidden group-hover:block text-slate-300 hover:text-violet-500"/>
+                        <span className="text-violet-500 font-bold group-hover:hidden">{index}</span></>
+
+                    ) :  !isUnavailable ? (
+                        <>
+                            <Play size={16} fill="currentColor" onClick={handlePlayClick}
+                                  className="hidden group-hover:block text-slate-300 hover:text-violet-500"/>
+                            <span className="group-hover:hidden">{index}</span>
+
+                        </>
                     ) : (
-                        <span className="group-hover:hidden">{index}</span>
-                    )}
-                    {!isCurrentTrack && (
-                        <Play size={16} fill="currentColor" onClick={handlePlayClick}
-                              className="hidden group-hover:block text-slate-300 hover:text-white"/>
+                        <span>{index}</span>
                     )}
                 </div>
 
@@ -121,13 +141,17 @@ export const TrackCard = ({track, variant, className, index, addedAt, onClick, o
                                 </span>
                             )}
                         </span>
-                        <Link
-                            to={`/user/${track.artistUsername}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-xs text-slate-400 hover:text-slate-300 hover:underline transition-colors truncate w-fit"
-                        >
-                            {track.artistAlias}
-                        </Link>
+                        {isUnavailable ? (
+                            <span className="truncate text-slate-500 line-through opacity-70">{track.artistAlias}</span>
+                        ) : (
+                            <Link
+                                to={`/user/${track.artistUsername}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-xs text-slate-400 hover:text-slate-300 hover:underline transition-colors truncate w-fit"
+                            >
+                                {track.artistAlias}
+                            </Link>
+                        )}
                     </div>
                 </div>
 
@@ -219,13 +243,18 @@ export const TrackCard = ({track, variant, className, index, addedAt, onClick, o
                         </span>
                         <div className="flex items-center gap-1 text-slate-400 text-xs mt-0.5">
                             <User size={12} className="shrink-0"/>
-                            <Link
-                                to={`/user/${track.artistUsername}`}
-                                onClick={(e) => e.stopPropagation()}
-                                className="truncate hover:text-slate-300 transition-colors"
-                            >
-                                {track.artistAlias}
-                            </Link>
+                            {isUnavailable ? (
+                                <span
+                                    className="truncate text-slate-500 line-through opacity-70">{track.artistAlias}</span>
+                            ) : (
+                                <Link
+                                    to={`/user/${track.artistUsername}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="text-xs text-slate-400 hover:text-slate-300 hover:underline transition-colors truncate w-fit"
+                                >
+                                    {track.artistAlias}
+                                </Link>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -276,13 +305,17 @@ export const TrackCard = ({track, variant, className, index, addedAt, onClick, o
                     <div
                         className="flex items-center gap-1.5 mt-0.5 text-slate-400 text-xs hover:text-slate-300 transition-colors truncate">
                         <User size={12} className="shrink-0"/>
-                        <Link
-                            to={`/user/${track.artistUsername}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="truncate"
-                        >
-                            {track.artistAlias}
-                        </Link>
+                        {isUnavailable ? (
+                            <span className="truncate text-slate-500 line-through opacity-70">{track.artistAlias}</span>
+                        ) : (
+                            <Link
+                                to={`/user/${track.artistUsername}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-xs text-slate-400 hover:text-slate-300 hover:underline transition-colors truncate w-fit"
+                            >
+                                {track.artistAlias}
+                            </Link>
+                        )}
                     </div>
                     <div
                         className="flex items-center gap-2 mt-1.5 text-slate-500 text-[11px] uppercase tracking-wider font-semibold">

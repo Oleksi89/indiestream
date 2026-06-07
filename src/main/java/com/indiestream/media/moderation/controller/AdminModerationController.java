@@ -100,4 +100,20 @@ public class AdminModerationController {
         adminModerationService.banArtist(artistId, reason, adminId);
         return ResponseEntity.noContent().build();
     }
+
+
+    /**
+     * Cross-Module Action: UnBans the artist.
+     */
+    @PostMapping("/artists/{artistId}/unban")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<Void> unbanArtist(
+            @PathVariable("artistId") UUID artistId,
+            @RequestParam String reason,
+            Authentication authentication) {
+
+        UUID adminId = UUID.fromString(authentication.getName());
+        adminModerationService.unbanArtist(artistId, reason, adminId);
+        return ResponseEntity.noContent().build();
+    }
 }

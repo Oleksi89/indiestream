@@ -4,7 +4,7 @@ import {useAuthStore} from '@/shared/store/authStore';
 import {EditProfileModal} from '@/features/profile/ui/EditProfileModal';
 import {Button} from '@/shared/ui/button';
 import {useState} from 'react';
-import {User, CalendarDays, Loader2, ImageIcon, Lock} from 'lucide-react';
+import {User, CalendarDays, Loader2, ImageIcon, Lock, UserX} from 'lucide-react';
 import {cn} from '@/shared/lib/utils';
 import {useSecureUrl} from "@/shared/hooks/useSecureUrl";
 import {profileApi} from "@/features/profile/api/profile.api";
@@ -75,7 +75,18 @@ export const ProfilePage = () => {
     }
 
     if (isError || !profile) {
-        return <div className="flex h-full w-full items-center justify-center text-slate-400">Profile not found.</div>;
+        return (
+            <div
+                className="flex flex-col h-[80vh] w-full items-center justify-center text-slate-400 animate-in fade-in">
+                <UserX size={64} className="mb-4 text-slate-600 opacity-50"/>
+                <h2 className="text-2xl font-bold text-slate-300 mb-2">Profile Unavailable</h2>
+                <p className="text-sm text-slate-500">This account doesn't exist or has been suspended.</p>
+                <Button variant="outline" className="mt-6 border-slate-700 text-slate-300 hover:bg-slate-800"
+                        onClick={() => navigate('/')}>
+                    Return Home
+                </Button>
+            </div>
+        );
     }
 
     const isPrivateAndNotOwner = profile.profile?.isPrivate && !isOwnProfile;

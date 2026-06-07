@@ -1,6 +1,6 @@
 import React from 'react';
 import {useNavigate} from 'react-router-dom';
-import {Play, ListPlus, User, Link as LinkIcon, Plus, Check} from 'lucide-react';
+import {Play, ListPlus, User, Link as LinkIcon, Plus, Check, Ban} from 'lucide-react';
 import toast from 'react-hot-toast';
 import {useQueryClient} from '@tanstack/react-query';
 
@@ -24,6 +24,7 @@ import type {PlaylistTrackDto} from "@/features/playlist/types";
 interface TrackContextMenuProps {
     children: React.ReactNode;
     track: TrackDto;
+    onRemoveFromPlaylist?: () => void;
 }
 
 export const TrackContextMenu: React.FC<TrackContextMenuProps> = ({children, track}) => {
@@ -34,6 +35,7 @@ export const TrackContextMenu: React.FC<TrackContextMenuProps> = ({children, tra
 
     const {data: library, isLoading: isLibraryLoading} = useUserLibrary(0, 50);
     const togglePlaylistTrack = useTogglePlaylistTrack();
+    const isUnavailable = track.artistUsername === 'unavailable';
 
     const handlePlay = () => setTrack(track);
 
@@ -76,57 +78,105 @@ export const TrackContextMenu: React.FC<TrackContextMenuProps> = ({children, tra
                 <div>{children}</div>
             </ContextMenuTrigger>
             <ContextMenuContent className="w-56">
-                <ContextMenuItem onClick={handlePlay}>
-                    <Play className="mr-2 h-4 w-4"/>
-                    <span>Play Now</span>
-                </ContextMenuItem>
-                <ContextMenuItem onClick={handleAddToQueue}>
-                    <ListPlus className="mr-2 h-4 w-4"/>
-                    <span>Add to Queue</span>
-                </ContextMenuItem>
-                <ContextMenuSeparator/>
+                {isUnavailable ? (
+                    <>
+                        <ContextMenuItem disabled className="text-red-400/70">
+                            <Ban className="mr-2 h-4 w-4"/>
+                            <span>Content Unavailable</span>
+                        </ContextMenuItem>
+                        <ContextMenuSub>
+                            <ContextMenuSubTrigger>
+                                <Plus className="mr-2 h-4 w-4"/>
+                                <span>Exclude from Playlist</span>
+                            </ContextMenuSubTrigger>
+                            <ContextMenuSubContent className="w-56 max-h-64 overflow-y-auto">
+                                {isLibraryLoading ? (
+                                    <ContextMenuItem disabled>Loading...</ContextMenuItem>
+                                ) : editablePlaylists.length === 0 ? (
+                                    <ContextMenuItem disabled>No editable playlists</ContextMenuItem>
+                                ) : (
+                                    editablePlaylists.map((playlist) => {
+                                        // Dynamically check cache for track presence
+                                        const tracks = queryClient.getQueryData<PageResponse<PlaylistTrackDto>>(playlistKeys.tracks(playlist.id));
+                                        const isPresent = tracks?.content.some(t => t.trackId === track.id) || false;
 
-                <ContextMenuSub>
-                    <ContextMenuSubTrigger>
-                        <Plus className="mr-2 h-4 w-4"/>
-                        <span>Add to Playlist</span>
-                    </ContextMenuSubTrigger>
-                    <ContextMenuSubContent className="w-56 max-h-64 overflow-y-auto">
-                        {isLibraryLoading ? (
-                            <ContextMenuItem disabled>Loading...</ContextMenuItem>
-                        ) : editablePlaylists.length === 0 ? (
-                            <ContextMenuItem disabled>No editable playlists</ContextMenuItem>
-                        ) : (
-                            editablePlaylists.map((playlist) => {
-                                // Dynamically check cache for track presence
-                                const tracks = queryClient.getQueryData<PageResponse<PlaylistTrackDto>>(playlistKeys.tracks(playlist.id));
-                                const isPresent = tracks?.content.some(t => t.trackId === track.id) || false;
+                                        if (isPresent) return (
 
-                                return (
-                                    <ContextMenuItem
-                                        key={playlist.id}
-                                        onSelect={(e) => e.preventDefault()} // Prevent closing
-                                        onClick={() => handleTogglePlaylist(playlist.id, isPresent)}
-                                        className="flex items-center justify-between group"
-                                    >
-                                        <span className="truncate pr-2">{playlist.name}</span>
-                                        {isPresent && <Check className="h-4 w-4 text-violet-400 shrink-0"/>}
-                                    </ContextMenuItem>
-                                );
-                            })
-                        )}
-                    </ContextMenuSubContent>
-                </ContextMenuSub>
+                                            <ContextMenuItem
+                                                key={playlist.id}
+                                                onSelect={(e) => e.preventDefault()} // Prevent closing
+                                                onClick={() => handleTogglePlaylist(playlist.id, isPresent)}
+                                                className="flex items-center justify-between group"
+                                            >
+                                                {isPresent &&
+                                                    <>
+                                                        <span className="truncate pr-2">{playlist.name}</span>
+                                                        <Check className="h-4 w-4 text-violet-400 shrink-0"/>
+                                                    </>}
+                                            </ContextMenuItem>
+                                        );
+                                        else return;
+                                    })
+                                )}
+                            </ContextMenuSubContent>
+                        </ContextMenuSub>
+                    </>
+                ) : (
+                    <>
 
-                <ContextMenuSeparator/>
-                <ContextMenuItem onClick={handleGoToArtist}>
-                    <User className="mr-2 h-4 w-4"/>
-                    <span>Go to Artist</span>
-                </ContextMenuItem>
-                <ContextMenuItem onClick={handleCopyLink}>
-                    <LinkIcon className="mr-2 h-4 w-4"/>
-                    <span>Copy Link</span>
-                </ContextMenuItem>
+                        <ContextMenuItem onClick={handlePlay}>
+                            <Play className="mr-2 h-4 w-4"/>
+                            <span>Play Now</span>
+                        </ContextMenuItem>
+                        <ContextMenuItem onClick={handleAddToQueue}>
+                            <ListPlus className="mr-2 h-4 w-4"/>
+                            <span>Add to Queue</span>
+                        </ContextMenuItem>
+                        <ContextMenuSeparator/>
+
+                        <ContextMenuSub>
+                            <ContextMenuSubTrigger>
+                                <Plus className="mr-2 h-4 w-4"/>
+                                <span>Add to Playlist</span>
+                            </ContextMenuSubTrigger>
+                            <ContextMenuSubContent className="w-56 max-h-64 overflow-y-auto">
+                                {isLibraryLoading ? (
+                                    <ContextMenuItem disabled>Loading...</ContextMenuItem>
+                                ) : editablePlaylists.length === 0 ? (
+                                    <ContextMenuItem disabled>No editable playlists</ContextMenuItem>
+                                ) : (
+                                    editablePlaylists.map((playlist) => {
+                                        // Dynamically check cache for track presence
+                                        const tracks = queryClient.getQueryData<PageResponse<PlaylistTrackDto>>(playlistKeys.tracks(playlist.id));
+                                        const isPresent = tracks?.content.some(t => t.trackId === track.id) || false;
+
+                                        return (
+                                            <ContextMenuItem
+                                                key={playlist.id}
+                                                onSelect={(e) => e.preventDefault()} // Prevent closing
+                                                onClick={() => handleTogglePlaylist(playlist.id, isPresent)}
+                                                className="flex items-center justify-between group"
+                                            >
+                                                <span className="truncate pr-2">{playlist.name}</span>
+                                                {isPresent && <Check className="h-4 w-4 text-violet-400 shrink-0"/>}
+                                            </ContextMenuItem>
+                                        );
+                                    })
+                                )}
+                            </ContextMenuSubContent>
+                        </ContextMenuSub>
+
+                        <ContextMenuSeparator/>
+                        <ContextMenuItem onClick={handleGoToArtist}>
+                            <User className="mr-2 h-4 w-4"/>
+                            <span>Go to Artist</span>
+                        </ContextMenuItem>
+                        <ContextMenuItem onClick={handleCopyLink}>
+                            <LinkIcon className="mr-2 h-4 w-4"/>
+                            <span>Copy Link</span>
+                        </ContextMenuItem>
+                    </>
+                )}
             </ContextMenuContent>
         </ContextMenu>
     );
