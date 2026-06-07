@@ -6,9 +6,12 @@ import com.indiestream.auth.UserPublicProfile;
 import com.indiestream.auth.domain.Role;
 import com.indiestream.auth.domain.User;
 import com.indiestream.auth.domain.UserProfile;
+import com.indiestream.auth.domain.UserModerationLog;
 import com.indiestream.auth.dto.*;
 import com.indiestream.auth.event.UserRegisteredEvent;
+import com.indiestream.auth.event.UserUnbannedEvent;
 import com.indiestream.auth.repository.UserFollowerRepository;
+import com.indiestream.auth.repository.UserModerationLogRepository;
 import com.indiestream.auth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -20,6 +23,7 @@ import com.indiestream.auth.exception.EmailAlreadyInUseException;
 import com.indiestream.auth.exception.UsernameAlreadyInUseException;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -29,6 +33,8 @@ public class UserService implements AuthModuleApi {
 
     private final UserRepository userRepository;
     private final UserFollowerRepository followerRepository;
+    private final UserModerationLogRepository moderationLogRepository;
+    private final TokenBlacklistService tokenBlacklistService;
     private final PasswordEncoder passwordEncoder;
     private final ApplicationEventPublisher events;
     private final ProfileStorageService profileStorageService;
@@ -39,12 +45,16 @@ public class UserService implements AuthModuleApi {
      */
     @Transactional(readOnly = true)
     public Optional<UserDto> getUserById(UUID id) {
-        return userRepository.findById(id).map(this::mapToBasicDto);
+        return userRepository.findById(id)
+                .filter(user -> !user.getIsBanned())
+                .map(this::mapToBasicDto);
     }
 
     @Transactional(readOnly = true)
     public Optional<UserDto> getUserByEmail(String email) {
-        return userRepository.findByEmail(email).map(this::mapToBasicDto);
+        return userRepository.findByEmail(email)
+                .filter(user -> !user.getIsBanned())
+                .map(this::mapToBasicDto);
     }
 
     /**
@@ -52,15 +62,21 @@ public class UserService implements AuthModuleApi {
      */
     @Transactional(readOnly = true)
     public Optional<UserProfileResponse> getProfileByUsername(String username, UUID currentUserId) {
-        return userRepository.findByUsername(username).map(user -> mapToProfileResponse(user, currentUserId));
+        return userRepository.findByUsername(username)
+                .filter(user -> !user.getIsBanned())
+                .map(user -> mapToProfileResponse(user, currentUserId));
     }
 
     @Override
     @Transactional(readOnly = true)
     public boolean isProfileAccessible(UUID targetUserId, UUID currentUserId) {
-        if (currentUserId != null && currentUserId.equals(targetUserId)) return true;
+        if (currentUserId != null && currentUserId.equals(targetUserId)) {
+            return userRepository.findById(targetUserId)
+                    .map(u -> !u.getIsBanned())
+                    .orElse(false);
+        }
         return userRepository.findById(targetUserId)
-                .map(u -> u.getProfile() == null || !u.getProfile().isPrivate())
+                .map(u -> !u.getIsBanned() && (u.getProfile() == null || !u.getProfile().isPrivate()))
                 .orElse(false);
     }
 
@@ -105,6 +121,7 @@ public class UserService implements AuthModuleApi {
     @Transactional
     public UserProfileResponse updateProfile(UUID userId, UpdateUserProfileRequestDto request) {
         User user = userRepository.findById(userId)
+                .filter(u -> !u.getIsBanned())
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         if (request.alias() != null && !request.alias().isBlank()) {
@@ -122,6 +139,7 @@ public class UserService implements AuthModuleApi {
     @Transactional
     public UserProfileResponse updateAvatar(UUID userId, MultipartFile file) {
         User user = userRepository.findById(userId)
+                .filter(u -> !u.getIsBanned())
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         UserProfile profile = user.getProfile();
@@ -139,6 +157,7 @@ public class UserService implements AuthModuleApi {
     @Transactional
     public UserProfileResponse updateBanner(UUID userId, MultipartFile file) {
         User user = userRepository.findById(userId)
+                .filter(u -> !u.getIsBanned())
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         UserProfile profile = user.getProfile();
@@ -157,6 +176,7 @@ public class UserService implements AuthModuleApi {
     @Transactional(readOnly = true)
     public Optional<UserPublicProfile> getUserPublicProfile(UUID userId) {
         return userRepository.findById(userId)
+                .filter(user -> !user.getIsBanned())
                 .map(this::mapToPublicProfile);
     }
 
@@ -164,6 +184,7 @@ public class UserService implements AuthModuleApi {
     @Transactional(readOnly = true)
     public Optional<UserPublicProfile> getUserPublicProfileByUsername(String username) {
         return userRepository.findByUsername(username)
+                .filter(user -> !user.getIsBanned())
                 .map(this::mapToPublicProfile);
     }
 
@@ -172,6 +193,7 @@ public class UserService implements AuthModuleApi {
     public List<UserPublicProfile> getPublicProfiles(Set<UUID> userIds) {
         if (userIds == null || userIds.isEmpty()) return List.of();
         return userRepository.findAllByIdIn(userIds).stream()
+                .filter(user -> !user.getIsBanned())
                 .map(this::mapToPublicProfile)
                 .collect(Collectors.toList());
     }
@@ -180,6 +202,7 @@ public class UserService implements AuthModuleApi {
     @Transactional(readOnly = true)
     public String getUserEmail(UUID userId) {
         return userRepository.findById(userId)
+                .filter(user -> !user.getIsBanned())
                 .map(User::getEmail)
                 .orElse("Unknown User");
     }
@@ -196,10 +219,14 @@ public class UserService implements AuthModuleApi {
         if (userIds == null || userIds.isEmpty()) return Collections.emptyMap();
 
         List<Object[]> results = userRepository.findAliasesByIds(userIds);
-        return results.stream().collect(Collectors.toMap(
-                row -> (UUID) row[0],
-                row -> (String) row[1]
-        ));
+        Map<UUID, String> aliasMap = new HashMap<>();
+        for (Object[] row : results) {
+            UUID id = (UUID) row[0];
+            userRepository.findById(id).filter(u -> !u.getIsBanned()).ifPresent(u -> {
+                aliasMap.put(id, (String) row[1]);
+            });
+        }
+        return aliasMap;
     }
 
     /**
@@ -235,6 +262,50 @@ public class UserService implements AuthModuleApi {
         List<UserPublicProfile> profiles = users.stream().map(this::mapToPublicProfile).toList();
 
         return new PageImpl<>(profiles, effectivePageable, profiles.size());
+    }
+
+    @Transactional
+    public void banUser(UUID userId, UUID adminId, String reason) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (user.getIsBanned()) return;
+
+        user.setIsBanned(true);
+        userRepository.save(user);
+
+        UserModerationLog logEntry = UserModerationLog.builder()
+                .userId(userId)
+                .adminId(adminId)
+                .action("BAN")
+                .reason(reason)
+                .build();
+        moderationLogRepository.save(logEntry);
+
+        tokenBlacklistService.revokeUserSessions(userId);
+    }
+
+    @Transactional
+    public void unbanUser(UUID userId, UUID adminId, String reason) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (!user.getIsBanned()) return;
+
+        user.setIsBanned(false);
+        userRepository.save(user);
+
+        UserModerationLog logEntry = UserModerationLog.builder()
+                .userId(userId)
+                .adminId(adminId)
+                .action("UNBAN")
+                .reason(reason)
+                .build();
+        moderationLogRepository.save(logEntry);
+
+        tokenBlacklistService.restoreUserSessions(userId);
+
+        events.publishEvent(new UserUnbannedEvent(userId, adminId, reason, Instant.now()));
     }
 
     private UserPublicProfile mapToPublicProfile(User user) {

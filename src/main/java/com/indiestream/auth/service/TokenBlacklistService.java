@@ -5,16 +5,14 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.util.UUID;
 
-/**
- * Manages the lifecycle of invalidated JWTs.
- * Essential for terminating user sessions in our stateless architecture.
- */
 @Service
 @RequiredArgsConstructor
 public class TokenBlacklistService {
 
     private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
+    private static final String BANNED_USER_PREFIX = "jwt:banned_user:";
     private final StringRedisTemplate redisTemplate;
 
     /**
@@ -32,5 +30,17 @@ public class TokenBlacklistService {
 
     public boolean isBlacklisted(String token) {
         return Boolean.TRUE.equals(redisTemplate.hasKey(BLACKLIST_PREFIX + token));
+    }
+
+    public void revokeUserSessions(UUID userId) {
+        redisTemplate.opsForValue().set(BANNED_USER_PREFIX + userId.toString(), "banned", Duration.ofDays(7));
+    }
+
+    public void restoreUserSessions(UUID userId) {
+        redisTemplate.delete(BANNED_USER_PREFIX + userId.toString());
+    }
+
+    public boolean isUserBannedInRedis(UUID userId) {
+        return Boolean.TRUE.equals(redisTemplate.hasKey(BANNED_USER_PREFIX + userId.toString()));
     }
 }

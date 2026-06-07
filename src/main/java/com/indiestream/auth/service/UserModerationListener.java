@@ -1,6 +1,7 @@
 package com.indiestream.auth.service;
 
 import com.indiestream.auth.event.UserBannedEvent;
+import com.indiestream.auth.event.UserUnbanRequestedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -13,8 +14,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @RequiredArgsConstructor
 public class UserModerationListener {
 
-    // private final UserService userService;
-    // private final TokenBlacklistService tokenBlacklistService;
+    private final UserService userService;
 
     /**
      * Listens for cross-module ban events.
@@ -23,20 +23,25 @@ public class UserModerationListener {
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleUserBannedEvent(UserBannedEvent event) {
-        log.warn("CRITICAL: Cross-module ban event received for User ID: {} by Admin ID: {}. Reason: {}",
-                event.userId(), event.adminId(), event.reason());
-
+        log.warn("CRITICAL: Cross-module ban event executing for User ID: {}. Reason: {}",
+                event.userId(), event.reason());
         try {
-            // Lock the user account in the database (e.g., set isEnabled = false or isBanned = true)
-            // userService.lockAccount(event.userId(), event.reason());
-
-            // Blacklist all active JWT tokens in Redis to force immediate session termination
-            // tokenBlacklistService.revokeAllUserTokens(event.userId());
-
-            log.info("Successfully executed account lockdown and token revocation for User ID: {}", event.userId());
+            userService.banUser(event.userId(), event.adminId(), event.reason());
+            log.info("Account lockdown successful for User ID: {}", event.userId());
         } catch (Exception e) {
-            log.error("Failed to fully apply cross-module ban for User ID: {}", event.userId(), e);
-            // Sending an alert to a dead-letter queue or monitoring system
+            log.error("Failed to apply DB lockdown for User ID: {}", event.userId(), e);
+        }
+    }
+
+    @Async
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void handleUserUnbanRequestedEvent(UserUnbanRequestedEvent event) {
+        log.warn("Cross-module UNBAN event executing for User ID: {}", event.userId());
+        try {
+            userService.unbanUser(event.userId(), event.adminId(), event.reason());
+            log.info("Account restoration successful for User ID: {}", event.userId());
+        } catch (Exception e) {
+            log.error("Failed to apply DB restoration for User ID: {}", event.userId(), e);
         }
     }
 }
