@@ -7,7 +7,6 @@ import com.indiestream.auth.event.UserRegisteredEvent;
 import com.indiestream.media.api.MediaModuleApi;
 import com.indiestream.media.api.TrackMetadata;
 import com.indiestream.media.api.TrackArchivedEvent;
-import com.indiestream.media.catalog.domain.TrackStatus;
 import com.indiestream.playlist.PlaylistLibraryProjection;
 import com.indiestream.playlist.PlaylistModuleApi;
 import com.indiestream.playlist.domain.*;
@@ -165,7 +164,7 @@ public class PlaylistService implements PlaylistModuleApi {
                 .map(pt -> {
                     TrackMetadata metadata = mediaModuleApi.getTrackMetadata(pt.getId().getTrackId());
 
-                    if (metadata.status() != TrackStatus.PUBLISHED) {
+                    if (!"PUBLISHED".equals(metadata.statusCode())) {
                         if (!isAuthorizedViewer) {
                             return null;
                         }
@@ -386,9 +385,9 @@ public class PlaylistService implements PlaylistModuleApi {
         if (playlistTrackRepository.existsById(linkId)) return;
 
         // Fetch duration from Media module API
-        TrackMetadata track = mediaModuleApi.getTrackMetadata(trackId);
+        TrackMetadata metadata = mediaModuleApi.getTrackMetadata(trackId);
 
-        if (track.status() != TrackStatus.PUBLISHED && track.status() != TrackStatus.APPROVED) {
+        if (!"PUBLISHED".equals(metadata.statusCode()) && !"APPROVED".equals(metadata.statusCode())) {
             throw new IllegalArgumentException("Cannot add non-approved or restricted tracks to playlists.");
         }
 
@@ -405,7 +404,7 @@ public class PlaylistService implements PlaylistModuleApi {
 
         // Update cached aggregates
         playlist.setTrackCount(playlist.getTrackCount() + 1);
-        playlist.setTotalDurationSeconds(playlist.getTotalDurationSeconds() + track.durationSeconds());
+        playlist.setTotalDurationSeconds(playlist.getTotalDurationSeconds() + metadata.durationSeconds());
         playlistRepository.save(playlist);
 
         if (playlist.getIsSystem()) {

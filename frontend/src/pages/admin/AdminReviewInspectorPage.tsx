@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import {useState} from 'react';
 import {useParams, useNavigate} from 'react-router-dom';
 import {ArrowLeft, Loader2, Gavel, ShieldCheck, ArchiveRestore, Ban, UserX, UserCheck} from 'lucide-react';
 import {useQuery} from '@tanstack/react-query';

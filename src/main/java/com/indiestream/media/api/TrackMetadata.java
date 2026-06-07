@@ -1,7 +1,5 @@
 package com.indiestream.media.api;
 
-import com.indiestream.media.catalog.domain.TrackStatus;
-
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -24,6 +22,6 @@ public record TrackMetadata(
         Set<String> customTags,
         Set<String> aiGeneratedTags,
 
-        TrackStatus status
+        String statusCode
 ) {
 }

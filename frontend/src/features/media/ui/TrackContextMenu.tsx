@@ -20,7 +20,6 @@ import {
 } from '@/shared/ui/ContextMenu.tsx';
 import type {PageResponse, TrackDto} from "@/features/media/types";
 import type {PlaylistTrackDto} from "@/features/playlist/types";
-import {ContextMenuLabel} from "@radix-ui/react-context-menu";
 
 interface TrackContextMenuProps {
     children: React.ReactNode;
@@ -116,6 +115,7 @@ export const TrackContextMenu: React.FC<TrackContextMenuProps> = ({children, tra
                                                     </>}
                                             </ContextMenuItem>
                                         );
+                                        else return;
                                     })
                                 )}
                             </ContextMenuSubContent>

@@ -1,12 +1,11 @@
 import {useMemo, useState} from 'react';
 import {useParams} from 'react-router-dom';
-import {useQuery, useQueryClient} from '@tanstack/react-query';
+import {useQuery} from '@tanstack/react-query';
 import {playlistApi} from '@/features/playlist/api/playlist.api';
 import {
     playlistKeys,
     useFollowPlaylist,
     useUnfollowPlaylist,
-    useTogglePlaylistTrack
 } from '@/features/playlist/hooks/usePlaylists';
 import {usePlaylistPermissions} from '@/features/playlist/hooks/usePlaylistPermissions';
 import {useLibrary} from '@/features/library/hooks/useLibrary';
@@ -27,7 +26,6 @@ import type {TrackDto} from "@/features/media/types";
 
 export const PlaylistPage = () => {
     const {id} = useParams<{ id: string }>();
-    const queryClient = useQueryClient();
     const {playContext} = usePlayerStore();
     const {user: currentUser} = useAuthStore();
     const {data: library} = useLibrary();

@@ -235,7 +235,7 @@ public class TrackService implements MediaModuleApi {
                         t.isExplicit(),
                         t.getTags().custom(),
                         t.getTags().aiGenerated(),
-                        t.getStatus()
+                        t.getStatus().name()
                 ))
                 .orElseThrow(() -> new IllegalArgumentException("Track not found"));
     }
@@ -265,7 +265,7 @@ public class TrackService implements MediaModuleApi {
                         t.getId(), t.getTitle(), t.getArtistId(), t.getDurationSeconds(),
                         t.getStemsMetadata(), t.getCoverMinioPath(), t.getGenre(),
                         t.isExplicit(), t.getTags().custom(), t.getTags().aiGenerated(),
-                        t.getStatus()
+                        t.getStatus().name()
                 ))
                 .toList();
 
