@@ -71,6 +71,10 @@ dependencies {
     implementation("org.springframework.retry:spring-retry")
     implementation("org.springframework.boot:spring-boot-starter-aop")
     implementation("org.springframework.ai:spring-ai-starter-model-google-genai")
+
+    // --- Telemetry Module: High-Throughput & Resilience ---
+    implementation("io.github.resilience4j:resilience4j-spring-boot3:2.2.0")
+    implementation("com.bucket4j:bucket4j-core:8.10.1")
 }
 
 tasks.withType<Test> {
