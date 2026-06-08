@@ -6,6 +6,7 @@ import com.indiestream.media.storage.exception.MediaNotFoundException;
 import com.indiestream.media.storage.exception.MediaStreamException;
 import com.indiestream.media.moderation.exception.AppealNotAllowedException;
 import com.indiestream.playlist.exception.PlaylistNotFoundException;
+import com.indiestream.telemetry.exception.RateLimitExceededException;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -134,6 +135,18 @@ public class GlobalExceptionHandler {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, "The storage provider is temporarily unavailable or returning errors.");
         problemDetail.setTitle("Storage Streaming Failure");
         problemDetail.setType(URI.create("https://indiestream.com/errors/storage-unavailable"));
+        return problemDetail;
+    }
+
+    /**
+     * Handles Telemetry Gateway rate limits.
+     * Yields HTTP 429 to signal clients to pause buffer flushing.
+     */
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ProblemDetail handleRateLimitExceeded(RateLimitExceededException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage());
+        problemDetail.setTitle("Rate Limit Exceeded");
+        problemDetail.setType(URI.create("https://indiestream.com/errors/rate-limit"));
         return problemDetail;
     }
 }
