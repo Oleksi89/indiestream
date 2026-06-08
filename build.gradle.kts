@@ -75,6 +75,7 @@ dependencies {
     // --- Telemetry Module: High-Throughput & Resilience ---
     implementation("io.github.resilience4j:resilience4j-spring-boot3:2.2.0")
     implementation("com.bucket4j:bucket4j-core:8.10.1")
+    implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")
 }
 
 tasks.withType<Test> {
