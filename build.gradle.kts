@@ -80,6 +80,7 @@ dependencies {
     // --- Telemetry Module: Aggregation & ShedLock ---
     implementation("net.javacrumbs.shedlock:shedlock-spring:5.13.0")
     implementation("net.javacrumbs.shedlock:shedlock-provider-jdbc-template:5.13.0")
+    implementation("org.springframework.modulith:spring-modulith-events-api")
 }
 
 tasks.withType<Test> {
