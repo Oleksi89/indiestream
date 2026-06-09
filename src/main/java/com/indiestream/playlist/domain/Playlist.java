@@ -55,6 +55,10 @@ public class Playlist {
     @Builder.Default
     private Integer followersCount = 0;
 
+    @Column(name = "like_count", nullable = false)
+    @Builder.Default
+    private Integer likeCount = 0;
+
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;
 

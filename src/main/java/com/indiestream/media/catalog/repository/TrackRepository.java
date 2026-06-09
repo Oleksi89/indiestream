@@ -6,6 +6,7 @@ import com.indiestream.media.moderation.dto.ModerationQueueProjection;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.domain.Page;
@@ -71,4 +72,11 @@ public interface TrackRepository extends JpaRepository<Track, UUID>, JpaSpecific
      */
     @Query("SELECT t FROM Track t WHERE t.artistId = :artistId AND t.status != 'ARCHIVED' ORDER BY t.createdAt DESC")
     Page<Track> findAllStudioTracksExcludingArchived(@Param("artistId") UUID artistId, Pageable pageable);
+
+    /**
+     * Executes an isolated high-performance atomic increment for track counters.
+     */
+    @Modifying
+    @Query(value = "UPDATE tracks SET play_count = play_count + :plays, skip_count = skip_count + :skips, like_count = like_count + :likes WHERE id = :id", nativeQuery = true)
+    void incrementTrackCounters(@Param("id") UUID id, @Param("plays") int plays, @Param("skips") int skips, @Param("likes") int likes);
 }

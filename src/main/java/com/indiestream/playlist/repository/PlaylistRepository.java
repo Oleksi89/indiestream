@@ -71,4 +71,8 @@ public interface PlaylistRepository extends JpaRepository<Playlist, UUID> {
     @Modifying
     @Query("UPDATE Playlist p SET p.isPublic = false, p.isCollaborative = false WHERE p.ownerId = :ownerId")
     void enforceGlobalBanCascadingPrivacy(@Param("ownerId") UUID ownerId);
+
+    @Modifying
+    @Query(value = "UPDATE playlists SET like_count = like_count + :likes WHERE id = :id", nativeQuery = true)
+    void incrementPlaylistCounters(@Param("id") UUID id, @Param("likes") int likes);
 }
