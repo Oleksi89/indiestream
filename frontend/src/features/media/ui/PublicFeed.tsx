@@ -38,7 +38,7 @@ export const PublicFeed = () => {
                     <TrackCard
                         track={track}
                         variant="grid"
-                        onPlayOverride={() => playContext(data.content, 'public-feed', index)}
+                        onPlayOverride={() => playContext(data.content, {type: 'PUBLIC_FEED'}, index)}
                     />
                 </TrackContextMenu>
             ))}

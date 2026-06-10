@@ -1,9 +1,16 @@
 import {create} from 'zustand';
 import {persist, createJSONStorage} from 'zustand/middleware';
 import type {TrackDto} from '@/features/media/types';
+import type {TelemetrySourceType} from '@/features/telemetry/types';
 
 export type PlaybackMode = 'master' | 'stems';
 export type RepeatMode = 'OFF' | 'CONTEXT' | 'TRACK';
+
+// Structured Context for AI Vector weight tracking
+export interface PlaybackContext {
+    type: TelemetrySourceType;
+    id?: string;
+}
 
 interface PlayerState {
     // Media State
@@ -16,7 +23,7 @@ interface PlayerState {
     queue: TrackDto[];
     originalQueue: TrackDto[];
     history: TrackDto[];
-    playbackContext: string | null;
+    playbackContext: PlaybackContext | null;
     isShuffle: boolean;
     repeatMode: RepeatMode;
     isQueueOpen: boolean;
@@ -25,8 +32,8 @@ interface PlayerState {
     stemVolumes: Record<string, number>;
 
     // Actions
-    setTrack: (track: TrackDto) => void;
-    playContext: (tracks: TrackDto[], contextId: string, startIndex?: number) => void;
+    setTrack: (track: TrackDto, context?: PlaybackContext) => void;
+    playContext: (tracks: TrackDto[], context: PlaybackContext, startIndex?: number) => void;
     togglePlay: () => void;
     setPlaying: (isPlaying: boolean) => void;
     setVolume: (volume: number) => void;
@@ -79,8 +86,8 @@ export const usePlayerStore = create<PlayerState>()(
             playbackMode: 'master',
             stemVolumes: {},
 
-            setTrack: (track) => {
-                const {currentTrack} = get();
+            setTrack: (track, context) => {
+                const {currentTrack, playbackContext} = get();
                 if (currentTrack) {
                     set((state) => ({history: [...state.history, currentTrack]}));
                 }
@@ -89,7 +96,9 @@ export const usePlayerStore = create<PlayerState>()(
                     currentTrack: track,
                     isPlaying: true,
                     progress: 0,
-                    playbackMode: 'master' // Always default to master on new track for performance
+                    playbackMode: 'master', // Always default to master on new track for performance
+                    // Update context only if explicitly provided, else retain current context
+                    playbackContext: context !== undefined ? context : playbackContext
                 });
 
                 if (track.stemsMetadata && Object.keys(track.stemsMetadata).length > 0) {
@@ -99,7 +108,7 @@ export const usePlayerStore = create<PlayerState>()(
                 }
             },
 
-            playContext: (tracks, contextId, startIndex = 0) => {
+            playContext: (tracks, context, startIndex = 0) => {
                 if (tracks.length === 0) return;
 
                 const trackToPlay = tracks[startIndex];
@@ -107,7 +116,7 @@ export const usePlayerStore = create<PlayerState>()(
 
                 set({
                     originalQueue: tracks,
-                    playbackContext: contextId,
+                    playbackContext: context,
                     history: [],
                     isShuffle: false // Reset shuffle on new context
                 });

@@ -1,6 +1,7 @@
 package com.indiestream.telemetry.dto;
 
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 import java.util.UUID;
@@ -26,7 +27,12 @@ public record PlaybackTelemetryPayload(
         int endPositionMs,
 
         @Min(value = 2000, message = "Playback duration must be at least 2000ms to filter out misclicks")
-        int playbackDurationMs
+        int playbackDurationMs,
+
+        @NotBlank(message = "Source Type (Context) is required for AI Vector modeling")
+        String sourceType,
+
+        UUID sourceId
 ) {
     public PlaybackTelemetryPayload {
         if (endPositionMs < startPositionMs) {

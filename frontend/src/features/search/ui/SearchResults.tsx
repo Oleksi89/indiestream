@@ -54,7 +54,8 @@ export const SearchResults = ({data, isLoading, hasSearched}: SearchResultsProps
         const trackDtos = data.tracks.map(mapTrackToDto);
         const startIndex = trackDtos.findIndex(t => t.id === trackId);
         if (startIndex !== -1) {
-            playContext(trackDtos, 'search-results', startIndex);
+            // Inject SEARCH context into the telemetry state machine
+            playContext(trackDtos, {type: 'SEARCH'}, startIndex);
         }
     };
 

@@ -18,7 +18,9 @@ public record RawPlaybackRecord(
         String clientIp,
         String userAgent,
         boolean isSuspectedBot,
-        String playbackStatus, // Stored as VARCHAR explicitly
+        String playbackStatus,
+        String sourceType,
+        UUID sourceId,
         OffsetDateTime createdAt
 ) {
 }

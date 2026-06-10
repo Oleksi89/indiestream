@@ -6,7 +6,7 @@ import {useQueryClient} from '@tanstack/react-query';
 
 import {usePlayerStore} from '@/shared/store/playerStore.ts';
 import {useUserLibrary, useTogglePlaylistTrack, playlistKeys} from '../../playlist/hooks/usePlaylists';
-
+import {useInteractionTracker} from '@/features/telemetry';
 
 import {
     ContextMenu,
@@ -32,6 +32,7 @@ export const TrackContextMenu: React.FC<TrackContextMenuProps> = ({children, tra
     const queryClient = useQueryClient();
     const setTrack = usePlayerStore((state) => state.setTrack);
     const addToQueue = usePlayerStore((state) => state.addToQueue);
+    const {trackInteraction} = useInteractionTracker();
 
     const {data: library, isLoading: isLibraryLoading} = useUserLibrary(0, 50);
     const togglePlaylistTrack = useTogglePlaylistTrack();
@@ -48,7 +49,12 @@ export const TrackContextMenu: React.FC<TrackContextMenuProps> = ({children, tra
 
     const handleCopyLink = () => {
         const url = `${window.location.origin}/track/${track.id}`;
-        navigator.clipboard.writeText(url).then(() => toast.success('Link copied to clipboard'));
+        navigator.clipboard.writeText(url).then(() => {
+            toast.success('Link copied to clipboard');
+            // Track the share interaction, defaulting to PUBLIC_FEED if context is lost
+            const currentContext = usePlayerStore.getState().playbackContext;
+            trackInteraction(track.id, 'SHARE', currentContext?.type || 'PUBLIC_FEED', 'CONTEXT_MENU');
+        });
     };
 
     const handleTogglePlaylist = (playlistId: string, isPresent: boolean) => {
@@ -68,6 +74,11 @@ export const TrackContextMenu: React.FC<TrackContextMenuProps> = ({children, tra
             track: payload,
             isPresent
         });
+
+        if (!isPresent) {
+            const currentContext = usePlayerStore.getState().playbackContext;
+            trackInteraction(track.id, 'ADD_TO_PLAYLIST', currentContext?.type || 'PUBLIC_FEED', 'CONTEXT_MENU');
+        }
     };
 
     const editablePlaylists = library?.content || [];
@@ -115,7 +126,7 @@ export const TrackContextMenu: React.FC<TrackContextMenuProps> = ({children, tra
                                                     </>}
                                             </ContextMenuItem>
                                         );
-                                        else return;
+                                        else return null;
                                     })
                                 )}
                             </ContextMenuSubContent>
