@@ -16,6 +16,7 @@ import {useQuery} from "@tanstack/react-query";
 import {playlistApi} from "@/features/playlist/api/playlist.api.ts";
 import type {TrackMetadataPayload} from "@/features/playlist/types";
 import {AddToPlaylistDropdown} from "@/features/playlist/ui/AddToPlaylistDropdown.tsx";
+import {useInteractionTracker} from "@/features/telemetry";
 
 /**
  * Global Player Bar Component.
@@ -27,10 +28,12 @@ export const PlayerBar = () => {
         currentTrack, isPlaying, togglePlay, volume, setVolume,
         progress, setProgress, duration, setDuration, setPlaying,
         playbackMode, setPlaybackMode, stemVolumes, setStemVolume,
-        playNext, playPrevious, isShuffle, toggleShuffle, repeatMode, setRepeatMode, toggleQueue, isQueueOpen
+        playNext, playPrevious, isShuffle, toggleShuffle, repeatMode, setRepeatMode, toggleQueue, isQueueOpen,
+        playbackContext
     } = usePlayerStore();
 
     const token = useAuthStore(state => state.token);
+    const {trackInteraction} = useInteractionTracker();
 
     const [isMixerOpen, setIsMixerOpen] = useState(false);
     const [isPlaylistMenuOpen, setIsPlaylistMenuOpen] = useState(false);
@@ -75,8 +78,12 @@ export const PlayerBar = () => {
     } : null;
 
     const handleLike = () => {
-        if (!trackMetadata) return;
+        if (!trackMetadata || !trackId) return;
         toggleLike.mutate({track: trackMetadata, isLiked});
+
+        if (!isLiked) {
+            trackInteraction(trackId, 'LIKE', playbackContext?.type || 'PUBLIC_FEED', 'PLAYER_BAR');
+        }
     };
 
     useEffect(() => {
