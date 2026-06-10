@@ -91,7 +91,8 @@ public class PlaybackStreamBatchConsumer {
                 batch.add(new RawPlaybackRecord(
                         payload.eventId(), userId, payload.trackId(), payload.sessionId(),
                         payload.startPositionMs(), payload.endPositionMs(), payload.playbackDurationMs(),
-                        clientIp, userAgent, isBot, status.name(), OffsetDateTime.parse(ingestedAt)
+                        clientIp, userAgent, isBot, status.name(), payload.sourceType(), payload.sourceId(),
+                        OffsetDateTime.parse(ingestedAt)
                 ));
 
                 processedIds.add(record.getId());

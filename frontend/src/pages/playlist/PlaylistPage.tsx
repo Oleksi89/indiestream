@@ -23,12 +23,14 @@ import {PlaylistDropdownMenu} from "@/features/playlist/ui/PlaylistDropdownMenu"
 import {PlaylistHeader} from '@/features/playlist/ui/PlaylistHeader';
 import {usePlaylistColor} from '@/features/playlist/hooks/usePlaylistColor';
 import type {TrackDto} from "@/features/media/types";
+import {useInteractionTracker} from "@/features/telemetry";
 
 export const PlaylistPage = () => {
     const {id} = useParams<{ id: string }>();
     const {playContext} = usePlayerStore();
     const {user: currentUser} = useAuthStore();
     const {data: library} = useLibrary();
+    const {trackInteraction} = useInteractionTracker();
 
     const [isEditModalOpen, setEditModalOpen] = useState(false);
     const [isCollabModalOpen, setCollabModalOpen] = useState(false);
@@ -85,9 +87,21 @@ export const PlaylistPage = () => {
 
     const handlePlayPlaylist = () => {
         const playableTracks = mappedTracks.filter(t => t.artistUsername !== 'unavailable');
-        if (playableTracks.length > 0) playContext(playableTracks, `playlist:${id}`, 0);
+        // Inject Context into the playback engine
+        if (playableTracks.length > 0) {
+            playContext(playableTracks, {type: 'PLAYLIST', id: playlist.id}, 0);
+        }
     };
 
+    const handleToggleFollow = () => {
+        if (isFollowed) {
+            unfollowMutation.mutate(playlist.id);
+        } else {
+            followMutation.mutate(playlist.id);
+            // Fire and forget interaction telemetry
+            trackInteraction(playlist.id, 'FOLLOW_PLAYLIST', 'PLAYLIST', 'TRACK_CARD');
+        }
+    };
 
     return (
         <div className="flex flex-col min-h-full transition-colors duration-1000 ease-in-out"
@@ -109,7 +123,7 @@ export const PlaylistPage = () => {
 
                 {!isOwner && !playlist.isSystem && (
                     <Button
-                        onClick={() => isFollowed ? unfollowMutation.mutate(playlist.id) : followMutation.mutate(playlist.id)}
+                        onClick={handleToggleFollow}
                         variant={isFollowed ? "outline" : "default"}
                         className={cn("rounded-full px-6 font-bold tracking-wide transition-all border-2",
                             isFollowed ? "border-white/30 text-white hover:border-white/60 bg-transparent" : "bg-white text-black hover:bg-slate-200 border-transparent")}
@@ -158,7 +172,11 @@ export const PlaylistPage = () => {
                                     variant="playlist-row"
                                     index={index + 1}
                                     addedAt={tracksData?.content[index].addedAt}
-                                    onPlayOverride={() => playContext(mappedTracks.filter(t => t.artistUsername !== 'unavailable'), `playlist:${id}`, index)}
+                                    onPlayOverride={() => playContext(
+                                        mappedTracks.filter(t => t.artistUsername !== 'unavailable'),
+                                        {type: 'PLAYLIST', id: playlist.id},
+                                        index
+                                    )}
                                 />
                             </TrackContextMenu>
                         ))

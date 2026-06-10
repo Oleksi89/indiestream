@@ -18,7 +18,8 @@ export type TelemetrySourceType =
     | 'PROFILE'
     | 'PUBLIC_FEED'
     | 'EXTERNAL_SHARE'
-    | 'SYSTEM_RECOMMENDATION';
+    | 'SYSTEM_RECOMMENDATION'
+    | 'SYSTEM_INTERNAL'; // mute analytics for admin/artist dashboards
 
 export type UiSurface =
     | 'CONTEXT_MENU'
@@ -35,6 +36,8 @@ export interface PlaybackTelemetryPayload {
     startPositionMs: number;
     endPositionMs: number;
     playbackDurationMs: number;
+    sourceType: TelemetrySourceType;
+    sourceId?: string;
 }
 
 export interface InteractionTelemetryPayload {

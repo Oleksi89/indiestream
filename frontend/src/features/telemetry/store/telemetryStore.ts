@@ -1,6 +1,7 @@
 import {create} from 'zustand';
 import type {TimeRange} from '../types';
 import {getTelemetryWorker} from '../lib/workerManager';
+import {usePlayerStore} from "@/shared/store/playerStore.ts";
 
 export const generateSafeUUID = (): string => {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -25,6 +26,7 @@ interface TelemetryState {
     handleResume: (progressSeconds: number, volume: number) => void;
     handleVolumeChange: (progressSeconds: number, volume: number) => void;
     flushTelemetry: (keepSession?: boolean) => void;
+    flushTelemetryOnPause: () => void;
 }
 
 
@@ -97,6 +99,9 @@ export const useTelemetryStore = create<TelemetryState>((set, get) => ({
             activeRangeStart: null,
             lastTrackedProgress: progressSeconds
         });
+
+        // Safe mid-session synchronization without breaking context
+        get().flushTelemetryOnPause();
     },
 
     handleResume: (progressSeconds, volume) => {
@@ -134,6 +139,19 @@ export const useTelemetryStore = create<TelemetryState>((set, get) => ({
         const {currentTrackId, sessionId, timeRanges, activeRangeStart, lastTrackedProgress} = get();
         if (!currentTrackId || !sessionId) return;
 
+        const {playbackContext} = usePlayerStore.getState();
+        // Mute completely if this is an internal admin/artist playback
+        if (playbackContext?.type === 'SYSTEM_INTERNAL') {
+            set({
+                currentTrackId: null,
+                sessionId: null,
+                timeRanges: [],
+                activeRangeStart: null,
+                lastTrackedProgress: 0
+            });
+            return;
+        }
+
         let finalRanges = [...timeRanges];
         if (activeRangeStart !== null) {
             finalRanges.push({startMs: activeRangeStart, endMs: lastTrackedProgress * 1000});
@@ -159,7 +177,10 @@ export const useTelemetryStore = create<TelemetryState>((set, get) => ({
                         sessionId,
                         startPositionMs,
                         endPositionMs,
-                        playbackDurationMs
+                        playbackDurationMs,
+                        // Fallback to SYSTEM_RECOMMENDATION if context is completely lost
+                        sourceType: playbackContext?.type || 'SYSTEM_RECOMMENDATION',
+                        sourceId: playbackContext?.id
                     }
                 });
             }
@@ -171,6 +192,56 @@ export const useTelemetryStore = create<TelemetryState>((set, get) => ({
             timeRanges: [],
             activeRangeStart: null,
             lastTrackedProgress: 0
+        });
+    },
+
+    flushTelemetryOnPause: () => {
+        const {currentTrackId, sessionId, timeRanges, activeRangeStart, lastTrackedProgress} = get();
+        if (!currentTrackId || !sessionId) return;
+
+        const playbackContext = usePlayerStore.getState().playbackContext;
+
+        // Mute internal playbacks
+        if (playbackContext?.type === 'SYSTEM_INTERNAL') {
+            set({timeRanges: [], activeRangeStart: null});
+            return;
+        }
+
+        let finalRanges = [...timeRanges];
+        if (activeRangeStart !== null) {
+            finalRanges.push({startMs: activeRangeStart, endMs: lastTrackedProgress * 1000});
+        }
+
+        finalRanges = finalRanges.filter(r => r.endMs > r.startMs);
+
+        if (finalRanges.length > 0) {
+            const playbackDurationMs = finalRanges.reduce((sum, range) => sum + (range.endMs - range.startMs), 0);
+            const MIN_PLAYBACK_DURATION_MS = 2000;
+
+            if (playbackDurationMs >= MIN_PLAYBACK_DURATION_MS) {
+                const startPositionMs = Math.min(...finalRanges.map(r => r.startMs));
+                const endPositionMs = Math.max(...finalRanges.map(r => r.endMs));
+
+                getTelemetryWorker().postMessage({
+                    type: 'ENQUEUE_PLAYBACK',
+                    payload: {
+                        eventId: generateSafeUUID(),
+                        trackId: currentTrackId,
+                        sessionId,
+                        startPositionMs,
+                        endPositionMs,
+                        playbackDurationMs,
+                        sourceType: playbackContext?.type || 'SYSTEM_RECOMMENDATION',
+                        sourceId: playbackContext?.id
+                    }
+                });
+            }
+        }
+
+        // Wipe buffered time ranges, but preserve Track and Session context
+        set({
+            timeRanges: [],
+            activeRangeStart: null
         });
     }
 }));

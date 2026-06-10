@@ -277,6 +277,11 @@ export const useFollowPlaylist = () => {
 
             // 1. Optimistically update Library Sidebar
             if (previousLibrary && playlistInfo) {
+
+                if (previousLibrary.some(item => item.id === playlistId)) {
+                    return {previousLibrary, playlistId};
+                }
+
                 const optimisticItem: LibraryItemDto = {
                     id: playlistInfo.id,
                     type: 'FOLLOWED_PLAYLIST',
