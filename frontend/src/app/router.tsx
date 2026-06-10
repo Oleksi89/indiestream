@@ -13,6 +13,7 @@ import {ProfilePage} from "@/pages/profile/ProfilePage.tsx";
 import {SearchPage} from "@/pages/search/SearchPage.tsx";
 import {AdminTrackRegistryPage} from "@/pages/admin/AdminTrackRegistryPage.tsx";
 import {AdminReviewInspectorPage} from "@/pages/admin/AdminReviewInspectorPage.tsx";
+import {TelemetryProvider} from '@/features/telemetry'; // Added import
 
 const routes = [
     // Guest Only Routes
@@ -34,7 +35,12 @@ const routes = [
         element: <ProtectedRoute/>,
         children: [
             {
-                element: <AuthenticatedLayout/>,
+                // tracking only happens for identified users
+                element: (
+                    <TelemetryProvider>
+                        <AuthenticatedLayout/>
+                    </TelemetryProvider>
+                ),
                 children: [
                     {
                         path: '/',
@@ -58,7 +64,7 @@ const routes = [
                         children: [
                             {
                                 path: '/artist/dashboard',
-                                element: <ArtistDashboardPage/>, // Artist upload hub
+                                element: <ArtistDashboardPage/>, // Artist hub
                             },
                         ],
                     },
