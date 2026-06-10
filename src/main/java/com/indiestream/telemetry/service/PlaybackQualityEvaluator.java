@@ -7,7 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 /**
- * Evaluates the quality of a playback segment to determine if it qualifies for analytics metrics
+ * Evaluates the quality of a playback segment
  */
 @Service
 @RequiredArgsConstructor
@@ -15,11 +15,15 @@ public class PlaybackQualityEvaluator {
 
     private final TrackDurationCache durationCache;
 
-    // Playbacks under 30s are considered skips.
-    private static final int SKIP_THRESHOLD_MS = 30_000;
+    private static final int MIN_VALID_DURATION_MS = 2000; // 2 seconds misclick barrier
+    private static final int SKIP_THRESHOLD_MS = 30_000; // Playbacks under 30s are considered skips.
     private static final double FULL_PLAYBACK_RATIO = 0.80;
 
     public PlaybackStatus evaluate(PlaybackTelemetryPayload payload) {
+        if (payload.playbackDurationMs() < MIN_VALID_DURATION_MS) {
+            return PlaybackStatus.UNKNOWN;
+        }
+
         if (payload.playbackDurationMs() < SKIP_THRESHOLD_MS) {
             return PlaybackStatus.SKIP;
         }

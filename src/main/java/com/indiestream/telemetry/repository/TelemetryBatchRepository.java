@@ -40,7 +40,7 @@ public class TelemetryBatchRepository {
             ) VALUES (
                 :eventId, :userId, :trackId, :sessionId, :startPositionMs, 
                 :endPositionMs, :playbackDurationMs, :clientIp, :userAgent, 
-                :isSuspectedBot, :playbackStatus, :createdAt
+                :suspectedBot, :playbackStatus, :createdAt
             ) 
             ON CONFLICT (event_id, created_at) DO NOTHING
             """;
