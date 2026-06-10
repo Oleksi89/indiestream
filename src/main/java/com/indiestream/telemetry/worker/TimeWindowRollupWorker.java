@@ -38,10 +38,10 @@ public class TimeWindowRollupWorker {
     public void executeHourlyRollup() {
         // ALWAYS target the previous fully-closed hour.
         // E.g., if cron runs at 14:05, targetHour is 13:00, endHour is 14:00.
-        OffsetDateTime targetHour = OffsetDateTime.now(ZoneOffset.UTC)
-                .truncatedTo(ChronoUnit.HOURS)
-                .minusHours(1);
-        OffsetDateTime endHour = targetHour.plusHours(1);
+        OffsetDateTime endHour = OffsetDateTime.now(ZoneOffset.UTC)
+                .truncatedTo(ChronoUnit.HOURS);
+        // Auto-Heal Strategy: Scan the last 6 hours instead of just 1.
+        OffsetDateTime targetHour = endHour.minusHours(6);
 
         log.info("Starting Hourly Telemetry Rollup for window: {} to {}", targetHour, endHour);
 
@@ -54,8 +54,9 @@ public class TimeWindowRollupWorker {
                 trackPlayRows, trackInteractionRows, playlistInteractionRows);
 
         // 2. Fetch the computed deltas to safely broadcast to other modules
-        List<TrackCountersAggregatedEvent> trackDeltas = rollupRepository.fetchTrackStatsForHour(targetHour);
-        List<PlaylistCountersAggregatedEvent> playlistDeltas = rollupRepository.fetchPlaylistStatsForHour(targetHour);
+        OffsetDateTime activeClosedHour = targetHour.minusHours(1);
+        List<TrackCountersAggregatedEvent> trackDeltas = rollupRepository.fetchTrackStatsForHour(activeClosedHour);
+        List<PlaylistCountersAggregatedEvent> playlistDeltas = rollupRepository.fetchPlaylistStatsForHour(activeClosedHour);
 
         // 3. Broadcast to Spring Modulith components
         trackDeltas.forEach(eventPublisher::publishEvent);
@@ -70,12 +71,12 @@ public class TimeWindowRollupWorker {
     @Scheduled(cron = "0 0 2 * * *")
     @SchedulerLock(name = "daily_telemetry_rollup", lockAtLeastFor = "5m", lockAtMostFor = "30m")
     public void executeDailyRollup() {
-        OffsetDateTime targetDayStart = OffsetDateTime.now(ZoneOffset.UTC)
-                .truncatedTo(ChronoUnit.DAYS)
-                .minusDays(1);
-        OffsetDateTime targetDayEnd = targetDayStart.plusDays(1);
+        OffsetDateTime targetDayEnd = OffsetDateTime.now(ZoneOffset.UTC)
+                .truncatedTo(ChronoUnit.DAYS);
+        // Auto-Heal Strategy: Rollup last 3 days to guarantee zero gaps even after long downtime.
+        OffsetDateTime targetDayStart = targetDayEnd.minusDays(3);
 
-        log.info("Starting Daily Telemetry Rollup for day: {}", targetDayStart.toLocalDate());
+        log.info("Starting Daily Telemetry Rollup for day: {}", targetDayEnd.minusDays(1).toLocalDate());
 
         int dailyRows = rollupRepository.aggregateDailyTrackStats(targetDayStart, targetDayEnd);
         log.info("Successfully aggregated {} tracks for daily retention", dailyRows);
