@@ -38,4 +38,20 @@ public class LivePulseService {
         // but for our current scale, piggybacking on the heartbeat is highly efficient O(log(N)).
         redisTemplate.opsForZSet().removeRangeByScore(key, 0, now - ACTIVE_WINDOW_MS);
     }
+
+    /**
+     * Counts the number of distinct listeners currently active within the time window.
+     * High performance O(log(N)) operation using Redis ZCOUNT.
+     *
+     * @param trackId The track to check.
+     * @return Number of concurrent listeners.
+     */
+    public long getConcurrentListenersCount(UUID trackId) {
+        String key = "pulse:track:" + trackId;
+        long now = Instant.now().toEpochMilli();
+        long minScore = now - ACTIVE_WINDOW_MS;
+
+        Long count = redisTemplate.opsForZSet().count(key, minScore, now);
+        return count != null ? count : 0L;
+    }
 }
