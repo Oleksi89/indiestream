@@ -25,7 +25,7 @@ public record PlaybackTelemetryPayload(
         @Min(value = 0, message = "End position must be positive")
         int endPositionMs,
 
-        @Min(value = 0, message = "Playback duration must be positive")
+        @Min(value = 2000, message = "Playback duration must be at least 2000ms to filter out misclicks")
         int playbackDurationMs
 ) {
     public PlaybackTelemetryPayload {
