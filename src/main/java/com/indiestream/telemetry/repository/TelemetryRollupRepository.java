@@ -26,7 +26,7 @@ public class TelemetryRollupRepository {
                     date_trunc('hour', created_at) AS hour_timestamp,
                     COUNT(event_id) FILTER (WHERE playback_status IN ('FULL', 'PARTIAL')) AS plays_count,
                     COUNT(event_id) FILTER (WHERE playback_status = 'SKIP') AS skips_count,
-                    COUNT(DISTINCT session_id) AS unique_listeners_count,
+                    COUNT(DISTINCT COALESCE(user_id::text, session_id::text)) AS unique_listeners_count,
                     0 AS initial_likes
                 FROM raw_playback_logs
                 WHERE created_at >= :start AND created_at < :end
