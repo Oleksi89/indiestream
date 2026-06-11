@@ -4,7 +4,7 @@ import {useAuthStore} from '@/shared/store/authStore';
 import {EditProfileModal} from '@/features/profile/ui/EditProfileModal';
 import {Button} from '@/shared/ui/button';
 import {useState} from 'react';
-import {User, CalendarDays, Loader2, ImageIcon, Lock, UserX} from 'lucide-react';
+import {User, CalendarDays, Loader2, ImageIcon, Lock, UserX, History} from 'lucide-react';
 import {cn} from '@/shared/lib/utils';
 import {useSecureUrl} from "@/shared/hooks/useSecureUrl";
 import {profileApi} from "@/features/profile/api/profile.api";
@@ -13,16 +13,21 @@ import {playlistApi} from '@/features/playlist/api/playlist.api';
 import {mediaApi} from '@/features/media/api/media.api';
 import {LibraryItem} from '@/features/playlist/ui/LibraryItem';
 import {TrackCard} from '@/features/media/ui/TrackCard';
+import {useListeningHistory} from '@/features/analytics/hooks/useAnalytics';
+import {PaginationControls} from '@/shared/ui/PaginationControls';
 import type {PlaylistDto} from '@/features/playlist/types';
+import {usePlayerStore} from '@/shared/store/playerStore';
 
-type Tab = 'playlists' | 'tracks' | 'followers' | 'following';
+type Tab = 'playlists' | 'tracks' | 'followers' | 'following' | 'history';
 
 export const ProfilePage = () => {
     const {username} = useParams<{ username: string }>();
     const navigate = useNavigate();
     const {user: currentUser} = useAuthStore();
+    const {playContext} = usePlayerStore();
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<Tab>('playlists');
+    const [historyPage, setHistoryPage] = useState(0); // For pagination
     const isOwnProfile = currentUser?.username === username;
 
     const {data: profile, isLoading, isError} = useUserProfile(username || '');
@@ -66,6 +71,9 @@ export const ProfilePage = () => {
         enabled: !!profile?.username && activeTab === 'following' && (!profile.profile?.hideSubscriptions || isOwnProfile)
     });
 
+    // Fetch Listening History exclusively for the owner
+    const {data: historyData, isLoading: isHistoryLoading} = useListeningHistory(historyPage);
+
     if (isLoading) {
         return (
             <div className="flex h-full w-full items-center justify-center">
@@ -91,17 +99,24 @@ export const ProfilePage = () => {
 
     const isPrivateAndNotOwner = profile.profile?.isPrivate && !isOwnProfile;
 
-    // Filter tabs dynamically based on privacy settings
+    // Filter tabs dynamically based on privacy settings and ownership
     const tabs = [
         {id: 'playlists', label: 'Playlists', hidden: false},
         {id: 'tracks', label: 'Tracks', hidden: profile.role === 'USER'},
         {id: 'followers', label: 'Followers', hidden: profile.profile?.hideSubscriptions && !isOwnProfile},
         {id: 'following', label: 'Following', hidden: profile.profile?.hideSubscriptions && !isOwnProfile},
+        {id: 'history', label: 'Listening History', hidden: !isOwnProfile}, // Only owner sees history
     ].filter(t => !t.hidden);
 
     const handleFollowToggle = () => {
         if (profile.isFollowedByMe) unfollowMutation.mutate();
         else followMutation.mutate();
+    };
+
+    const handlePlayHistory = (startIndex: number) => {
+        if (!historyData?.content) return;
+        const tracks = historyData.content.map(h => h.track);
+        playContext(tracks, {type: 'PROFILE', id: 'listening-history'}, startIndex);
     };
 
     const formattedDate = new Date(profile.createdAt).toLocaleDateString('en-US', {month: 'long', year: 'numeric'});
@@ -230,6 +245,8 @@ export const ProfilePage = () => {
                                                 : "border-transparent text-slate-400 hover:text-slate-200"
                                         )}
                                     >
+                                        {tab.id === 'history' &&
+                                            <History size={14} className="inline-block mr-1.5 mb-0.5"/>}
                                         {tab.label}
                                     </button>
                                 ))}
@@ -275,6 +292,41 @@ export const ProfilePage = () => {
                                     </div>
                                 )}
 
+                                {/* History Tab */}
+                                {activeTab === 'history' && isOwnProfile && (
+                                    <div className="flex flex-col gap-1">
+                                        {isHistoryLoading ? (
+                                            <Loader2 className="animate-spin text-violet-500 mx-auto my-10 h-8 w-8"/>
+                                        ) : historyData?.content?.length ? (
+                                            <>
+                                                {historyData.content.map((historyItem, index) => (
+                                                    <TrackCard
+                                                        key={`${historyItem.track.id}-${index}`}
+                                                        track={historyItem.track}
+                                                        variant="list"
+                                                        onPlayOverride={() => handlePlayHistory(index)}
+                                                    />
+                                                ))}
+                                                {historyData.totalPages > 1 && (
+                                                    <div className="mt-8 flex justify-center">
+                                                        <PaginationControls
+                                                            currentPage={historyPage}
+                                                            totalPages={historyData.totalPages}
+                                                            onPageChange={setHistoryPage}
+                                                        />
+                                                    </div>
+                                                )}
+                                            </>
+                                        ) : (
+                                            <div
+                                                className="text-center flex flex-col items-center gap-2 text-slate-500 py-20">
+                                                <History size={48} className="opacity-20"/>
+                                                <p>Your listening history is empty.</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
                                 {activeTab === 'followers' && (
                                     <div className="flex flex-col gap-2">
                                         {isFollowersLoading ? (
@@ -285,7 +337,6 @@ export const ProfilePage = () => {
                                                      className="flex items-center gap-4 p-3 rounded-xl border border-transparent hover:border-white/10 bg-slate-900/40 hover:bg-slate-800/60 cursor-pointer transition-all">
                                                     <div
                                                         className="h-12 w-12 rounded-full overflow-hidden bg-slate-800 shrink-0 flex items-center justify-center">
-                                                        {/* Тут ми використовуємо простий підхід до аватару для списків, для оптимізації можна винести в окремий мікро-компонент */}
                                                         <User className="text-slate-500 h-6 w-6"/>
                                                     </div>
                                                     <div className="flex flex-col min-w-0">

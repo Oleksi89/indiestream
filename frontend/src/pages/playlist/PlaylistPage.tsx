@@ -9,7 +9,7 @@ import {
 } from '@/features/playlist/hooks/usePlaylists';
 import {usePlaylistPermissions} from '@/features/playlist/hooks/usePlaylistPermissions';
 import {useLibrary} from '@/features/library/hooks/useLibrary';
-import {Clock, Play, MoreHorizontal, Disc3, Check, Users} from 'lucide-react';
+import {Clock, Play, MoreHorizontal, Disc3, Check, Users, BarChart2} from 'lucide-react';
 import {Button} from '@/shared/ui/button';
 import {cn} from '@/shared/lib/utils';
 import {TrackContextMenu} from '@/features/media/ui/TrackContextMenu';
@@ -24,6 +24,7 @@ import {PlaylistHeader} from '@/features/playlist/ui/PlaylistHeader';
 import {usePlaylistColor} from '@/features/playlist/hooks/usePlaylistColor';
 import type {TrackDto} from "@/features/media/types";
 import {useInteractionTracker} from "@/features/telemetry";
+import {PlaylistAnalyticsModal} from "@/features/playlist/ui/PlaylistAnalyticsModal.tsx";
 
 export const PlaylistPage = () => {
     const {id} = useParams<{ id: string }>();
@@ -34,6 +35,8 @@ export const PlaylistPage = () => {
 
     const [isEditModalOpen, setEditModalOpen] = useState(false);
     const [isCollabModalOpen, setCollabModalOpen] = useState(false);
+
+    const [isAnalyticsModalOpen, setAnalyticsModalOpen] = useState(false);
 
     const {data: playlist, isLoading: isPlaylistLoading} = useQuery({
         queryKey: playlistKeys.detail(id!),
@@ -139,6 +142,14 @@ export const PlaylistPage = () => {
                     </Button>
                 )}
 
+                {isOwner && !playlist.isSystem && (
+                    <Button variant="ghost"
+                            className="rounded-full text-violet-300 hover:text-white hover:bg-violet-500/20 bg-violet-500/10 border border-violet-500/30"
+                            onClick={() => setAnalyticsModalOpen(true)}>
+                        <BarChart2 className="w-5 h-5 mr-2"/> Stats
+                    </Button>
+                )}
+
                 {/* Clean Dropdown Encapsulation */}
                 <PlaylistDropdownMenu playlist={playlist}>
                     <button className="text-white/60 hover:text-white transition-colors focus:outline-none">
@@ -189,6 +200,8 @@ export const PlaylistPage = () => {
             {playlist.isCollaborative && currentUser?.id &&
                 <CollaboratorsModal playlist={playlist} currentUserId={currentUser?.id} isOpen={isCollabModalOpen}
                                     onClose={() => setCollabModalOpen(false)}/>}
+            {isOwner && <PlaylistAnalyticsModal playlist={playlist} isOpen={isAnalyticsModalOpen}
+                                                onClose={() => setAnalyticsModalOpen(false)}/>}
         </div>
     );
 };
