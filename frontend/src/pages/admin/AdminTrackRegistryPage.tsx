@@ -7,6 +7,7 @@ import {useAdminFilters} from "@/features/media/sub-features/admin/hooks/useAdmi
 import {useGlobalAdminTracks} from "@/features/media/sub-features/admin/hooks/useAdminQueries.ts";
 import {AdminTrackTable} from "@/features/media/sub-features/admin/ui/AdminTrackTable.tsx";
 import {AdminFiltersBar} from "@/features/media/sub-features/admin/ui/AdminFiltersBar.tsx";
+import {AdminPlatformAnalytics} from "@/features/analytics/ui/AdminPlatformAnalytics.tsx";
 
 export const AdminTrackRegistryPage = () => {
     const navigate = useNavigate();
@@ -48,6 +49,9 @@ export const AdminTrackRegistryPage = () => {
                     Advanced moderation workspace and cross-module audit center.
                 </p>
             </div>
+
+            {/* Admin Global Telemetry Widget */}
+            <AdminPlatformAnalytics/>
 
             {/* Smart Filters Bar */}
             <AdminFiltersBar
