@@ -1,6 +1,8 @@
 package com.indiestream.telemetry.service.analytics;
 
 import com.indiestream.telemetry.domain.AnalyticsTimeRange;
+import com.indiestream.telemetry.dto.analytics.EngagementMetricsDto;
+import com.indiestream.telemetry.dto.analytics.PlaylistOverviewDto;
 import com.indiestream.telemetry.dto.analytics.SummaryMetricsDto;
 import com.indiestream.telemetry.repository.SupplementalAnalyticsQueryRepository;
 import com.indiestream.telemetry.repository.projection.AggregateMetricsProjection;
@@ -17,13 +19,16 @@ public class CuratorAnalyticsService {
     private final SupplementalAnalyticsQueryRepository queryRepository;
 
     @Cacheable(value = "analytics:historical", key = "#ownerId + '-' + #playlistId + '-' + #timeRange.name()")
-    public SummaryMetricsDto getPlaylistOverview(UUID playlistId, UUID ownerId, AnalyticsTimeRange timeRange) {
+    public PlaylistOverviewDto getPlaylistOverview(UUID playlistId, UUID ownerId, AnalyticsTimeRange timeRange) {
         AggregateMetricsProjection current = queryRepository.getPlaylistGlobalMetrics(
-                playlistId, ownerId, timeRange.getCurrentStartDate(), timeRange.getCurrentEndDate());
+                playlistId, timeRange.getCurrentStartOffset(), timeRange.getCurrentEndOffset());
 
         AggregateMetricsProjection prev = queryRepository.getPlaylistGlobalMetrics(
-                playlistId, ownerId, timeRange.getPreviousStartDate(), timeRange.getCurrentStartDate().minusDays(1));
+                playlistId, timeRange.getPreviousStartOffset(), timeRange.getPreviousEndOffset());
 
-        return GrowthCalculator.buildSummary(current, prev);
+        SummaryMetricsDto summary = GrowthCalculator.buildSummary(current, prev);
+        EngagementMetricsDto engagement = GrowthCalculator.buildEngagement(current);
+
+        return new PlaylistOverviewDto(summary, engagement);
     }
 }
