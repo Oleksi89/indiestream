@@ -60,19 +60,39 @@ public class TelemetryRollupRepository {
         return jdbcTemplate.update(sql, new MapSqlParameterSource().addValue("start", start).addValue("end", end));
     }
 
+    /**
+     * Aggregates daily statistics.
+     * Applies CTE to accurately calculate distinct listeners directly from raw logs,
+     * preventing the double-counting anomaly of summing hourly distincts.
+     */
     public int aggregateDailyTrackStats(OffsetDateTime startOfDay, OffsetDateTime endOfDay) {
         String sql = """                
+                WITH hourly_sums AS (
+                    SELECT 
+                        track_id,
+                        DATE(hour_timestamp AT TIME ZONE 'UTC') AS date_timestamp,
+                        SUM(plays) AS plays_sum,
+                        SUM(skips) AS skips_sum,
+                        SUM(likes) AS likes_sum
+                    FROM track_hourly_stats
+                    WHERE hour_timestamp >= :start AND hour_timestamp < :end
+                    GROUP BY track_id, DATE(hour_timestamp AT TIME ZONE 'UTC')
+                ),
+                daily_uniques AS (
+                    SELECT 
+                        track_id,
+                        DATE(created_at AT TIME ZONE 'UTC') AS date_timestamp,
+                        COUNT(DISTINCT COALESCE(user_id::text, session_id::text)) AS sessions_sum
+                    FROM raw_playback_logs
+                    WHERE created_at >= :start AND created_at < :end
+                      AND playback_status IN ('FULL', 'PARTIAL') AND source_type != 'SYSTEM_INTERNAL'
+                    GROUP BY track_id, DATE(created_at AT TIME ZONE 'UTC')
+                )
                 INSERT INTO track_daily_stats (track_id, date_timestamp, plays, skips, unique_listeners, likes)
                 SELECT 
-                    track_id,
-                    DATE(hour_timestamp) AS date_timestamp,
-                    SUM(plays) AS plays_sum,
-                    SUM(skips) AS skips_sum,
-                    SUM(unique_listeners) AS sessions_sum,
-                    SUM(likes) AS likes_sum
-                FROM track_hourly_stats
-                WHERE hour_timestamp >= :start AND hour_timestamp < :end
-                GROUP BY track_id, DATE(hour_timestamp)
+                    h.track_id, h.date_timestamp, h.plays_sum, h.skips_sum, COALESCE(u.sessions_sum, 0), h.likes_sum
+                FROM hourly_sums h
+                LEFT JOIN daily_uniques u ON h.track_id = u.track_id AND h.date_timestamp = u.date_timestamp
                 ON CONFLICT (track_id, date_timestamp) 
                 DO UPDATE SET 
                     plays = EXCLUDED.plays,
@@ -160,13 +180,25 @@ public class TelemetryRollupRepository {
 
     public int aggregateDailyPlaylistStats(OffsetDateTime startOfDay, OffsetDateTime endOfDay) {
         String sql = """
+            WITH hourly_sums AS (
+                SELECT playlist_id, DATE(hour_timestamp AT TIME ZONE 'UTC') AS date_timestamp,
+                       SUM(plays) AS plays_sum, SUM(skips) AS skips_sum, SUM(likes) AS likes_sum
+                FROM playlist_hourly_stats
+                WHERE hour_timestamp >= :start AND hour_timestamp < :end
+                GROUP BY playlist_id, DATE(hour_timestamp AT TIME ZONE 'UTC')
+            ),
+            daily_uniques AS (
+                SELECT source_id AS playlist_id, DATE(created_at AT TIME ZONE 'UTC') AS date_timestamp,
+                       COUNT(DISTINCT COALESCE(user_id::text, session_id::text)) AS sessions_sum
+                FROM raw_playback_logs
+                WHERE created_at >= :start AND created_at < :end
+                  AND source_type = 'PLAYLIST' AND source_id IS NOT NULL AND is_suspected_bot = false
+                GROUP BY source_id, DATE(created_at AT TIME ZONE 'UTC')
+            )
             INSERT INTO playlist_daily_stats (playlist_id, date_timestamp, plays, skips, unique_listeners, likes)
-            SELECT 
-                playlist_id, DATE(hour_timestamp) AS date_timestamp,
-                SUM(plays), SUM(skips), SUM(unique_listeners), SUM(likes)
-            FROM playlist_hourly_stats
-            WHERE hour_timestamp >= :start AND hour_timestamp < :end
-            GROUP BY playlist_id, DATE(hour_timestamp)
+            SELECT h.playlist_id, h.date_timestamp, h.plays_sum, h.skips_sum, COALESCE(u.sessions_sum, 0), h.likes_sum
+            FROM hourly_sums h
+            LEFT JOIN daily_uniques u ON h.playlist_id = u.playlist_id AND h.date_timestamp = u.date_timestamp
             ON CONFLICT (playlist_id, date_timestamp) 
             DO UPDATE SET plays = EXCLUDED.plays, skips = EXCLUDED.skips, unique_listeners = EXCLUDED.unique_listeners, likes = EXCLUDED.likes
             """;
@@ -203,5 +235,32 @@ public class TelemetryRollupRepository {
             DO UPDATE SET plays = EXCLUDED.plays
             """;
         return jdbcTemplate.update(sql, new MapSqlParameterSource().addValue("start", startOfDay).addValue("end", endOfDay));
+    }
+
+
+    public int refreshTrackPopularityScores() {
+        String sql = """
+            WITH recent_stats AS (
+                SELECT 
+                    track_id, 
+                    SUM(plays) * 1.0 + SUM(unique_listeners) * 2.0 + SUM(likes) * 5.0 AS calculated_score
+                FROM track_daily_stats
+                WHERE date_timestamp >= CURRENT_DATE - INTERVAL '7 days'
+                GROUP BY track_id
+            ),
+            updated_active AS (
+                UPDATE tracks t
+                SET popularity_score = r.calculated_score
+                FROM recent_stats r
+                WHERE t.id = r.track_id
+                RETURNING t.id
+            )
+            UPDATE tracks t
+            SET popularity_score = popularity_score * 0.5
+            WHERE id NOT IN (SELECT id FROM updated_active)
+              AND popularity_score > 0.01;
+            """;
+
+        return jdbcTemplate.update(sql, new MapSqlParameterSource());
     }
 }
