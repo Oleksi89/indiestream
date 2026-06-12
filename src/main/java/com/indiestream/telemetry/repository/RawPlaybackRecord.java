@@ -21,6 +21,7 @@ public record RawPlaybackRecord(
         String playbackStatus,
         String sourceType,
         UUID sourceId,
+        String clientCountry,
         OffsetDateTime createdAt
 ) {
 }

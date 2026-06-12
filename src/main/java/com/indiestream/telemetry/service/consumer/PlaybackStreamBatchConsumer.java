@@ -23,7 +23,9 @@ import org.springframework.stereotype.Service;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -39,7 +41,7 @@ public class PlaybackStreamBatchConsumer {
     private final ObjectMapper objectMapper;
     private final TelemetryBatchRepository batchRepository;
     private final PlaybackQualityEvaluator qualityEvaluator;
-    private final List<FraudGuard> fraudGuards; // Injects all strategy implementations
+    private final List<FraudGuard> fraudGuards;
     private final LivePulseService livePulseService;
 
     private static final int BATCH_SIZE = 500;
@@ -64,18 +66,28 @@ public class PlaybackStreamBatchConsumer {
 
         for (MapRecord<String, Object, Object> record : records) {
             try {
-                PlaybackTelemetryPayload payload = objectMapper.convertValue(record.getValue(), PlaybackTelemetryPayload.class);
-                String userIdStr = (String) record.getValue().get("userId");
-                String clientIp = (String) record.getValue().get("clientIp");
-                String userAgent = (String) record.getValue().get("userAgent");
-                String ingestedAt = (String) record.getValue().get("ingestedAt");
+                // 1. Sanitize the incoming map to destroy any literal "null" strings
+                // This prevents Jackson from crashing on UUID fields like sourceId
+                Map<String, Object> safeRecordMap = new HashMap<>();
+                record.getValue().forEach((k, v) -> {
+                    if (v != null && !"null".equalsIgnoreCase(String.valueOf(v).trim())) {
+                        safeRecordMap.put(String.valueOf(k), v);
+                    }
+                });
 
-                UUID userId = null;
-                if (userIdStr != null && !"null".equals(userIdStr) && !"anonymous".equals(userIdStr) && !"anonymousUser".equals(userIdStr)) {
-                    userId = UUID.fromString(userIdStr);
-                }
+                PlaybackTelemetryPayload payload = objectMapper.convertValue(safeRecordMap, PlaybackTelemetryPayload.class);
 
-                // 1. Evaluate Quality
+                String userIdStr = (String) safeRecordMap.get("userId");
+                String clientIp = (String) safeRecordMap.get("clientIp");
+                String userAgent = (String) safeRecordMap.get("userAgent");
+                String ingestedAt = (String) safeRecordMap.get("ingestedAt");
+
+                // Fallback to XX if missing entirely
+                String rawCountry = (String) safeRecordMap.getOrDefault("clientCountry", "XX");
+                String validCountry = validateAndSanitizeCountry(rawCountry);
+
+                UUID userId = (userIdStr != null) ? UUID.fromString(userIdStr) : null;
+
                 PlaybackStatus status = qualityEvaluator.evaluate(payload);
 
                 // 2. Evaluate Anti-Fraud Strategies
@@ -89,9 +101,20 @@ public class PlaybackStreamBatchConsumer {
 
                 // 4. Map to Persistence Record
                 batch.add(new RawPlaybackRecord(
-                        payload.eventId(), userId, payload.trackId(), payload.sessionId(),
-                        payload.startPositionMs(), payload.endPositionMs(), payload.playbackDurationMs(),
-                        clientIp, userAgent, isBot, status.name(), payload.sourceType(), payload.sourceId(),
+                        payload.eventId(),
+                        userId,
+                        payload.trackId(),
+                        payload.sessionId(),
+                        payload.startPositionMs(),
+                        payload.endPositionMs(),
+                        payload.playbackDurationMs(),
+                        clientIp,
+                        userAgent,
+                        isBot,
+                        status.name(),
+                        payload.sourceType(),
+                        payload.sourceId(),
+                        validCountry,
                         OffsetDateTime.parse(ingestedAt)
                 ));
 
@@ -100,7 +123,7 @@ public class PlaybackStreamBatchConsumer {
             } catch (Exception e) {
                 log.error("Failed to process playback record {}. Routing to DLQ.", record.getId(), e);
                 routeToDlq(record, "CONSUMER_PROCESSING_ERROR", e.getMessage());
-                // We must ACK the bad record so the consumer doesn't get stuck in a loop
+                // ACK the poisoned record so we don't get stuck in an infinite loop
                 processedIds.add(record.getId());
             }
         }
@@ -118,6 +141,25 @@ public class PlaybackStreamBatchConsumer {
                     processedIds.toArray(new RecordId[0])
             );
         }
+    }
+
+    /**
+     * Validates the country code against ISO 3166-1 alpha-2 standard.
+     * Uses a Graceful Fallback instead of throwing exceptions to prevent telemetry data loss.
+     */
+    private String validateAndSanitizeCountry(String countryCode) {
+        if (countryCode == null || countryCode.isBlank() || "null".equalsIgnoreCase(countryCode.trim())) {
+            return "XX";
+        }
+
+        String sanitized = countryCode.trim().toUpperCase();
+
+        if (!sanitized.matches("^[A-Z]{2}$")) {
+            log.warn("Invalid ISO country code received: '{}'. Falling back to 'XX'.", sanitized);
+            return "XX";
+        }
+
+        return sanitized;
     }
 
     private void routeToDlq(MapRecord<String, Object, Object> originalRecord, String errorType, String reason) {

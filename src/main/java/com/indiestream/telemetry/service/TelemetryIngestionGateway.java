@@ -7,6 +7,7 @@ import com.indiestream.telemetry.dto.PlaybackTelemetryPayload;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.connection.RedisStreamCommands;
 import org.springframework.data.redis.connection.stream.MapRecord;
 import org.springframework.data.redis.connection.stream.StreamRecords;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -15,7 +16,6 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * High-throughput ingestion gateway buffering telemetry payloads into Redis Streams.
@@ -34,9 +34,17 @@ public class TelemetryIngestionGateway {
     private static final String STREAM_DLQ = "stream:dlq";
 
     @CircuitBreaker(name = "redisTelemetry", fallbackMethod = "fallbackPlaybackIngestion")
-    public void ingestPlayback(PlaybackTelemetryPayload payload, String userId, String clientIp, String userAgent) {
+    public void ingestPlayback(PlaybackTelemetryPayload payload, String userId, String clientIp, String userAgent, String clientCountry) {
         try {
             Map<String, String> recordData = buildEnrichedPayload(payload, userId, clientIp, userAgent);
+
+            // Defensive validation for country code before Redis insertion
+            if (clientCountry != null && !clientCountry.isBlank() && !"null".equalsIgnoreCase(clientCountry.trim())) {
+                recordData.put("clientCountry", clientCountry.toUpperCase());
+            } else {
+                recordData.put("clientCountry", "XX");
+            }
+
             pushToStream(STREAM_PLAYBACK, recordData);
         } catch (Exception e) {
             routeToDlq(payload.eventId().toString(), "PLAYBACK", e.getMessage());
@@ -57,22 +65,29 @@ public class TelemetryIngestionGateway {
         MapRecord<String, String, String> record = StreamRecords.newRecord()
                 .ofStrings(data)
                 .withStreamKey(streamKey);
-        redisTemplate.opsForStream().add(record);
+        redisTemplate.opsForStream().add(record.withStreamKey(streamKey), RedisStreamCommands.XAddOptions.maxlen(10000));
     }
 
     /**
-     * Serializes the DTO into a Map<String, String> as required by Redis Streams
-     * and enriches it with the HTTP Request context.
+     * Serializes the DTO into a Map<String, String> as required by Redis Streams.
+     * Safely omits null values to prevent "null" string poison pills.
      */
     private Map<String, String> buildEnrichedPayload(Object payload, String userId, String clientIp, String userAgent) {
         Map<String, Object> baseMap = objectMapper.convertValue(payload, new TypeReference<>() {
         });
+        Map<String, String> enrichedMap = new HashMap<>();
 
-        // Convert Object values to String to satisfy StringRedisTemplate constraints
-        Map<String, String> enrichedMap = baseMap.entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> String.valueOf(e.getValue())));
+        // Strictly filter out nulls to prevent String.valueOf() from creating "null" strings
+        baseMap.forEach((key, value) -> {
+            if (value != null) {
+                enrichedMap.put(key, String.valueOf(value));
+            }
+        });
 
-        enrichedMap.put("userId", userId);
+        if (userId != null && !userId.equals("anonymousUser") && !userId.equals("anonymous")) {
+            enrichedMap.put("userId", userId);
+        }
+
         enrichedMap.put("clientIp", clientIp != null ? clientIp : "UNKNOWN");
         enrichedMap.put("userAgent", userAgent != null ? userAgent : "UNKNOWN");
         enrichedMap.put("ingestedAt", Instant.now().toString());
@@ -95,7 +110,7 @@ public class TelemetryIngestionGateway {
     // These ensure that if Redis is offline, the client does not receive an HTTP 500.
     // Telemetry is silently dropped (Fail-Safe), preserving the core user playback experience.
 
-    public void fallbackPlaybackIngestion(PlaybackTelemetryPayload payload, String userId, String clientIp, String userAgent, Throwable t) {
+    public void fallbackPlaybackIngestion(PlaybackTelemetryPayload payload, String userId, String clientIp, String userAgent, String clientCountry, Throwable t) {
         log.warn("[Circuit Breaker] Redis unavailable. Dropping playback telemetry for event: {}. Reason: {}", payload.eventId(), t.getMessage());
     }
 
