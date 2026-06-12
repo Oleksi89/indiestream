@@ -15,6 +15,7 @@ services:
   redis:
     image: redis:7.2-alpine
     container_name: indiestream-redis
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
     ports:
       - "6379:6379"
     restart: unless-stopped
