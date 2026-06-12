@@ -32,7 +32,10 @@ public record PlaybackTelemetryPayload(
         @NotBlank(message = "Source Type (Context) is required for AI Vector modeling")
         String sourceType,
 
-        UUID sourceId
+        UUID sourceId,
+
+        // @NotBlank(message = "Client country is required for logs")
+        String client_country
 ) {
     public PlaybackTelemetryPayload {
         if (endPositionMs < startPositionMs) {

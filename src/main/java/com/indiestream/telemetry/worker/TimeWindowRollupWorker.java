@@ -1,6 +1,5 @@
 package com.indiestream.telemetry.worker;
 
-
 import com.indiestream.shared.event.PlaylistCountersAggregatedEvent;
 import com.indiestream.shared.event.TrackCountersAggregatedEvent;
 import com.indiestream.telemetry.repository.TelemetryRollupRepository;
@@ -15,6 +14,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Distributed orchestrator for time-series aggregation.
@@ -30,55 +30,71 @@ public class TimeWindowRollupWorker {
     private final ApplicationEventPublisher eventPublisher;
 
     /**
-     * Executes at minute 5 of every hour (e.g., 14:05, 15:05).
-     * The 5-minute offset ensures all Redis buffers and DLQs for the previous hour are fully flushed.
+     * CRON: Executes at minute 5 of every hour.
      */
     @Scheduled(cron = "0 5 * * * *")
     @SchedulerLock(name = "hourly_telemetry_rollup", lockAtLeastFor = "2m", lockAtMostFor = "10m")
-    public void executeHourlyRollup() {
-        // ALWAYS target the previous fully-closed hour.
-        // E.g., if cron runs at 14:05, targetHour is 13:00, endHour is 14:00.
-        OffsetDateTime endHour = OffsetDateTime.now(ZoneOffset.UTC)
-                .truncatedTo(ChronoUnit.HOURS);
-        // Auto-Heal Strategy: Scan the last 6 hours instead of just 1.
-        OffsetDateTime targetHour = endHour.minusHours(6);
+    public void executeHourlyRollupCron() {
+        OffsetDateTime endHour = OffsetDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.HOURS);
+        OffsetDateTime targetHour = endHour.minusHours(6); // Auto-Heal Strategy
 
-        log.info("Starting Hourly Telemetry Rollup for window: {} to {}", targetHour, endHour);
-
-        // 1. Execute DB-native High Performance UPSERTs
-        int trackPlayRows = rollupRepository.aggregateHourlyTrackPlaybacks(targetHour, endHour);
-        int trackInteractionRows = rollupRepository.aggregateHourlyTrackInteractions(targetHour, endHour);
-        int playlistInteractionRows = rollupRepository.aggregateHourlyPlaylistInteractions(targetHour, endHour);
-
-        log.info("Aggregated {} track playback rows, {} track interaction rows, {} playlist interaction rows",
-                trackPlayRows, trackInteractionRows, playlistInteractionRows);
-
-        // 2. Fetch the computed deltas to safely broadcast to other modules
-        OffsetDateTime activeClosedHour = targetHour.minusHours(1);
-        List<TrackCountersAggregatedEvent> trackDeltas = rollupRepository.fetchTrackStatsForHour(activeClosedHour);
-        List<PlaylistCountersAggregatedEvent> playlistDeltas = rollupRepository.fetchPlaylistStatsForHour(activeClosedHour);
-
-        // 3. Broadcast to Spring Modulith components
-        trackDeltas.forEach(eventPublisher::publishEvent);
-        playlistDeltas.forEach(eventPublisher::publishEvent);
-
-        log.info("Successfully broadcasted {} track events and {} playlist events", trackDeltas.size(), playlistDeltas.size());
+        log.info("[CRON] Starting Hourly Telemetry Rollup for window: {} to {}", targetHour, endHour);
+        Map<String, Integer> stats = executeHourlyRollup(targetHour, endHour);
+        log.info("[CRON] Aggregation complete: {}", stats);
     }
 
     /**
-     * Executes every day at 02:00 AM. Rolls up the 24 hourly rows into 1 daily row permanently.
+     * CRON: Executes every day at 02:00 AM.
      */
     @Scheduled(cron = "0 0 2 * * *")
     @SchedulerLock(name = "daily_telemetry_rollup", lockAtLeastFor = "5m", lockAtMostFor = "30m")
-    public void executeDailyRollup() {
-        OffsetDateTime targetDayEnd = OffsetDateTime.now(ZoneOffset.UTC)
-                .truncatedTo(ChronoUnit.DAYS);
-        // Auto-Heal Strategy: Rollup last 3 days to guarantee zero gaps even after long downtime.
-        OffsetDateTime targetDayStart = targetDayEnd.minusDays(3);
+    public void executeDailyRollupCron() {
+        OffsetDateTime targetDayEnd = OffsetDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.DAYS);
+        OffsetDateTime targetDayStart = targetDayEnd.minusDays(3); // Auto-Heal Strategy
 
-        log.info("Starting Daily Telemetry Rollup for day: {}", targetDayEnd.minusDays(1).toLocalDate());
+        log.info("[CRON] Starting Daily Telemetry Rollup for window: {} to {}", targetDayStart, targetDayEnd);
+        int rows = executeDailyRollup(targetDayStart, targetDayEnd);
+        log.info("[CRON] Daily aggregation complete. {} tracks preserved.", rows);
+    }
 
-        int dailyRows = rollupRepository.aggregateDailyTrackStats(targetDayStart, targetDayEnd);
-        log.info("Successfully aggregated {} tracks for daily retention", dailyRows);
+    // --- PUBLIC METHODS FOR MANUAL TRIGGERING VIA ADMIN API ---
+
+    /**
+     * Executes the hourly database aggregation and dispatches Modulith events.
+     *
+     * @return A map containing operation statistics for the caller.
+     */
+    public Map<String, Integer> executeHourlyRollup(OffsetDateTime start, OffsetDateTime end) {
+        log.info("Executing Hourly Rollup from {} to {}", start, end);
+        int trackPlayRows = rollupRepository.aggregateHourlyTrackPlaybacks(start, end);
+        int trackInteractionRows = rollupRepository.aggregateHourlyTrackInteractions(start, end);
+
+        int playlistPlayRows = rollupRepository.aggregateHourlyPlaylistPlaybacks(start, end);
+        int playlistInteractionRows = rollupRepository.aggregateHourlyPlaylistInteractions(start, end);
+
+        OffsetDateTime activeClosedHour = end.minusHours(1);
+        List<TrackCountersAggregatedEvent> trackEvents = rollupRepository.fetchTrackStatsForHour(activeClosedHour);
+        trackEvents.forEach(eventPublisher::publishEvent);
+
+        List<PlaylistCountersAggregatedEvent> playlistEvents = rollupRepository.fetchPlaylistStatsForHour(activeClosedHour);
+        playlistEvents.forEach(eventPublisher::publishEvent);
+
+        return Map.of(
+                "trackPlaybacksAggregated", trackPlayRows,
+                "trackInteractionsAggregated", trackInteractionRows,
+                "playlistInteractionsAggregated", playlistInteractionRows,
+                "modulithEventsDispatched", trackEvents.size() + playlistEvents.size()
+        );
+    }
+
+    /**
+     * Executes the daily database compression logic.
+     */
+    public int executeDailyRollup(OffsetDateTime start, OffsetDateTime end) {
+        log.info("Executing Daily Compression Rollup from {} to {}", start, end);
+        rollupRepository.aggregateDailyTrackStats(start, end);
+        rollupRepository.aggregateDailyPlaylistStats(start, end);
+        rollupRepository.aggregateDailyTrackDemographics(start, end);
+        return rollupRepository.aggregateDailyTrackStats(start, end);
     }
 }

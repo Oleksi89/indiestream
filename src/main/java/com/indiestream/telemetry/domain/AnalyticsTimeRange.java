@@ -28,11 +28,27 @@ public enum AnalyticsTimeRange {
         return LocalDate.now(ZoneOffset.UTC);
     }
 
-    public OffsetDateTime getCurrentStartOffset() {
-        return OffsetDateTime.now(ZoneOffset.UTC).minusDays(this.days);
-    }
-
     public OffsetDateTime getCurrentEndOffset() {
         return OffsetDateTime.now(ZoneOffset.UTC);
+    }
+
+    public OffsetDateTime getCurrentStartOffset() {
+        if (this == ALL_TIME) {
+            // Project epoch (e.g., when the platform was launched)
+            return OffsetDateTime.of(2024, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC);
+        }
+        return getCurrentEndOffset().minusDays(this.days);
+    }
+
+    public OffsetDateTime getPreviousEndOffset() {
+        // Exactly 1 millisecond before the current period starts to prevent overlap
+        return getCurrentStartOffset().minusNanos(1000000);
+    }
+
+    public OffsetDateTime getPreviousStartOffset() {
+        if (this == ALL_TIME) {
+            return OffsetDateTime.of(2014, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC);
+        }
+        return getPreviousEndOffset().minusDays(this.days);
     }
 }

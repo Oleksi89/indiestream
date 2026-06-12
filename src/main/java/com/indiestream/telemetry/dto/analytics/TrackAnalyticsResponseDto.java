@@ -7,9 +7,10 @@ public record TrackAnalyticsResponseDto(
         EngagementMetricsDto engagement,
         List<TimeSeriesPointDto> timeSeries,
         List<AttributionMetricDto> attribution,
+        List<RegionStatDto> demographics,
         long currentConcurrentListeners
 ) {
     public TrackAnalyticsResponseDto withConcurrentListeners(long concurrentListeners) {
-        return new TrackAnalyticsResponseDto(summary, engagement, timeSeries, attribution, concurrentListeners);
+        return new TrackAnalyticsResponseDto(summary, engagement, timeSeries, attribution, demographics, concurrentListeners);
     }
 }
