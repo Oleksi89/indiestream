@@ -1,7 +1,6 @@
 package com.indiestream.auth.controller;
 
-import com.indiestream.auth.dto.PageResponse;
-import com.indiestream.auth.dto.UserDto;
+import com.indiestream.shared.dto.PageResponse;
 import com.indiestream.auth.dto.UserSummaryDto;
 import com.indiestream.auth.service.FollowService;
 import lombok.RequiredArgsConstructor;
