@@ -3,7 +3,7 @@ package com.indiestream.auth.service;
 import com.indiestream.auth.domain.User;
 import com.indiestream.auth.domain.UserFollower;
 import com.indiestream.auth.domain.UserFollowerId;
-import com.indiestream.auth.dto.PageResponse;
+import com.indiestream.shared.dto.PageResponse;
 import com.indiestream.auth.dto.UserSummaryDto;
 import com.indiestream.auth.event.UserFollowedEvent;
 import com.indiestream.auth.event.UserUnfollowedEvent;

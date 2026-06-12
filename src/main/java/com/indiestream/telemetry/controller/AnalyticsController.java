@@ -1,14 +1,12 @@
 package com.indiestream.telemetry.controller;
 
+import com.indiestream.shared.dto.PageResponse;
 import com.indiestream.telemetry.domain.AnalyticsTimeRange;
-import com.indiestream.telemetry.dto.analytics.ArtistOverviewDto;
-import com.indiestream.telemetry.dto.analytics.SummaryMetricsDto;
-import com.indiestream.telemetry.dto.analytics.TrackAnalyticsResponseDto;
-import com.indiestream.telemetry.service.analytics.AdminAnalyticsService;
-import com.indiestream.telemetry.service.analytics.ArtistAnalyticsService;
-import com.indiestream.telemetry.service.analytics.CsvExportService;
-import com.indiestream.telemetry.service.analytics.CuratorAnalyticsService;
+import com.indiestream.telemetry.dto.analytics.*;
+import com.indiestream.telemetry.service.analytics.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -30,6 +28,7 @@ public class AnalyticsController {
     private final ArtistAnalyticsService artistAnalyticsService;
     private final CuratorAnalyticsService curatorAnalyticsService;
     private final AdminAnalyticsService adminAnalyticsService;
+    private final UserListeningHistoryService userListeningHistoryService;
     private final CsvExportService csvExportService;
 
     /**
@@ -83,7 +82,7 @@ public class AnalyticsController {
      * CURATOR WORKSPACE: Playlist performance overview.
      */
     @GetMapping("/curator/playlists/{playlistId}")
-    public ResponseEntity<SummaryMetricsDto> getPlaylistAnalytics(
+    public ResponseEntity<PlaylistOverviewDto> getPlaylistAnalytics(
             Principal principal,
             @PathVariable UUID playlistId,
             @RequestParam(defaultValue = "LAST_7_DAYS") AnalyticsTimeRange timeRange) {
@@ -102,5 +101,20 @@ public class AnalyticsController {
             @RequestParam(defaultValue = "LAST_7_DAYS") AnalyticsTimeRange timeRange) {
 
         return ResponseEntity.ok(adminAnalyticsService.getPlatformOverview(timeRange));
+    }
+
+    /**
+     * USER DASHBOARD: Fetch authentic paginated listening history.
+     * Automatically filters skips and administrative system-internal loops.
+     */
+    @GetMapping("/me/history")
+    public ResponseEntity<PageResponse<ListeningHistoryItemDto>> getMyListeningHistory(
+            Principal principal,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+
+        UUID userId = UUID.fromString(principal.getName());
+        Pageable pageable = PageRequest.of(page, size);
+        return ResponseEntity.ok(userListeningHistoryService.getUserHistory(userId, pageable));
     }
 }

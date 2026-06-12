@@ -8,9 +8,7 @@ import com.indiestream.telemetry.service.LivePulseService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -35,16 +33,16 @@ public class ArtistAnalyticsService {
     @Cacheable(value = "analytics:historical", key = "#artistId + '-overview-' + #timeRange.name()")
     public ArtistOverviewDto getArtistGlobalOverview(UUID artistId, AnalyticsTimeRange timeRange) {
         AggregateMetricsProjection current = queryRepository.getArtistGlobalMetrics(
-                artistId, timeRange.getCurrentStartDate(), timeRange.getCurrentEndDate());
+                artistId, timeRange.getCurrentStartOffset(), timeRange.getCurrentEndOffset());
 
         AggregateMetricsProjection prev = queryRepository.getArtistGlobalMetrics(
-                artistId, timeRange.getPreviousStartDate(), timeRange.getCurrentStartDate().minusDays(1));
+                artistId, timeRange.getPreviousStartOffset(), timeRange.getPreviousEndOffset());
 
         SummaryMetricsDto summary = GrowthCalculator.buildSummary(current, prev);
         EngagementMetricsDto engagement = GrowthCalculator.buildEngagement(current);
 
         List<TopPerformingTrackDto> topTracks = queryRepository.getTopTracksForArtist(
-                        artistId, timeRange.getCurrentStartDate(), timeRange.getCurrentEndDate(), 5)
+                        artistId, timeRange.getCurrentStartOffset(), timeRange.getCurrentEndOffset(), 5)
                 .stream()
                 .map(t -> new TopPerformingTrackDto(
                         t.trackId(), t.title(), t.coverMinioPath(), t.plays(), t.uniqueListeners(),
@@ -60,16 +58,16 @@ public class ArtistAnalyticsService {
     @Cacheable(value = "analytics:historical", key = "#artistId + '-' + #trackId + '-' + #timeRange.name()")
     public TrackAnalyticsResponseDto getTrackHistoricalAnalytics(UUID trackId, UUID artistId, AnalyticsTimeRange timeRange) {
         AggregateMetricsProjection current = queryRepository.getTrackMetrics(
-                trackId, artistId, timeRange.getCurrentStartDate(), timeRange.getCurrentEndDate());
+                trackId, artistId, timeRange.getCurrentStartOffset(), timeRange.getCurrentEndOffset());
 
         AggregateMetricsProjection prev = queryRepository.getTrackMetrics(
-                trackId, artistId, timeRange.getPreviousStartDate(), timeRange.getCurrentStartDate().minusDays(1));
+                trackId, artistId, timeRange.getPreviousStartOffset(), timeRange.getPreviousEndOffset());
 
         SummaryMetricsDto summary = GrowthCalculator.buildSummary(current, prev);
         EngagementMetricsDto engagement = GrowthCalculator.buildEngagement(current);
 
         List<TimeSeriesPointDto> timeSeries = queryRepository.getTrackTimeSeries(
-                        trackId, artistId, timeRange.getCurrentStartDate(), timeRange.getCurrentEndDate())
+                        trackId, artistId, timeRange.getCurrentStartOffset(), timeRange.getCurrentEndOffset())
                 .stream()
                 .map(ts -> new TimeSeriesPointDto(
                         ts.dateTimestamp().atStartOfDay().atOffset(java.time.ZoneOffset.UTC),
@@ -84,8 +82,18 @@ public class ArtistAnalyticsService {
                         current.totalPlays() > 0 ? (attr.count() / (double) current.totalPlays()) * 100.0 : 0.0
                 )).collect(Collectors.toList());
 
-        // 0 for concurrent listeners because this object is cached. Real-time is appended in the wrapper.
-        return new TrackAnalyticsResponseDto(summary, engagement, timeSeries, attribution, 0);
+        // Safe calculation for percentageOfTotal
+        List<RegionStatDto> demographics = queryRepository.getTrackDemographics(
+                        trackId, artistId, timeRange.getCurrentStartOffset(), timeRange.getCurrentEndOffset())
+                .stream()
+                .map(geo -> new RegionStatDto(
+                        geo.countryOrCity(),
+                        geo.listeners(),
+                        current.uniqueListeners() > 0 ? (geo.listeners() / (double) current.uniqueListeners()) * 100.0 : 0.0
+                ))
+                .collect(Collectors.toList());
+
+        return new TrackAnalyticsResponseDto(summary, engagement, timeSeries, attribution, demographics, 0);
     }
 
     /**

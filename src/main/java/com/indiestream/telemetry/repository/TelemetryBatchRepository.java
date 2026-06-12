@@ -36,11 +36,11 @@ public class TelemetryBatchRepository {
                 INSERT INTO raw_playback_logs (
                 event_id, user_id, track_id, session_id, start_position_ms, 
                 end_position_ms, playback_duration_ms, client_ip, user_agent, 
-                is_suspected_bot, playback_status, source_type, source_id, created_at
+                is_suspected_bot, playback_status, source_type, source_id, client_country, created_at
             ) VALUES (
                 :eventId, :userId, :trackId, :sessionId, :startPositionMs, 
                 :endPositionMs, :playbackDurationMs, :clientIp, :userAgent, 
-                :suspectedBot, :playbackStatus, :sourceType, :sourceId, :createdAt
+                :suspectedBot, :playbackStatus, :sourceType, :sourceId, :clientCountry, :createdAt
             ) 
             ON CONFLICT (event_id, created_at) DO NOTHING
             """;

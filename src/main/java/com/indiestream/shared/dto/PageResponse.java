@@ -1,4 +1,4 @@
-package com.indiestream.auth.dto;
+package com.indiestream.shared.dto;
 
 import org.springframework.data.domain.Page;
 

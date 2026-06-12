@@ -17,10 +17,10 @@ public class AdminAnalyticsService {
     @Cacheable(value = "analytics:historical", key = "'platform-global-' + #timeRange.name()")
     public SummaryMetricsDto getPlatformOverview(AnalyticsTimeRange timeRange) {
         AggregateMetricsProjection current = queryRepository.getPlatformGlobalMetrics(
-                timeRange.getCurrentStartDate(), timeRange.getCurrentEndDate());
+                timeRange.getCurrentStartOffset(), timeRange.getCurrentEndOffset());
 
         AggregateMetricsProjection prev = queryRepository.getPlatformGlobalMetrics(
-                timeRange.getPreviousStartDate(), timeRange.getCurrentStartDate().minusDays(1));
+                timeRange.getPreviousStartOffset(), timeRange.getCurrentStartOffset());
 
         return GrowthCalculator.buildSummary(current, prev);
     }

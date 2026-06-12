@@ -84,7 +84,7 @@ public class TelemetryRollupRepository {
     }
 
     public int aggregateHourlyPlaylistInteractions(OffsetDateTime start, OffsetDateTime end) {
-        String sql = """            
+        String sql = """ 
             INSERT INTO playlist_hourly_stats (playlist_id, hour_timestamp, plays, skips, unique_listeners, likes)
             SELECT 
                 target_id,
@@ -93,11 +93,10 @@ public class TelemetryRollupRepository {
                 COUNT(event_id) AS likes_count
             FROM raw_interaction_logs
             WHERE created_at >= :start AND created_at < :end
-              AND interaction_type IN ('LIKE', 'FOLLOW_PLAYLIST')
+              AND interaction_type = 'FOLLOW_PLAYLIST'
             GROUP BY target_id, date_trunc('hour', created_at)
             ON CONFLICT (playlist_id, hour_timestamp) 
-            DO UPDATE SET 
-                likes = EXCLUDED.likes
+            DO UPDATE SET likes = EXCLUDED.likes
             """;
         return jdbcTemplate.update(sql, new MapSqlParameterSource().addValue("start", start).addValue("end", end));
     }
@@ -127,5 +126,82 @@ public class TelemetryRollupRepository {
                         rs.getInt("likes")
                 )
         );
+    }
+
+
+    /**
+     * Extracts playbacks specifically attributed to a Playlist context.
+     */
+    public int aggregateHourlyPlaylistPlaybacks(OffsetDateTime start, OffsetDateTime end) {
+        String sql = """
+            INSERT INTO playlist_hourly_stats (playlist_id, hour_timestamp, plays, skips, unique_listeners, likes)
+            SELECT 
+                source_id,
+                date_trunc('hour', created_at) AS hour_timestamp,
+                COUNT(event_id) FILTER (WHERE playback_status IN ('FULL', 'PARTIAL')) AS plays_count,
+                COUNT(event_id) FILTER (WHERE playback_status = 'SKIP') AS skips_count,
+                COUNT(DISTINCT COALESCE(user_id::text, session_id::text)) AS unique_listeners_count,
+                0 AS initial_likes
+            FROM raw_playback_logs
+            WHERE created_at >= :start AND created_at < :end
+              AND source_type = 'PLAYLIST' AND source_id IS NOT NULL
+              AND is_suspected_bot = false
+            GROUP BY source_id, date_trunc('hour', created_at)
+            ON CONFLICT (playlist_id, hour_timestamp) 
+            DO UPDATE SET 
+                plays = EXCLUDED.plays,
+                skips = EXCLUDED.skips,
+                unique_listeners = EXCLUDED.unique_listeners
+            """;
+        return jdbcTemplate.update(sql, new MapSqlParameterSource().addValue("start", start).addValue("end", end));
+    }
+
+
+
+    public int aggregateDailyPlaylistStats(OffsetDateTime startOfDay, OffsetDateTime endOfDay) {
+        String sql = """
+            INSERT INTO playlist_daily_stats (playlist_id, date_timestamp, plays, skips, unique_listeners, likes)
+            SELECT 
+                playlist_id, DATE(hour_timestamp) AS date_timestamp,
+                SUM(plays), SUM(skips), SUM(unique_listeners), SUM(likes)
+            FROM playlist_hourly_stats
+            WHERE hour_timestamp >= :start AND hour_timestamp < :end
+            GROUP BY playlist_id, DATE(hour_timestamp)
+            ON CONFLICT (playlist_id, date_timestamp) 
+            DO UPDATE SET plays = EXCLUDED.plays, skips = EXCLUDED.skips, unique_listeners = EXCLUDED.unique_listeners, likes = EXCLUDED.likes
+            """;
+        return jdbcTemplate.update(sql, new MapSqlParameterSource().addValue("start", startOfDay).addValue("end", endOfDay));
+    }
+
+    public int aggregateDailyTrackDemographics(OffsetDateTime startOfDay, OffsetDateTime endOfDay) {
+        String sql = """
+            INSERT INTO track_daily_demographics (track_id, date_timestamp, client_country, listeners)
+            SELECT 
+                track_id, DATE(created_at AT TIME ZONE 'UTC') AS date_timestamp,
+                COALESCE(client_country, 'XX'), COUNT(DISTINCT COALESCE(user_id::text, session_id::text))
+            FROM raw_playback_logs
+            WHERE created_at >= :start AND created_at < :end
+              AND playback_status IN ('FULL', 'PARTIAL') AND source_type != 'SYSTEM_INTERNAL'
+            GROUP BY track_id, DATE(created_at AT TIME ZONE 'UTC'), COALESCE(client_country, 'XX')
+            ON CONFLICT (track_id, date_timestamp, client_country) 
+            DO UPDATE SET listeners = EXCLUDED.listeners
+            """;
+        return jdbcTemplate.update(sql, new MapSqlParameterSource().addValue("start", startOfDay).addValue("end", endOfDay));
+    }
+
+    public int aggregateDailyTrackSources(OffsetDateTime startOfDay, OffsetDateTime endOfDay) {
+        String sql = """
+            INSERT INTO track_daily_sources (track_id, date_timestamp, source_type, plays)
+            SELECT 
+                track_id, DATE(created_at AT TIME ZONE 'UTC') AS date_timestamp,
+                source_type, COUNT(event_id)
+            FROM raw_playback_logs
+            WHERE created_at >= :start AND created_at < :end
+              AND playback_status IN ('FULL', 'PARTIAL') AND source_type != 'SYSTEM_INTERNAL'
+            GROUP BY track_id, DATE(created_at AT TIME ZONE 'UTC'), source_type
+            ON CONFLICT (track_id, date_timestamp, source_type) 
+            DO UPDATE SET plays = EXCLUDED.plays
+            """;
+        return jdbcTemplate.update(sql, new MapSqlParameterSource().addValue("start", startOfDay).addValue("end", endOfDay));
     }
 }

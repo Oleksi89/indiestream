@@ -3,6 +3,7 @@ package com.indiestream.telemetry.controller;
 import com.indiestream.telemetry.dto.InteractionTelemetryPayload;
 import com.indiestream.telemetry.dto.PlaybackTelemetryPayload;
 import com.indiestream.telemetry.security.TelemetryRateLimiter;
+import com.indiestream.telemetry.service.GeoLocationResolver;
 import com.indiestream.telemetry.service.TelemetryIngestionGateway;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -25,6 +26,7 @@ public class TelemetryController {
 
     private final TelemetryIngestionGateway gateway;
     private final TelemetryRateLimiter rateLimiter;
+    private final GeoLocationResolver geoLocationResolver;
 
     @PostMapping("/playback")
     public ResponseEntity<Void> ingestPlayback(
@@ -38,7 +40,11 @@ public class TelemetryController {
         // Principal is guaranteed to be the String UUID by JwtAuthenticationFilter
         String userId = authentication.getName();
 
-        gateway.ingestPlayback(payload, userId, clientIp, request.getHeader("User-Agent"));
+        // Resolves the physical location using CDN edge headers (e.g., Cloudflare)
+        String clientCountry = geoLocationResolver.resolveCountry(request);
+
+        // Dispatches the payload to Redis Streams for asynchronous batch processing
+        gateway.ingestPlayback(payload, userId, clientIp, request.getHeader("User-Agent"), clientCountry);
 
         // HTTP 202 Accepted confirms receipt without blocking the thread for processing
         return ResponseEntity.accepted().build();
