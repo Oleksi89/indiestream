@@ -1,8 +1,11 @@
 import {useMemo} from 'react';
-import {format, parseISO} from 'date-fns';
+
 import {AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer} from 'recharts';
 import type {TimeSeriesPointDto} from '../types';
 import {AnalyticsEmptyState} from './AnalyticsEmptyState.tsx';
+import {parseISO} from "date-fns/parseISO";
+import {differenceInHours} from "date-fns/differenceInHours";
+import {format} from "date-fns/format";
 
 interface TimeSeriesChartProps {
     data: TimeSeriesPointDto[];
@@ -12,13 +15,21 @@ interface TimeSeriesChartProps {
 export const TimeSeriesChart = ({data, height = 350}: TimeSeriesChartProps) => {
 
     const formattedData = useMemo(() => {
+        if (!data || data.length === 0) return [];
+
+        const firstDate = parseISO(data[0].timestamp);
+        const lastDate = parseISO(data[data.length - 1].timestamp);
+        const isHourly = differenceInHours(lastDate, firstDate) <= 48;
+
         return data.map(point => ({
             ...point,
-            displayDate: format(parseISO(point.timestamp), 'MMM dd')
+            // Hours for <= 48h, Days for more
+            displayDate: format(parseISO(point.timestamp), isHourly ? 'HH:mm' : 'MMM dd'),
+            fullDate: format(parseISO(point.timestamp), 'PPpp')
         }));
     }, [data]);
 
-    if (!data || data.length === 0) {
+    if (!formattedData.length) {
         return <AnalyticsEmptyState title="No timeline data" minHeight={`min-h-[${height}px]`}/>;
     }
 
@@ -39,21 +50,15 @@ export const TimeSeriesChart = ({data, height = 350}: TimeSeriesChartProps) => {
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} opacity={0.5}/>
                     <XAxis
-                        dataKey="displayDate"
-                        stroke="#64748b"
-                        fontSize={11}
-                        tickLine={false}
-                        axisLine={false}
-                        dy={10}
+                        dataKey="displayDate" stroke="#64748b" fontSize={11}
+                        tickLine={false} axisLine={false} dy={10}
                     />
                     <YAxis
-                        stroke="#64748b"
-                        fontSize={11}
-                        tickLine={false}
-                        axisLine={false}
+                        stroke="#64748b" fontSize={11} tickLine={false} axisLine={false}
                         tickFormatter={(value) => value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value}
                     />
                     <Tooltip
+                        labelFormatter={(_, payload) => payload[0]?.payload.fullDate || ''}
                         contentStyle={{
                             backgroundColor: '#0f172a',
                             borderColor: '#1e293b',
