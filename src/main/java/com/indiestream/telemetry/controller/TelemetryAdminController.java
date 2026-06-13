@@ -41,7 +41,7 @@ public class TelemetryAdminController {
     public ResponseEntity<Map<String, Integer>> forceHourlyRollup() {
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         // Force scan from 2 hours ago up to the next hour
-        OffsetDateTime start = now.minusHours(2).truncatedTo(ChronoUnit.HOURS);
+        OffsetDateTime start = now.minusHours(24).truncatedTo(ChronoUnit.HOURS);
         OffsetDateTime end = now.plusHours(1).truncatedTo(ChronoUnit.HOURS);
 
         Map<String, Integer> result = rollupWorker.executeHourlyRollup(start, end);

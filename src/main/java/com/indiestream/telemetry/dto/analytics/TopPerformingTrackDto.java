@@ -8,6 +8,7 @@ public record TopPerformingTrackDto(
         String coverMinioPath,
         long plays,
         long uniqueListeners,
-        double skipRate
+        double skipRate,
+        double popularityScore
 ) {
 }

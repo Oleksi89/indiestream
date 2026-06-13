@@ -1,13 +1,10 @@
 import {useNavigate} from 'react-router-dom';
 import {ShieldAlert, Loader2} from 'lucide-react';
-
-
 import {PaginationControls} from '@/shared/ui/PaginationControls';
 import {useAdminFilters} from "@/features/media/sub-features/admin/hooks/useAdminFilters.ts";
 import {useGlobalAdminTracks} from "@/features/media/sub-features/admin/hooks/useAdminQueries.ts";
 import {AdminTrackTable} from "@/features/media/sub-features/admin/ui/AdminTrackTable.tsx";
 import {AdminFiltersBar} from "@/features/media/sub-features/admin/ui/AdminFiltersBar.tsx";
-import {AdminPlatformAnalytics} from "@/features/analytics/ui/AdminPlatformAnalytics.tsx";
 
 export const AdminTrackRegistryPage = () => {
     const navigate = useNavigate();
@@ -50,8 +47,6 @@ export const AdminTrackRegistryPage = () => {
                 </p>
             </div>
 
-            {/* Admin Global Telemetry Widget */}
-            <AdminPlatformAnalytics/>
 
             {/* Smart Filters Bar */}
             <AdminFiltersBar

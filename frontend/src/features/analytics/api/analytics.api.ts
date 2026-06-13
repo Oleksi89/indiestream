@@ -2,44 +2,44 @@ import {apiClient} from '@/shared/api/apiClient.ts';
 import type {
     ArtistOverviewDto,
     TrackAnalyticsResponseDto,
-    SummaryMetricsDto,
-    AnalyticsTimeRange,
+    PlaylistOverviewDto,
+    PlatformOverviewDto,
     ListeningHistoryItemDto
 } from '../types';
 
 export const analyticsApi = {
-    getArtistOverview: async (timeRange: AnalyticsTimeRange): Promise<ArtistOverviewDto> => {
+    getArtistOverview: async (startDate: string, endDate: string): Promise<ArtistOverviewDto> => {
         const {data} = await apiClient.get<ArtistOverviewDto>('/analytics/artist/overview', {
-            params: {timeRange}
+            params: {startDate, endDate}
         });
         return data;
     },
 
-    getTrackAnalytics: async (trackId: string, timeRange: AnalyticsTimeRange): Promise<TrackAnalyticsResponseDto> => {
+    getTrackAnalytics: async (trackId: string, startDate: string, endDate: string): Promise<TrackAnalyticsResponseDto> => {
         const {data} = await apiClient.get<TrackAnalyticsResponseDto>(`/analytics/artist/tracks/${trackId}`, {
-            params: {timeRange}
+            params: {startDate, endDate}
         });
         return data;
     },
 
-    exportTrackCsv: async (trackId: string, timeRange: AnalyticsTimeRange): Promise<Blob> => {
+    exportTrackCsv: async (trackId: string, startDate: string, endDate: string): Promise<Blob> => {
         const {data} = await apiClient.get(`/analytics/artist/tracks/${trackId}/export`, {
-            params: {timeRange},
-            responseType: 'blob' // Critical for file downloads
+            params: {startDate, endDate},
+            responseType: 'blob'
         });
         return data;
     },
 
-    getCuratorPlaylistAnalytics: async (playlistId: string, timeRange: AnalyticsTimeRange): Promise<SummaryMetricsDto> => {
-        const {data} = await apiClient.get<SummaryMetricsDto>(`/analytics/curator/playlists/${playlistId}`, {
-            params: {timeRange}
+    getCuratorPlaylistAnalytics: async (playlistId: string, startDate: string, endDate: string): Promise<PlaylistOverviewDto> => {
+        const {data} = await apiClient.get<PlaylistOverviewDto>(`/analytics/curator/playlists/${playlistId}`, {
+            params: {startDate, endDate}
         });
         return data;
     },
 
-    getPlatformOverview: async (timeRange: AnalyticsTimeRange): Promise<SummaryMetricsDto> => {
-        const {data} = await apiClient.get<SummaryMetricsDto>('/analytics/admin/platform', {
-            params: {timeRange}
+    getPlatformOverview: async (startDate: string, endDate: string): Promise<PlatformOverviewDto> => {
+        const {data} = await apiClient.get<PlatformOverviewDto>('/analytics/admin/platform', {
+            params: {startDate, endDate}
         });
         return data;
     },

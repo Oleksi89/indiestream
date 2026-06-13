@@ -25,3 +25,12 @@ export const useAdminTrackDetails = (trackId: string) => {
         enabled: !!trackId,
     });
 };
+
+export const useAdminTrackAnalytics = (trackId: string | undefined, startDate: string, endDate: string) => {
+    return useQuery({
+        queryKey: [...adminKeys.all, 'track-analytics', trackId, startDate, endDate],
+        queryFn: () => adminApi.getAdminTrackAnalytics(trackId!, startDate, endDate),
+        enabled: !!trackId,
+        staleTime: 60 * 1000,
+    });
+};

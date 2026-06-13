@@ -1,4 +1,3 @@
-import {useState} from 'react';
 import {TrackTable} from '@/features/media/sub-features/studio/ui/TrackTable.tsx';
 import {useAuthStore} from '@/shared/store/authStore';
 import {UploadWizardModal} from '@/features/media/sub-features/upload/ui/UploadWizardModal.tsx';
@@ -7,11 +6,14 @@ import {useQueryClient} from '@tanstack/react-query';
 import {trackKeys, useStudioTracks} from '@/features/media/hooks/useTrackQueries';
 import {cn} from '@/shared/lib/utils';
 import {ArtistAnalyticsDashboard} from "@/features/analytics/ui/ArtistAnalyticsDashboard.tsx";
+import {useSearchParams} from "react-router-dom";
 
 export const ArtistDashboardPage = () => {
     const user = useAuthStore((state) => state.user);
     const queryClient = useQueryClient();
-    const [activeTab, setActiveTab] = useState<'catalog' | 'analytics'>('catalog');
+    // Utilize URL Search Params for state persistence
+    const [searchParams, setSearchParams] = useSearchParams();
+    const activeTab = searchParams.get('tab') || 'catalog';
 
     // Subscribe to fetching state to animate the refresh button
     const {isFetching} = useStudioTracks();
@@ -19,6 +21,17 @@ export const ArtistDashboardPage = () => {
     const handleRefresh = () => {
         // Invalidating cache forces an immediate background fetch
         queryClient.invalidateQueries({queryKey: trackKeys.studio()});
+    };
+
+    const handleTabSwitch = (tab: 'catalog' | 'analytics') => {
+        setSearchParams(prev => {
+            prev.set('tab', tab);
+            // Clear deep-dive context when navigating away from analytics
+            if (tab === 'catalog') {
+                prev.delete('trackId');
+            }
+            return prev;
+        }, {replace: true});
     };
 
     return (
@@ -40,7 +53,7 @@ export const ArtistDashboardPage = () => {
             {/* Studio Navigation Tabs */}
             <div className="flex items-center gap-6 mb-8 border-b border-slate-800/50 overflow-x-auto custom-scrollbar">
                 <button
-                    onClick={() => setActiveTab('catalog')}
+                    onClick={() => handleTabSwitch('catalog')}
                     className={cn(
                         "flex items-center gap-2 pb-3 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap",
                         activeTab === 'catalog'
@@ -52,7 +65,7 @@ export const ArtistDashboardPage = () => {
                     My Catalog
                 </button>
                 <button
-                    onClick={() => setActiveTab('analytics')}
+                    onClick={() => handleTabSwitch('analytics')}
                     className={cn(
                         "flex items-center gap-2 pb-3 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap",
                         activeTab === 'analytics'

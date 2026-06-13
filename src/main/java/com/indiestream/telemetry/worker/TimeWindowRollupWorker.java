@@ -18,8 +18,8 @@ import java.util.Map;
 
 /**
  * Distributed orchestrator for time-series aggregation.
- * Executes exact-once cron jobs to rollup high-volume telemetry into analytics tables
- * and broadcasts deltas to core modules via Spring Modulith Events.
+ * Implements Near Real-Time (NRT) Micro-Batching for dashboards
+ * and exact-once Modulith event broadcasting for closed windows.
  */
 @Slf4j
 @Service
@@ -30,21 +30,41 @@ public class TimeWindowRollupWorker {
     private final ApplicationEventPublisher eventPublisher;
 
     /**
-     * CRON: Executes at minute 5 of every hour.
+     * MICRO-BATCH: Executes every 5 minutes.
+     * Continuously upserts the current active hour to provide Near Real-Time analytics to Artists.
      */
-    @Scheduled(cron = "0 5 * * * *")
-    @SchedulerLock(name = "hourly_telemetry_rollup", lockAtLeastFor = "2m", lockAtMostFor = "10m")
-    public void executeHourlyRollupCron() {
-        OffsetDateTime endHour = OffsetDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.HOURS);
-        OffsetDateTime targetHour = endHour.minusHours(6); // Auto-Heal Strategy
+    @Scheduled(fixedRate = 300000)
+    @SchedulerLock(name = "micro_batch_telemetry_rollup", lockAtLeastFor = "1m", lockAtMostFor = "4m")
+    public void executeMicroBatchRollupCron() {
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        // Look back 2 hours to capture late-arriving events, spanning up to the current minute
+        OffsetDateTime start = now.minusHours(2).truncatedTo(ChronoUnit.HOURS);
+        OffsetDateTime end = now.plusHours(1).truncatedTo(ChronoUnit.HOURS);
 
-        log.info("[CRON] Starting Hourly Telemetry Rollup for window: {} to {}", targetHour, endHour);
-        Map<String, Integer> stats = executeHourlyRollup(targetHour, endHour);
-        log.info("[CRON] Aggregation complete: {}", stats);
+        log.debug("[MICRO-BATCH] Aggregating telemetry from {} to {}", start, end);
+        executeHourlyRollup(start, end);
     }
 
     /**
-     * CRON: Executes every day at 02:00 AM.
+     * CRON: Executes exactly once at minute 5 of every hour.
+     * Broadcasts the finalized statistics of the previously closed hour.
+     */
+    @Scheduled(cron = "0 5 * * * *")
+    @SchedulerLock(name = "hourly_event_broadcast", lockAtLeastFor = "2m", lockAtMostFor = "10m")
+    public void executeHourlyEventBroadcastCron() {
+        OffsetDateTime closedHour = OffsetDateTime.now(ZoneOffset.UTC).minusHours(1).truncatedTo(ChronoUnit.HOURS);
+
+        log.info("[CRON] Broadcasting aggregated events for closed hour: {}", closedHour);
+
+        List<TrackCountersAggregatedEvent> trackEvents = rollupRepository.fetchTrackStatsForHour(closedHour);
+        trackEvents.forEach(eventPublisher::publishEvent);
+
+        List<PlaylistCountersAggregatedEvent> playlistEvents = rollupRepository.fetchPlaylistStatsForHour(closedHour);
+        playlistEvents.forEach(eventPublisher::publishEvent);
+    }
+
+    /**
+     * CRON: Executes every day at 02:00 AM UTC.
      */
     @Scheduled(cron = "0 0 2 * * *")
     @SchedulerLock(name = "daily_telemetry_rollup", lockAtLeastFor = "5m", lockAtMostFor = "30m")
@@ -68,22 +88,14 @@ public class TimeWindowRollupWorker {
         log.info("Executing Hourly Rollup from {} to {}", start, end);
         int trackPlayRows = rollupRepository.aggregateHourlyTrackPlaybacks(start, end);
         int trackInteractionRows = rollupRepository.aggregateHourlyTrackInteractions(start, end);
-
         int playlistPlayRows = rollupRepository.aggregateHourlyPlaylistPlaybacks(start, end);
         int playlistInteractionRows = rollupRepository.aggregateHourlyPlaylistInteractions(start, end);
-
-        OffsetDateTime activeClosedHour = end.minusHours(1);
-        List<TrackCountersAggregatedEvent> trackEvents = rollupRepository.fetchTrackStatsForHour(activeClosedHour);
-        trackEvents.forEach(eventPublisher::publishEvent);
-
-        List<PlaylistCountersAggregatedEvent> playlistEvents = rollupRepository.fetchPlaylistStatsForHour(activeClosedHour);
-        playlistEvents.forEach(eventPublisher::publishEvent);
 
         return Map.of(
                 "trackPlaybacksAggregated", trackPlayRows,
                 "trackInteractionsAggregated", trackInteractionRows,
-                "playlistInteractionsAggregated", playlistInteractionRows,
-                "modulithEventsDispatched", trackEvents.size() + playlistEvents.size()
+                "playlistPlaybacksAggregated", playlistPlayRows,
+                "playlistInteractionsAggregated", playlistInteractionRows
         );
     }
 
@@ -92,9 +104,12 @@ public class TimeWindowRollupWorker {
      */
     public int executeDailyRollup(OffsetDateTime start, OffsetDateTime end) {
         log.info("Executing Daily Compression Rollup from {} to {}", start, end);
-        rollupRepository.aggregateDailyTrackStats(start, end);
+        int compressedTracksCount = rollupRepository.aggregateDailyTrackStats(start, end);
+
         rollupRepository.aggregateDailyPlaylistStats(start, end);
         rollupRepository.aggregateDailyTrackDemographics(start, end);
-        return rollupRepository.aggregateDailyTrackStats(start, end);
+        rollupRepository.aggregateDailyTrackSources(start, end);
+        rollupRepository.refreshTrackPopularityScores();
+        return compressedTracksCount;
     }
 }
