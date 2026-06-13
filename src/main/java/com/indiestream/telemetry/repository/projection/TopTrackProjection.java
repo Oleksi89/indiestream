@@ -8,6 +8,7 @@ public record TopTrackProjection(
         String coverMinioPath,
         long plays,
         long skips,
-        long uniqueListeners
+        long uniqueListeners,
+        Double popularityScore
 ) {
 }

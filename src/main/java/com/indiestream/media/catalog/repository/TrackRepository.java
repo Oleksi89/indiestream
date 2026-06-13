@@ -48,7 +48,7 @@ public interface TrackRepository extends JpaRepository<Track, UUID>, JpaSpecific
                 jsonb_exists_any(t.tags->'moods', string_to_array(LOWER(:tagsCsv), ',')) OR
                 jsonb_exists_any(t.tags->'aiGenerated', string_to_array(LOWER(:tagsCsv), ','))
             )
-            ORDER BY t.created_at DESC
+            ORDER BY t.popularity_score DESC, t.created_at DESC
             LIMIT :limit OFFSET :offset
             """, nativeQuery = true)
     List<Track> searchTracksUnifiedNative(

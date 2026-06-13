@@ -50,6 +50,7 @@ public class CacheConfig {
 
         // 2. Safe global baseline for fallback caches
         RedisCacheConfiguration defaultCacheConfig = RedisCacheConfiguration.defaultCacheConfig()
+                .computePrefixWith(cacheName -> cacheName + "::") // Strict namespace isolation
                 .entryTtl(Duration.ofMinutes(15))
                 .disableCachingNullValues()
                 .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(stringSerializer))
@@ -60,6 +61,7 @@ public class CacheConfig {
 
         // Heavy CQRS historical analytics tolerate a 10-minute caching window before DB re-evaluation
         cacheConfigurations.put(CACHE_HISTORICAL_ANALYTICS, RedisCacheConfiguration.defaultCacheConfig()
+                .computePrefixWith(cacheName -> cacheName + "::")
                 .entryTtl(Duration.ofMinutes(10))
                 .disableCachingNullValues()
                 .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(stringSerializer))
@@ -67,6 +69,7 @@ public class CacheConfig {
 
         // High-frequency live metrics/heartbeats degrade fast, requiring 30 seconds expiration
         cacheConfigurations.put(CACHE_LIVE_PULSE, RedisCacheConfiguration.defaultCacheConfig()
+                .computePrefixWith(cacheName -> cacheName + "::")
                 .entryTtl(Duration.ofSeconds(30))
                 .disableCachingNullValues()
                 .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(stringSerializer))

@@ -1,5 +1,7 @@
 package com.indiestream.telemetry.controller;
 
+import com.indiestream.media.api.MediaModuleApi;
+import com.indiestream.media.api.TrackMetadata;
 import com.indiestream.shared.dto.PageResponse;
 import com.indiestream.telemetry.domain.AnalyticsTimeRange;
 import com.indiestream.telemetry.dto.analytics.*;
@@ -7,6 +9,7 @@ import com.indiestream.telemetry.service.analytics.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +17,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 /**
@@ -30,6 +34,7 @@ public class AnalyticsController {
     private final AdminAnalyticsService adminAnalyticsService;
     private final UserListeningHistoryService userListeningHistoryService;
     private final CsvExportService csvExportService;
+    private final MediaModuleApi mediaModuleApi;
 
     /**
      * ARTIST WORKSPACE: Global profile overview.
@@ -38,10 +43,11 @@ public class AnalyticsController {
     @PreAuthorize("hasRole('ARTIST')")
     public ResponseEntity<ArtistOverviewDto> getArtistOverview(
             Principal principal,
-            @RequestParam(defaultValue = "LAST_7_DAYS") AnalyticsTimeRange timeRange) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime endDate) {
 
         UUID artistId = UUID.fromString(principal.getName());
-        return ResponseEntity.ok(artistAnalyticsService.getArtistGlobalOverview(artistId, timeRange));
+        return ResponseEntity.ok(artistAnalyticsService.getArtistGlobalOverview(artistId, startDate, endDate));
     }
 
     /**
@@ -52,10 +58,11 @@ public class AnalyticsController {
     public ResponseEntity<TrackAnalyticsResponseDto> getTrackAnalytics(
             Principal principal,
             @PathVariable UUID trackId,
-            @RequestParam(defaultValue = "LAST_7_DAYS") AnalyticsTimeRange timeRange) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime endDate) {
 
         UUID artistId = UUID.fromString(principal.getName());
-        return ResponseEntity.ok(artistAnalyticsService.getTrackAnalyticsWithRealTime(trackId, artistId, timeRange));
+        return ResponseEntity.ok(artistAnalyticsService.getTrackAnalyticsWithRealTime(trackId, artistId, startDate, endDate));
     }
 
     /**
@@ -66,10 +73,11 @@ public class AnalyticsController {
     public ResponseEntity<byte[]> exportTrackAnalyticsCsv(
             Principal principal,
             @PathVariable UUID trackId,
-            @RequestParam(defaultValue = "LAST_30_DAYS") AnalyticsTimeRange timeRange) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime endDate) {
 
         UUID artistId = UUID.fromString(principal.getName());
-        TrackAnalyticsResponseDto data = artistAnalyticsService.getTrackHistoricalAnalytics(trackId, artistId, timeRange);
+        TrackAnalyticsResponseDto data = artistAnalyticsService.getTrackHistoricalAnalytics(trackId, artistId, startDate, endDate);
         byte[] csvBytes = csvExportService.generateTimeSeriesCsv(data.timeSeries());
 
         return ResponseEntity.ok()
@@ -85,11 +93,12 @@ public class AnalyticsController {
     public ResponseEntity<PlaylistOverviewDto> getPlaylistAnalytics(
             Principal principal,
             @PathVariable UUID playlistId,
-            @RequestParam(defaultValue = "LAST_7_DAYS") AnalyticsTimeRange timeRange) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime endDate) {
 
         // No explicit role needed; ownership is enforced via SQL JOINS in the Repository
         UUID ownerId = UUID.fromString(principal.getName());
-        return ResponseEntity.ok(curatorAnalyticsService.getPlaylistOverview(playlistId, ownerId, timeRange));
+        return ResponseEntity.ok(curatorAnalyticsService.getPlaylistOverview(playlistId, ownerId, startDate, endDate));
     }
 
     /**
@@ -97,10 +106,25 @@ public class AnalyticsController {
      */
     @GetMapping("/admin/platform")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<SummaryMetricsDto> getPlatformOverview(
-            @RequestParam(defaultValue = "LAST_7_DAYS") AnalyticsTimeRange timeRange) {
+    public ResponseEntity<PlatformOverviewDto> getPlatformOverview(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime endDate) {
 
-        return ResponseEntity.ok(adminAnalyticsService.getPlatformOverview(timeRange));
+        return ResponseEntity.ok(adminAnalyticsService.getPlatformOverview(startDate, endDate));
+    }
+
+    /**
+     * ADMIN WORKSPACE: Bypasses the Principal IDOR check by resolving the track's artist via MediaModuleApi.
+     * Reuses the highly optimized CQRS read models without duplicating logic.
+     */
+    @GetMapping("/admin/tracks/{trackId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<TrackAnalyticsResponseDto> getAdminTrackAnalytics(
+            @PathVariable UUID trackId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime endDate) {
+        TrackMetadata metadata = mediaModuleApi.getTrackMetadata(trackId);
+        return ResponseEntity.ok(artistAnalyticsService.getTrackAnalyticsWithRealTime(trackId, metadata.artistId(), startDate, endDate));
     }
 
     /**

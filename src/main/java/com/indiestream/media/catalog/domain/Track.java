@@ -98,6 +98,10 @@ public class Track {
     @Builder.Default
     private Integer likeCount = 0;
 
+    @Column(name = "popularity_score", nullable = false)
+    @Builder.Default
+    private Double popularityScore = 0.0;
+
     // --- Audit ---
 
     @Column(name = "created_at", updatable = false)

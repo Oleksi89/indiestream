@@ -1,14 +1,13 @@
-import {useState} from 'react';
 import {Activity} from 'lucide-react';
 import {usePlatformAnalytics} from '../hooks/useAnalytics.ts';
+import {useAnalyticsTimeRange} from '../hooks/useAnalyticsTimeRange.ts';
 import {SummaryMetricCard} from './SummaryMetricCard.tsx';
 import {TimeRangeSelector} from './TimeRangeSelector.tsx';
 import {MetricCardSkeleton} from './AnalyticsSkeletons.tsx';
-import type {AnalyticsTimeRange} from '../types';
 
 export const AdminPlatformAnalytics = () => {
-    const [timeRange, setTimeRange] = useState<AnalyticsTimeRange>('LAST_7_DAYS');
-    const {data, isLoading} = usePlatformAnalytics(timeRange);
+    const {preset, setRange, startDate, endDate} = useAnalyticsTimeRange('7D');
+    const {data, isLoading} = usePlatformAnalytics(startDate, endDate);
 
     return (
         <div
@@ -23,7 +22,8 @@ export const AdminPlatformAnalytics = () => {
                         <p className="text-xs text-slate-400">Global performance and engagement aggregates.</p>
                     </div>
                 </div>
-                <TimeRangeSelector value={timeRange} onChange={setTimeRange}/>
+                {/* Properly bound to setRange */}
+                <TimeRangeSelector value={preset} onChange={setRange}/>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -36,27 +36,14 @@ export const AdminPlatformAnalytics = () => {
                     </>
                 ) : (
                     <>
-                        <SummaryMetricCard
-                            title="Total System Plays"
-                            value={data.totalPlays}
-                            growthPercentage={data.playsGrowthPercentage}
-                        />
-                        <SummaryMetricCard
-                            title="Unique Listeners"
-                            value={data.uniqueListeners}
-                            growthPercentage={data.listenersGrowthPercentage}
-                        />
-                        <SummaryMetricCard
-                            title="Total Skips"
-                            value={data.totalPlays > 0 ? (data.uniqueListeners / data.totalPlays) * 100 : 0}
-                            format="percent"
-                            growthPercentage={data.playsGrowthPercentage} // Used as proxy for general load
-                        />
-                        <SummaryMetricCard
-                            title="Global Likes"
-                            value={data.totalLikes}
-                            growthPercentage={data.likesGrowthPercentage}
-                        />
+                        <SummaryMetricCard title="Total System Plays" value={data.summary.totalPlays}
+                                           growthPercentage={data.summary.playsGrowthPercentage}/>
+                        <SummaryMetricCard title="Unique Listeners" value={data.summary.uniqueListeners}
+                                           growthPercentage={data.summary.listenersGrowthPercentage}/>
+                        <SummaryMetricCard title="Global Completion Rate"
+                                           value={data.engagement.completionRatePercentage} format="percent"/>
+                        <SummaryMetricCard title="Global Likes" value={data.summary.totalLikes}
+                                           growthPercentage={data.summary.likesGrowthPercentage}/>
                     </>
                 )}
             </div>

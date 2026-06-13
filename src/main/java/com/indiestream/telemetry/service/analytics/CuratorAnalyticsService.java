@@ -10,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
+import java.time.OffsetDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 @Service
@@ -18,13 +20,17 @@ public class CuratorAnalyticsService {
 
     private final SupplementalAnalyticsQueryRepository queryRepository;
 
-    @Cacheable(value = "analytics:historical", key = "#ownerId + '-' + #playlistId + '-' + #timeRange.name()")
-    public PlaylistOverviewDto getPlaylistOverview(UUID playlistId, UUID ownerId, AnalyticsTimeRange timeRange) {
+    @Cacheable(value = "analytics:historical", key = "#ownerId + '-' + #playlistId + '-' + #startDate.toEpochSecond() + '-' + #endDate.toEpochSecond()")
+    public PlaylistOverviewDto getPlaylistOverview(UUID playlistId, UUID ownerId, OffsetDateTime startDate, OffsetDateTime endDate) {
+        long durationSeconds = ChronoUnit.SECONDS.between(startDate, endDate);
+        OffsetDateTime prevStart = startDate.minusSeconds(durationSeconds);
+        OffsetDateTime prevEnd = startDate.minusNanos(1000000);
+
         AggregateMetricsProjection current = queryRepository.getPlaylistGlobalMetrics(
-                playlistId, timeRange.getCurrentStartOffset(), timeRange.getCurrentEndOffset());
+                playlistId, startDate, endDate);
 
         AggregateMetricsProjection prev = queryRepository.getPlaylistGlobalMetrics(
-                playlistId, timeRange.getPreviousStartOffset(), timeRange.getPreviousEndOffset());
+                playlistId, prevStart, prevEnd);
 
         SummaryMetricsDto summary = GrowthCalculator.buildSummary(current, prev);
         EngagementMetricsDto engagement = GrowthCalculator.buildEngagement(current);

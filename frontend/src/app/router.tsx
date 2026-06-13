@@ -13,7 +13,8 @@ import {ProfilePage} from "@/pages/profile/ProfilePage.tsx";
 import {SearchPage} from "@/pages/search/SearchPage.tsx";
 import {AdminTrackRegistryPage} from "@/pages/admin/AdminTrackRegistryPage.tsx";
 import {AdminReviewInspectorPage} from "@/pages/admin/AdminReviewInspectorPage.tsx";
-import {TelemetryProvider} from '@/features/telemetry'; // Added import
+import {TelemetryProvider} from '@/features/telemetry';
+import {AdminPlatformAnalyticsPage} from "@/pages/admin/AdminPlatformAnalyticsPage.tsx"; // Added import
 
 const routes = [
     // Guest Only Routes
@@ -79,6 +80,10 @@ const routes = [
                             {
                                 path: '/admin/registry/:id',
                                 element: <AdminReviewInspectorPage/>,
+                            },
+                            {
+                                path: '/admin/telemetry',
+                                element: <AdminPlatformAnalyticsPage/>,
                             },
                         ],
                     },

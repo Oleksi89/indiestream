@@ -1,7 +1,5 @@
 import type {TrackDto} from '@/features/media/types';
 
-export type AnalyticsTimeRange = 'LAST_7_DAYS' | 'LAST_30_DAYS' | 'ALL_TIME';
-
 export interface SummaryMetricsDto {
     totalPlays: number;
     playsGrowthPercentage: number;
@@ -24,12 +22,23 @@ export interface TopPerformingTrackDto {
     plays: number;
     uniqueListeners: number;
     skipRate: number;
+    popularityScore: number;
 }
 
 export interface ArtistOverviewDto {
     summary: SummaryMetricsDto;
     engagement: EngagementMetricsDto;
     topTracks: TopPerformingTrackDto[];
+}
+
+export interface PlaylistOverviewDto {
+    summary: SummaryMetricsDto;
+    engagement: EngagementMetricsDto;
+}
+
+export interface PlatformOverviewDto {
+    summary: SummaryMetricsDto;
+    engagement: EngagementMetricsDto;
 }
 
 export interface TimeSeriesPointDto {
@@ -42,16 +51,20 @@ export interface TimeSeriesPointDto {
 
 export interface AttributionMetricDto {
     sourceType: string;
-    rawCount: number;
+    count: number;
     percentage: number;
 }
 
 export interface RegionStatDto {
     countryOrCity: string;
     listeners: number;
+    percentage: number;
 }
 
 export interface TrackAnalyticsResponseDto {
+    trackTitle: string;
+    coverMinioPath: string | null;
+    popularityScore: number;
     summary: SummaryMetricsDto;
     engagement: EngagementMetricsDto;
     timeSeries: TimeSeriesPointDto[];
@@ -62,6 +75,6 @@ export interface TrackAnalyticsResponseDto {
 
 export interface ListeningHistoryItemDto {
     track: TrackDto;
-    lastPlayedAt: string;
+    lastPlayedAt: string; // ISO-8601 OffsetDateTime
     totalListenedTimeMs: number;
 }

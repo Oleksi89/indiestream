@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 
@@ -31,32 +32,47 @@ public class AnalyticsQueryRepository {
      * Uses track_daily_stats for extreme performance (millisecond response time).
      */
     public AggregateMetricsProjection getArtistGlobalMetrics(UUID artistId, OffsetDateTime startDate, OffsetDateTime endDate) {
-        String sql = """
-            WITH combined_stats AS (
-                SELECT track_id, plays, skips, unique_listeners, likes
-                FROM track_daily_stats
-                WHERE date_timestamp >= CAST(:startDate AS DATE) AND date_timestamp <= CAST(:endDate AS DATE)
-                UNION ALL
-                SELECT track_id, plays, skips, unique_listeners, likes
-                FROM track_hourly_stats
-                WHERE CAST(hour_timestamp AT TIME ZONE 'UTC' AS DATE) = CAST(:endDate AT TIME ZONE 'UTC' AS DATE)
-                  AND hour_timestamp <= :endDate
-            )
-            SELECT
-                COALESCE(SUM(s.plays), 0) AS
-                total_plays,
-                COALESCE(SUM(s.skips
-                ), 0) AS total_skips,
-                COALESCE(SUM(s.
-                unique_listeners), 0) AS unique_listeners,
-                     COALESCE(SUM(s.likes), 0) AS
-                total_likes
-            FROM
-                combined_stats s
-            INNER JOIN
-                tracks t ON s.track_id = t.id
-            WHERE t.artist_id = :artistId
-            """;
+        boolean isHourly = ChronoUnit.HOURS.between(startDate, endDate) <= 48;
+        String sql;
+
+        if (isHourly) {
+            sql = """
+                WITH stats AS (
+                    SELECT COALESCE(SUM(s.plays), 0) AS plays, COALESCE(SUM(s.skips), 0) AS skips, COALESCE(SUM(s.likes), 0) AS likes
+                    FROM track_hourly_stats s INNER JOIN tracks t ON s.track_id = t.id
+                    WHERE t.artist_id = :artistId AND s.hour_timestamp >= :startDate AND s.hour_timestamp <= :endDate
+                ),
+                uniques AS (
+                    SELECT COUNT(DISTINCT COALESCE(r.user_id::text, r.session_id::text)) AS listeners
+                    FROM raw_playback_logs r INNER JOIN tracks t ON r.track_id = t.id
+                    WHERE t.artist_id = :artistId AND r.created_at >= :startDate AND r.created_at <= :endDate
+                      AND r.playback_status IN ('FULL', 'PARTIAL') AND r.source_type != 'SYSTEM_INTERNAL'
+                )
+                SELECT s.plays AS total_plays, s.skips AS total_skips, u.listeners AS unique_listeners, s.likes AS total_likes
+                FROM stats s CROSS JOIN uniques u
+                """;
+        } else {
+            sql = """
+                WITH combined_stats AS (
+                    SELECT s.plays, s.skips, s.likes
+                    FROM track_daily_stats s INNER JOIN tracks t ON s.track_id = t.id
+                    WHERE t.artist_id = :artistId AND s.date_timestamp >= CAST(:startDate AS DATE) AND s.date_timestamp < CAST(:endDate AS DATE)
+                    UNION ALL
+                    SELECT s.plays, s.skips, s.likes
+                    FROM track_hourly_stats s INNER JOIN tracks t ON s.track_id = t.id
+                    WHERE t.artist_id = :artistId AND CAST(s.hour_timestamp AT TIME ZONE 'UTC' AS DATE) = CAST(:endDate AT TIME ZONE 'UTC' AS DATE)
+                      AND s.hour_timestamp >= :startDate AND s.hour_timestamp <= :endDate
+                ),
+                uniques AS (
+                    SELECT COUNT(DISTINCT COALESCE(r.user_id::text, r.session_id::text)) AS listeners
+                    FROM raw_playback_logs r INNER JOIN tracks t ON r.track_id = t.id
+                    WHERE t.artist_id = :artistId AND r.created_at >= :startDate AND r.created_at <= :endDate
+                      AND r.playback_status IN ('FULL', 'PARTIAL') AND r.source_type != 'SYSTEM_INTERNAL'
+                )
+                SELECT COALESCE(SUM(c.plays), 0) AS total_plays, COALESCE(SUM(c.skips), 0) AS total_skips, MAX(u.listeners) AS unique_listeners, COALESCE(SUM(c.likes), 0) AS total_likes
+                FROM combined_stats c CROSS JOIN uniques u
+                """;
+        }
 
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("artistId", artistId)
@@ -76,30 +92,26 @@ public class AnalyticsQueryRepository {
      */
     public List<TopTrackProjection> getTopTracksForArtist(UUID artistId, OffsetDateTime startDate, OffsetDateTime endDate, int limit) {
         String sql = """
-              WITH combined_stats AS (
-                  SELECT track_id, plays, skips, unique_listeners, likes 
-                  FROM track_daily_stats 
-                  WHERE date_timestamp >= CAST(:startDate AS DATE) AND date_timestamp <= CAST(:endDate AS DATE)
-                  UNION ALL
-                  SELECT track_id, plays, skips, unique_listeners, likes 
-                  FROM track_hourly_stats 
-                  WHERE CAST(hour_timestamp AT TIME ZONE 'UTC' AS DATE) = CAST(:endDate AT TIME ZONE 'UTC' AS DATE)
-                    AND hour_timestamp <= :endDate
-              )
-              SELECT 
-                  t.id AS track_id,
-                  t.title,
-                  t.cover_minio_path,
-                  COALESCE(SUM(s.plays), 0) AS plays,
-                  COALESCE(SUM(s.skips), 0) AS skips,
-                  COALESCE(SUM(s.unique_listeners), 0) AS unique_listeners
-              FROM tracks t
-              LEFT JOIN combined_stats s ON t.id = s.track_id
-              WHERE t.artist_id = :artistId
-                AND t.status != 'ARCHIVED'
-              GROUP BY t.id, t.title, t.cover_minio_path
-              ORDER BY plays DESC, unique_listeners DESC
-              LIMIT :limit
+            WITH combined_stats AS (
+                SELECT track_id, plays, skips, likes FROM track_daily_stats
+                WHERE date_timestamp >= CAST(:startDate AS DATE) AND date_timestamp < CAST(:endDate AS DATE)
+                UNION ALL
+                SELECT track_id, plays, skips, likes FROM track_hourly_stats
+                WHERE CAST(hour_timestamp AT TIME ZONE 'UTC' AS DATE) = CAST(:endDate AT TIME ZONE 'UTC' AS DATE)
+                  AND hour_timestamp >= :startDate AND hour_timestamp <= :endDate
+            ),
+            uniques AS (
+                SELECT track_id, COUNT(DISTINCT COALESCE(user_id::text, session_id::text)) AS listeners
+                FROM raw_playback_logs
+                WHERE created_at >= :startDate AND created_at <= :endDate
+                  AND playback_status IN ('FULL', 'PARTIAL') AND source_type != 'SYSTEM_INTERNAL'
+                GROUP BY track_id
+            )
+            SELECT t.id AS track_id, t.title, t.cover_minio_path, t.popularity_score, COALESCE(SUM(c.plays), 0) AS plays, COALESCE(SUM(c.skips), 0) AS skips, COALESCE(MAX(u.listeners), 0) AS unique_listeners
+            FROM tracks t LEFT JOIN combined_stats c ON t.id = c.track_id LEFT JOIN uniques u ON t.id = u.track_id
+            WHERE t.artist_id = :artistId AND t.status != 'ARCHIVED'
+            GROUP BY t.id, t.title, t.cover_minio_path, t.popularity_score
+            ORDER BY plays DESC, unique_listeners DESC LIMIT :limit
             """;
 
         MapSqlParameterSource params = new MapSqlParameterSource()
@@ -114,7 +126,8 @@ public class AnalyticsQueryRepository {
                 rs.getString("cover_minio_path"),
                 rs.getLong("plays"),
                 rs.getLong("skips"),
-                rs.getLong("unique_listeners")
+                rs.getLong("unique_listeners"),
+                rs.getDouble("popularity_score")
         ));
     }
 
@@ -123,29 +136,45 @@ public class AnalyticsQueryRepository {
      * IDOR Guard: The INNER JOIN ensures the track belongs to the requesting artist.
      */
     public AggregateMetricsProjection getTrackMetrics(UUID trackId, UUID artistId, OffsetDateTime startDate, OffsetDateTime endDate) {
-                String sql = """
-                        WITH combined_stats AS (
-                            SELECT track_id, plays, skips, unique_listeners, likes
-                            FROM track_daily_stats
-                            WHERE track_id = :trackId 
-                              AND date_timestamp >= CAST(:startDate AS DATE) 
-                              AND date_timestamp <= CAST(:endDate AS DATE)
-                            UNION ALL
-                            SELECT track_id, plays, skips, unique_listeners, likes
-                            FROM track_hourly_stats
-                            WHERE CAST(hour_timestamp AT TIME ZONE 'UTC' AS DATE) = CAST(:endDate AT TIME ZONE 'UTC' AS DATE) 
-                                AND hour_timestamp <= :endDate
-                        )
-                        SELECT
-                            COALESCE(SUM(s.plays), 0) AS total_plays,
-                            COALESCE(SUM(s.skips), 0) AS total_skips,
-                            COALESCE(SUM(s.unique_listeners), 0) AS unique_listeners,
-                            COALESCE(SUM(s.likes), 0) AS total_likes
-                        FROM combined_stats s
-                        INNER JOIN tracks t ON s.track_id = t.id
-                        WHERE s.track_id = :trackId
-                          AND t.artist_id = :artistId
-            """;
+        boolean isHourly = ChronoUnit.HOURS.between(startDate, endDate) <= 48;
+        String sql;
+
+        if (isHourly) {
+            sql = """
+                WITH stats AS (
+                    SELECT COALESCE(SUM(plays), 0) AS plays, COALESCE(SUM(skips), 0) AS skips, COALESCE(SUM(likes), 0) AS likes
+                    FROM track_hourly_stats
+                    WHERE track_id = :trackId AND hour_timestamp >= :startDate AND hour_timestamp <= :endDate
+                ),
+                uniques AS (
+                    SELECT COUNT(DISTINCT COALESCE(user_id::text, session_id::text)) AS listeners
+                    FROM raw_playback_logs
+                    WHERE track_id = :trackId AND created_at >= :startDate AND created_at <= :endDate
+                      AND playback_status IN ('FULL', 'PARTIAL') AND source_type != 'SYSTEM_INTERNAL'
+                )
+                SELECT s.plays AS total_plays, s.skips AS total_skips, u.listeners AS unique_listeners, s.likes AS total_likes
+                FROM stats s CROSS JOIN uniques u
+                """;
+        } else {
+            sql = """
+                    WITH combined_stats AS (
+                        SELECT plays, skips, likes FROM track_daily_stats
+                        WHERE track_id = :trackId AND date_timestamp >= CAST(:startDate AS DATE) AND date_timestamp < CAST(:endDate AS DATE)
+                        UNION ALL
+                        SELECT plays, skips, likes FROM track_hourly_stats
+                        WHERE track_id = :trackId AND CAST(hour_timestamp AT TIME ZONE 'UTC' AS DATE) = CAST(:endDate AT TIME ZONE 'UTC' AS DATE)
+                          AND hour_timestamp >= :startDate AND hour_timestamp <= :endDate
+                    ),
+                    uniques AS (
+                        SELECT COUNT(DISTINCT COALESCE(user_id::text, session_id::text)) AS listeners
+                        FROM raw_playback_logs
+                        WHERE track_id = :trackId AND created_at >= :startDate AND created_at <= :endDate
+                          AND playback_status IN ('FULL', 'PARTIAL') AND source_type != 'SYSTEM_INTERNAL'
+                    )
+                    SELECT COALESCE(SUM(c.plays), 0) AS total_plays, COALESCE(SUM(c.skips), 0) AS total_skips, MAX(u.listeners) AS unique_listeners, COALESCE(SUM(c.likes), 0) AS total_likes
+                    FROM combined_stats c CROSS JOIN uniques u
+                    """;
+        }
 
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("trackId", trackId)
@@ -165,29 +194,53 @@ public class AnalyticsQueryRepository {
      * Fetches daily discrete points for building line charts.
      */
     public List<TimeSeriesProjection> getTrackTimeSeries(UUID trackId, UUID artistId, OffsetDateTime startDate, OffsetDateTime endDate) {
-        String sql = """
-                WITH combined_stats AS (
-                    SELECT track_id, date_timestamp AS dt, plays, skips, unique_listeners, likes 
-                    FROM track_daily_stats
-                    WHERE date_timestamp >= CAST(:startDate AS DATE) AND date_timestamp <= CAST(:endDate AS DATE)
-                    UNION ALL
-                    SELECT track_id, DATE(hour_timestamp AT TIME ZONE 'UTC') AS dt, plays, skips, unique_listeners, likes 
-                    FROM track_hourly_stats 
-                    WHERE CAST(hour_timestamp AT TIME ZONE 'UTC' AS DATE) = CAST(:endDate AT TIME ZONE 'UTC' AS DATE)\s
-                        AND hour_timestamp <= :endDate
+        boolean isHourly = ChronoUnit.HOURS.between(startDate, endDate) <= 48;
+        String sql;
+
+        if (isHourly) {
+            sql = """
+                WITH stats AS (
+                    SELECT hour_timestamp AS dt, plays, skips, likes FROM track_hourly_stats
+                    WHERE track_id = :trackId AND hour_timestamp >= :startDate AND hour_timestamp <= :endDate
+                ),
+                uniques AS (
+                    SELECT date_trunc('hour', created_at) AS dt, COUNT(DISTINCT COALESCE(user_id::text, session_id::text)) AS listeners
+                    FROM raw_playback_logs
+                    WHERE track_id = :trackId AND created_at >= :startDate AND created_at <= :endDate
+                      AND playback_status IN ('FULL', 'PARTIAL') AND source_type != 'SYSTEM_INTERNAL'
+                    GROUP BY date_trunc('hour', created_at)
                 )
-                SELECT
-                    s.dt AS date_timestamp,
-                    COALESCE(SUM(s.plays), 0) AS plays,
-                    COALESCE(SUM(s.skips), 0) AS skips,
-                    COALESCE(SUM(s.unique_listeners), 0) AS unique_listeners,
-                    COALESCE(SUM(s.likes), 0) AS likes
-                FROM combined_stats s
-                INNER JOIN tracks t ON s.track_id = t.id
-                WHERE s.track_id = :trackId AND t.artist_id = :artistId
-                GROUP BY s.dt
-                ORDER BY s.dt ASC
-            """;
+                SELECT s.dt, s.plays, s.skips, COALESCE(u.listeners, 0) AS unique_listeners, s.likes 
+                FROM stats s LEFT JOIN uniques u ON s.dt = u.dt ORDER BY s.dt ASC
+                """;
+        } else {
+            sql = """
+                    WITH historical AS (
+                        SELECT CAST(date_timestamp AS TIMESTAMP WITH TIME ZONE) AS dt, plays, skips, unique_listeners, likes
+                        FROM track_daily_stats
+                        WHERE track_id = :trackId AND date_timestamp >= CAST(:startDate AS DATE) AND date_timestamp < CAST(:endDate AS DATE)
+                    ),
+                    live_stats AS (
+                        SELECT date_trunc('day', hour_timestamp) AS dt, SUM(plays) AS plays, SUM(skips) AS skips, SUM(likes) AS likes
+                        FROM track_hourly_stats
+                        WHERE track_id = :trackId AND CAST(hour_timestamp AT TIME ZONE 'UTC' AS DATE) = CAST(:endDate AT TIME ZONE 'UTC' AS DATE)
+                          AND hour_timestamp >= :startDate AND hour_timestamp <= :endDate
+                        GROUP BY date_trunc('day', hour_timestamp)
+                    ),
+                    live_uniques AS (
+                        SELECT date_trunc('day', created_at) AS dt, COUNT(DISTINCT COALESCE(user_id::text, session_id::text)) AS unique_listeners
+                        FROM raw_playback_logs
+                        WHERE track_id = :trackId AND CAST(created_at AT TIME ZONE 'UTC' AS DATE) = CAST(:endDate AT TIME ZONE 'UTC' AS DATE)
+                          AND created_at >= :startDate AND created_at <= :endDate
+                          AND playback_status IN ('FULL', 'PARTIAL') AND source_type != 'SYSTEM_INTERNAL'
+                        GROUP BY date_trunc('day', created_at)
+                    )
+                    SELECT dt, plays, skips, unique_listeners, likes FROM historical
+                    UNION ALL
+                    SELECT s.dt, s.plays, s.skips, COALESCE(u.unique_listeners, 0), s.likes FROM live_stats s LEFT JOIN live_uniques u ON s.dt = u.dt
+                    ORDER BY dt ASC
+                    """;
+        }
 
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("trackId", trackId)
@@ -196,9 +249,8 @@ public class AnalyticsQueryRepository {
                 .addValue("endDate", endDate);
 
         return jdbcTemplate.query(sql, params, (rs, rowNum) -> new TimeSeriesProjection(
-                rs.getDate("date_timestamp").toLocalDate(),
-                rs.getLong("plays"),
-                rs.getLong("skips"),
+                rs.getTimestamp("dt").toInstant().atOffset(java.time.ZoneOffset.UTC),
+                rs.getLong("plays"), rs.getLong("skips"),
                 rs.getLong("unique_listeners"),
                 rs.getLong("likes")
         ));
@@ -220,23 +272,16 @@ public class AnalyticsQueryRepository {
         String sql = """
             WITH combined_stats AS (
                 SELECT client_country, listeners FROM track_daily_demographics 
-                WHERE track_id = :trackId AND date_timestamp >= CAST(:startDate AS DATE) AND date_timestamp <= :endDate
-                
+                WHERE track_id = :trackId AND date_timestamp >= CAST(:startDate AS DATE) AND date_timestamp < CAST(:endDate AS DATE)
                 UNION ALL
-                
                 SELECT COALESCE(client_country, 'XX'), COUNT(DISTINCT COALESCE(user_id::text, session_id::text)) 
-                FROM raw_playback_logs r
-                INNER JOIN tracks t ON r.track_id = t.id
-                WHERE r.track_id = :trackId AND t.artist_id = :artistId
-                  AND DATE(r.created_at AT TIME ZONE 'UTC') = CURRENT_DATE AND CURRENT_DATE <= :endDate
-                  AND r.playback_status IN ('FULL', 'PARTIAL') AND r.source_type != 'SYSTEM_INTERNAL'
+                FROM raw_playback_logs r INNER JOIN tracks t ON r.track_id = t.id
+                WHERE r.track_id = :trackId AND t.artist_id = :artistId AND CAST(r.created_at AT TIME ZONE 'UTC' AS DATE) = CAST(:endDate AT TIME ZONE 'UTC' AS DATE)
+                  AND r.created_at >= :startDate AND r.created_at <= :endDate AND r.playback_status IN ('FULL', 'PARTIAL') AND r.source_type != 'SYSTEM_INTERNAL'
                 GROUP BY COALESCE(client_country, 'XX')
             )
             SELECT client_country AS country_or_city, SUM(listeners) AS listeners
-            FROM combined_stats
-            GROUP BY client_country
-            ORDER BY listeners DESC
-            LIMIT 10
+            FROM combined_stats GROUP BY client_country ORDER BY listeners DESC LIMIT 10
             """;
 
         MapSqlParameterSource params = new MapSqlParameterSource().addValue("trackId", trackId).addValue("artistId", artistId).addValue("startDate", startDate).addValue("endDate", endDate);
@@ -256,18 +301,13 @@ public class AnalyticsQueryRepository {
      */
     public List<AttributionProjection> getTrackAttribution(UUID trackId, UUID artistId, OffsetDateTime startDate, OffsetDateTime endDate) {
         String sql = """
-                WITH combined_stats AS (
+            WITH combined_stats AS (
                 SELECT source_type, plays FROM track_daily_sources 
-                WHERE track_id = :trackId AND date_timestamp >= CAST(:startDate AS DATE) AND date_timestamp <= CAST(:endDate AS DATE)
-                
+                WHERE track_id = :trackId AND date_timestamp >= CAST(:startDate AS DATE) AND date_timestamp < CAST(:endDate AS DATE)
                 UNION ALL
-                
-                SELECT r.source_type, COUNT(r.event_id) 
-                FROM raw_playback_logs r
-                INNER JOIN tracks t ON r.track_id = t.id
-                WHERE r.track_id = :trackId AND t.artist_id = :artistId
-                  AND DATE(r.created_at AT TIME ZONE 'UTC') = CURRENT_DATE AND CURRENT_DATE <= :endDate
-                  AND r.playback_status IN ('FULL', 'PARTIAL') AND r.source_type != 'SYSTEM_INTERNAL'
+                SELECT r.source_type, COUNT(r.event_id) FROM raw_playback_logs r INNER JOIN tracks t ON r.track_id = t.id
+                WHERE r.track_id = :trackId AND t.artist_id = :artistId AND CAST(r.created_at AT TIME ZONE 'UTC' AS DATE) = CAST(:endDate AT TIME ZONE 'UTC' AS DATE)
+                  AND r.created_at >= :startDate AND r.created_at <= :endDate AND r.playback_status IN ('FULL', 'PARTIAL') AND r.source_type != 'SYSTEM_INTERNAL'
                 GROUP BY r.source_type
             )
             SELECT source_type, SUM(plays) AS count
@@ -281,11 +321,35 @@ public class AnalyticsQueryRepository {
     }
 
     /**
+     * Natively resolves descriptive track information combined with internal popularity ranking.
+     * Enforces strict data isolation by bypassing the public MediaModuleApi contracts.
+     */
+    public TrackAnalyticsMetadataProjection getTrackAnalyticsMetadata(UUID trackId, UUID artistId) {
+        String sql = """
+            SELECT id, title, cover_minio_path, popularity_score
+            FROM tracks
+            WHERE id = :trackId AND artist_id = :artistId
+            """;
+
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("trackId", trackId)
+                .addValue("artistId", artistId);
+
+        return jdbcTemplate.queryForObject(sql, params, (rs, rowNum) -> new TrackAnalyticsMetadataProjection(
+                rs.getObject("id", UUID.class),
+                rs.getString("title"),
+                rs.getString("cover_minio_path"),
+                rs.getDouble("popularity_score")
+        ));
+    }
+
+
+    /**
      * Fetches the chronological unique listening history of a user.
      * Combines high-volume logs with static track metadata natively.
      */
     public List<HistoryTrackProjection> getUserListeningHistory(UUID userId, int limit, long offset) {
-        String sql = """         
+        String sql = """
             SELECT 
                 t.id AS track_id,
                 t.title,

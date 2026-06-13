@@ -8,6 +8,7 @@ import type {
     ModerationQueueProjection
 } from '../../../types';
 import type {AxiosResponse} from 'axios';
+import type {TrackAnalyticsResponseDto} from "@/features/analytics/types";
 
 export interface AdminRegistryFilters {
     query?: string;
@@ -44,6 +45,14 @@ export const adminApi = {
             '/admin/moderation/tracks/queue',
             {params: {page, size}}
         );
+        return data;
+    },
+
+
+    getAdminTrackAnalytics: async (trackId: string, startDate: string, endDate: string) => {
+        const {data} = await apiClient.get<TrackAnalyticsResponseDto>(`/analytics/admin/tracks/${trackId}`, {
+            params: {startDate, endDate}
+        });
         return data;
     },
 
