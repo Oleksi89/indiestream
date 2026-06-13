@@ -15,7 +15,7 @@ export const AttributionChart = ({data}: AttributionChartProps) => {
 
     const chartData = data.map(d => ({
         name: d.sourceType.replace(/_/g, ' '),
-        value: d.rawCount
+        value: d.count
     }));
 
     return (
