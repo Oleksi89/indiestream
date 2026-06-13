@@ -1,60 +1,62 @@
 import {useQuery, useMutation} from '@tanstack/react-query';
 import {analyticsApi} from '../api/analytics.api.ts';
-import type {AnalyticsTimeRange} from '../types';
 
-// Query Key Factory (Best Practice for TanStack Query v5)
+// Query Key Factory
 export const analyticsKeys = {
     all: ['analytics'] as const,
-    artistOverview: (timeRange: AnalyticsTimeRange) => [...analyticsKeys.all, 'artist', 'overview', timeRange] as const,
-    trackDetails: (trackId: string, timeRange: AnalyticsTimeRange) => [...analyticsKeys.all, 'track', trackId, timeRange] as const,
-    curatorPlaylist: (playlistId: string, timeRange: AnalyticsTimeRange) => [...analyticsKeys.all, 'curator', playlistId, timeRange] as const,
-    adminPlatform: (timeRange: AnalyticsTimeRange) => [...analyticsKeys.all, 'admin', 'platform', timeRange] as const,
+    artistOverview: (startDate: string, endDate: string) => [...analyticsKeys.all, 'artist', 'overview', startDate, endDate] as const,
+    trackDetails: (trackId: string, startDate: string, endDate: string) => [...analyticsKeys.all, 'track', trackId, startDate, endDate] as const,
+    curatorPlaylist: (playlistId: string, startDate: string, endDate: string) => [...analyticsKeys.all, 'curator', playlistId, startDate, endDate] as const,
+    adminPlatform: (startDate: string, endDate: string) => [...analyticsKeys.all, 'admin', 'platform', startDate, endDate] as const,
     listeningHistory: (page: number) => [...analyticsKeys.all, 'history', page] as const,
 };
 
-export const useArtistOverview = (timeRange: AnalyticsTimeRange) => {
+export const useArtistOverview = (startDate: string, endDate: string) => {
     return useQuery({
-        queryKey: analyticsKeys.artistOverview(timeRange),
-        queryFn: () => analyticsApi.getArtistOverview(timeRange),
-        staleTime: 5 * 60 * 1000, // 5 minutes fresh
+        queryKey: analyticsKeys.artistOverview(startDate, endDate),
+        queryFn: () => analyticsApi.getArtistOverview(startDate, endDate),
+        staleTime: 5 * 60 * 1000,
     });
 };
 
-export const useTrackAnalytics = (trackId: string | undefined, timeRange: AnalyticsTimeRange) => {
+export const useTrackAnalytics = (trackId: string | undefined, startDate: string, endDate: string) => {
     return useQuery({
-        queryKey: analyticsKeys.trackDetails(trackId!, timeRange),
-        queryFn: () => analyticsApi.getTrackAnalytics(trackId!, timeRange),
+        queryKey: analyticsKeys.trackDetails(trackId!, startDate, endDate),
+        queryFn: () => analyticsApi.getTrackAnalytics(trackId!, startDate, endDate),
         enabled: !!trackId,
-        staleTime: 60 * 1000, // 1 minute (due to real-time concurrent listeners)
+        staleTime: 60 * 1000,
     });
 };
 
-export const useCuratorAnalytics = (playlistId: string | undefined, timeRange: AnalyticsTimeRange) => {
+export const useCuratorAnalytics = (playlistId: string | undefined, startDate: string, endDate: string) => {
     return useQuery({
-        queryKey: analyticsKeys.curatorPlaylist(playlistId!, timeRange),
-        queryFn: () => analyticsApi.getCuratorPlaylistAnalytics(playlistId!, timeRange),
+        queryKey: analyticsKeys.curatorPlaylist(playlistId!, startDate, endDate),
+        queryFn: () => analyticsApi.getCuratorPlaylistAnalytics(playlistId!, startDate, endDate),
         enabled: !!playlistId,
     });
 };
 
-export const usePlatformAnalytics = (timeRange: AnalyticsTimeRange) => {
+export const usePlatformAnalytics = (startDate: string, endDate: string) => {
     return useQuery({
-        queryKey: analyticsKeys.adminPlatform(timeRange),
-        queryFn: () => analyticsApi.getPlatformOverview(timeRange),
+        queryKey: analyticsKeys.adminPlatform(startDate, endDate),
+        queryFn: () => analyticsApi.getPlatformOverview(startDate, endDate),
         staleTime: 10 * 60 * 1000,
     });
 };
 
 export const useExportTrackCsv = () => {
     return useMutation({
-        mutationFn: ({trackId, timeRange}: { trackId: string, timeRange: AnalyticsTimeRange }) =>
-            analyticsApi.exportTrackCsv(trackId, timeRange),
+        mutationFn: ({trackId, startDate, endDate}: { trackId: string, startDate: string, endDate: string }) =>
+            analyticsApi.exportTrackCsv(trackId, startDate, endDate),
         onSuccess: (blob, variables) => {
             // Create a temporary link to trigger the browser's download
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `track_analytics_${variables.trackId}_${variables.timeRange}.csv`;
+            // Format the filename to reflect the selected range
+            const shortStart = variables.startDate.split('T')[0];
+            const shortEnd = variables.endDate.split('T')[0];
+            a.download = `track_analytics_${variables.trackId}_${shortStart}_to_${shortEnd}.csv`;
             document.body.appendChild(a);
             a.click();
             a.remove();

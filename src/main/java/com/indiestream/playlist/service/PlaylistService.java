@@ -295,7 +295,7 @@ public class PlaylistService implements PlaylistModuleApi {
         Playlist playlist = playlistRepository.findById(playlistId)
                 .orElseThrow(() -> new PlaylistNotFoundException(playlistId));
 
-        enforceModificationAccess(playlist, userId);
+        enforceOwnerAccess(playlist, userId);
 
         // System playlists like "Liked Tracks" must remain immutable in name/descr/collaborative
         if (playlist.getIsSystem()) {
@@ -307,6 +307,7 @@ public class PlaylistService implements PlaylistModuleApi {
         if (name != null && !name.isBlank() && !playlist.getIsSystem()) playlist.setName(name);
         if (description != null && !playlist.getIsSystem()) playlist.setDescription(description);
         if (isPublic != null) playlist.setIsPublic(isPublic);
+        if (isCollaborative != null) playlist.setIsCollaborative(isCollaborative);
 
         return mapToDto(playlistRepository.save(playlist));
     }
