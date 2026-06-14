@@ -1,8 +1,12 @@
 package com.indiestream.recommendation.api;
 
+import com.indiestream.recommendation.api.dto.PassiveTasteShiftDto;
 import com.indiestream.recommendation.service.EmbeddingProviderService;
+import com.indiestream.recommendation.service.PassiveTasteProcessor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * Implementation of the public API facade.
@@ -13,9 +17,15 @@ import org.springframework.stereotype.Service;
 public class RecommendationModuleApiImpl implements RecommendationModuleApi {
 
     private final EmbeddingProviderService embeddingProviderService;
+    private final PassiveTasteProcessor passiveTasteProcessor;
 
     @Override
     public float[] generateTextEmbedding(String compositeText) {
         return embeddingProviderService.generateEmbedding(compositeText);
+    }
+
+    @Override
+    public void processPassiveTasteShifts(List<PassiveTasteShiftDto> shifts) {
+        passiveTasteProcessor.processBatch(shifts);
     }
 }

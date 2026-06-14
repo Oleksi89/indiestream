@@ -1,4 +1,4 @@
-package com.indiestream.media.pipeline.dto;
+package com.indiestream.recommendation.dto;
 
 import java.util.List;
 import java.util.UUID;

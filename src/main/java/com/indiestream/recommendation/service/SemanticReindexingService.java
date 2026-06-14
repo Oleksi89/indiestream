@@ -1,8 +1,7 @@
-package com.indiestream.media.pipeline.service;
+package com.indiestream.recommendation.service;
 
-import com.indiestream.media.catalog.domain.Track;
-import com.indiestream.media.catalog.repository.TrackRepository;
-import com.indiestream.media.pipeline.dto.ReindexRequestDto;
+import com.indiestream.media.api.MediaRecommendationFacade;
+import com.indiestream.recommendation.dto.ReindexRequestDto;
 import com.indiestream.recommendation.api.RecommendationModuleApi;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,8 +23,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class SemanticReindexingService {
 
-    private final TrackRepository trackRepository;
-    private final RecommendationModuleApi recommendationModuleApi;
+    private final MediaRecommendationFacade mediaRecommendationFacade;
+    private final EmbeddingProviderService embeddingProviderService;
     private final SemanticPayloadExtractor payloadExtractor;
 
     private static final int BATCH_SIZE = 50;
@@ -41,7 +40,7 @@ public class SemanticReindexingService {
         if (request.all()) {
             reindexEntirePlatform();
         } else {
-            reindexSpecificTracks(request.trackIds());
+            processBatch(mediaRecommendationFacade.getExistingTrackIds(request.trackIds()));
         }
 
         log.info("Semantic Re-indexing Job complete.");
@@ -49,42 +48,28 @@ public class SemanticReindexingService {
 
     private void reindexEntirePlatform() {
         int page = 0;
-        Page<Track> trackPage;
-
+        Page<UUID> trackIdPage;
         do {
-            trackPage = trackRepository.findAll(PageRequest.of(page, BATCH_SIZE));
-            log.info("Processing Re-index Batch {}/{}", page + 1, trackPage.getTotalPages());
-
-            processBatch(trackPage.getContent());
+            trackIdPage = mediaRecommendationFacade.getAllTrackIds(PageRequest.of(page, BATCH_SIZE));
+            processBatch(trackIdPage.getContent());
             page++;
-
-        } while (trackPage.hasNext());
+        } while (trackIdPage.hasNext());
     }
 
-    private void reindexSpecificTracks(List<UUID> trackIds) {
-        List<Track> tracks = trackRepository.findAllById(trackIds);
-        processBatch(tracks);
-    }
-
-    private void processBatch(List<Track> tracks) {
-        for (Track track : tracks) {
+    private void processBatch(List<UUID> trackIds) {
+        for (UUID trackId : trackIds) {
             try {
-                String payload = payloadExtractor.extract(track);
-                float[] vector = recommendationModuleApi.generateTextEmbedding(payload);
-
-                trackRepository.updateTrackVector(track.getId(), vector);
-                log.debug("Successfully re-indexed track: {}", track.getId());
-
-                // Strict LLM Rate Limit Prevention Guard
+                mediaRecommendationFacade.getTrackSemanticMetadata(trackId).ifPresent(meta -> {
+                    String payload = payloadExtractor.extract(meta);
+                    float[] vector = embeddingProviderService.generateEmbedding(payload);
+                    mediaRecommendationFacade.updateTrackVector(trackId, vector);
+                });
                 Thread.sleep(THROTTLE_MS);
-
             } catch (InterruptedException ie) {
                 Thread.currentThread().interrupt();
-                log.warn("Re-indexing job was interrupted.");
                 break;
             } catch (Exception e) {
-                log.error("Failed to re-index track {}: {}", track.getId(), e.getMessage());
-                // Circuit Breaker inside RecommendationModuleApi will eventually catch sustained failures.
+                log.error("Failed to re-index track {}: {}", trackId, e.getMessage());
             }
         }
     }
