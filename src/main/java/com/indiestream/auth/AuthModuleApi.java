@@ -48,4 +48,14 @@ public interface AuthModuleApi {
      * // TODO: [Auth] - Deprecate and replace with getUserPublicProfile in Media module metadata logic.
      */
     String getUserEmail(UUID userId);
+
+    // --- Recommendation Engine Integrations ---
+
+    boolean profileExists(UUID userId);
+
+    float[] getTasteVector(UUID userId);
+
+    void updateTasteVector(UUID userId, float[] vector);
+
+    void clearTasteVector(UUID userId);
 }

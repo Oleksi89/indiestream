@@ -363,4 +363,44 @@ public class UserService implements AuthModuleApi {
                 user.getProfile().getUpdatedAt()
         );
     }
+
+
+    // --- EPIC 6: Recommendation Engine Integrations ---
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean profileExists(UUID userId) {
+        return userRepository.existsById(userId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public float[] getTasteVector(UUID userId) {
+        return userRepository.findById(userId)
+                .filter(u -> !u.getIsBanned())
+                .map(User::getProfile)
+                .map(UserProfile::getTasteVector)
+                .orElse(null);
+    }
+
+    @Override
+    @Transactional
+    public void updateTasteVector(UUID userId, float[] vector) {
+        userRepository.findById(userId).ifPresent(user -> {
+            if (user.getProfile() != null && !user.getIsBanned()) {
+                user.getProfile().setTasteVector(vector);
+                // Dirty checking will automatically update the database
+            }
+        });
+    }
+
+    @Override
+    @Transactional
+    public void clearTasteVector(UUID userId) {
+        userRepository.findById(userId).ifPresent(user -> {
+            if (user.getProfile() != null) {
+                user.getProfile().setTasteVector(null);
+            }
+        });
+    }
 }
