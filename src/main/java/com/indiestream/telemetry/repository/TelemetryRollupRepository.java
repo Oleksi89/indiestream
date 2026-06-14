@@ -263,4 +263,45 @@ public class TelemetryRollupRepository {
 
         return jdbcTemplate.update(sql, new MapSqlParameterSource());
     }
+
+
+    /**
+     * AI CORE: Fetches raw playback records for a specific time window.
+     * STRICT FILTERING: Only returns records for authenticated users (user_id IS NOT NULL),
+     * completely excluding anonymous sessions and suspected bots.
+     * Used by the Taste Engine to apply asynchronous vector shifts (Plays/Skips).
+     */
+    public List<com.indiestream.telemetry.repository.RawPlaybackRecord> fetchAuthenticatedPlaybacksForWindow(OffsetDateTime start, OffsetDateTime end) {
+        String sql = """
+                SELECT 
+                    event_id, user_id, track_id, session_id, start_position_ms, 
+                    end_position_ms, playback_duration_ms, client_ip, user_agent, 
+                    is_suspected_bot, playback_status, source_type, source_id, 
+                    client_country, created_at
+                FROM raw_playback_logs
+                WHERE created_at >= :start AND created_at < :end
+                  AND user_id IS NOT NULL 
+                  AND is_suspected_bot = false
+                """;
+
+        return jdbcTemplate.query(sql, new MapSqlParameterSource().addValue("start", start).addValue("end", end), (rs, rowNum) ->
+                new com.indiestream.telemetry.repository.RawPlaybackRecord(
+                        rs.getObject("event_id", java.util.UUID.class),
+                        rs.getObject("user_id", java.util.UUID.class),
+                        rs.getObject("track_id", java.util.UUID.class),
+                        rs.getObject("session_id", java.util.UUID.class),
+                        rs.getInt("start_position_ms"),
+                        rs.getInt("end_position_ms"),
+                        rs.getInt("playback_duration_ms"),
+                        rs.getString("client_ip"),
+                        rs.getString("user_agent"),
+                        rs.getBoolean("is_suspected_bot"),
+                        rs.getString("playback_status"),
+                        rs.getString("source_type"),
+                        rs.getObject("source_id", java.util.UUID.class),
+                        rs.getString("client_country"),
+                        rs.getObject("created_at", OffsetDateTime.class)
+                )
+        );
+    }
 }
