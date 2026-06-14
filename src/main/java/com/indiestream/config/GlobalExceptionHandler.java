@@ -6,7 +6,9 @@ import com.indiestream.media.storage.exception.MediaNotFoundException;
 import com.indiestream.media.storage.exception.MediaStreamException;
 import com.indiestream.media.moderation.exception.AppealNotAllowedException;
 import com.indiestream.playlist.exception.PlaylistNotFoundException;
+import com.indiestream.recommendation.exception.EmbeddingGenerationException;
 import com.indiestream.telemetry.exception.RateLimitExceededException;
+import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -24,7 +26,7 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleEmailAlreadyInUse(EmailAlreadyInUseException ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
         problemDetail.setTitle("Email Conflict");
-        problemDetail.setType(URI.create("https://indiestream.com/errors/email-in-use"));
+        problemDetail.setType(URI.create("urn:indiestream:error:email-in-use"));
         return problemDetail;
     }
 
@@ -32,7 +34,7 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleUsernameAlreadyInUse(UsernameAlreadyInUseException ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
         problemDetail.setTitle("Username Conflict");
-        problemDetail.setType(URI.create("https://indiestream.com/errors/username-in-use"));
+        problemDetail.setType(URI.create("urn:indiestream:error:username-in-use"));
         return problemDetail;
     }
 
@@ -40,6 +42,7 @@ public class GlobalExceptionHandler {
     public ProblemDetail handlePlaylistNotFound(PlaylistNotFoundException ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
         problemDetail.setTitle("Playlist Not Found");
+        problemDetail.setType(URI.create("urn:indiestream:error:playlist-not-found"));
         return problemDetail;
     }
 
@@ -47,7 +50,7 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleInvalidFile(InvalidFileException ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
         problemDetail.setTitle("Invalid File");
-        problemDetail.setType(URI.create("https://indiestream.com/errors/invalid-file"));
+        problemDetail.setType(URI.create("urn:indiestream:error:invalid-file"));
         return problemDetail;
     }
 
@@ -55,7 +58,7 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleFileTooLarge(FileTooLargeException ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.PAYLOAD_TOO_LARGE, ex.getMessage());
         problemDetail.setTitle("Payload Too Large");
-        problemDetail.setType(URI.create("https://indiestream.com/errors/file-too-large"));
+        problemDetail.setType(URI.create("urn:indiestream:error:file-too-large"));
         return problemDetail;
     }
 
@@ -63,7 +66,7 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleCannotFollowSelf(CannotFollowSelfException ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
         problemDetail.setTitle("Invalid Follow Operation");
-        problemDetail.setType(URI.create("https://indiestream.com/errors/invalid-follow"));
+        problemDetail.setType(URI.create("urn:indiestream:error:invalid-follow"));
         return problemDetail;
     }
 
@@ -71,6 +74,7 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleIllegalArgument(IllegalArgumentException ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
         problemDetail.setTitle("Bad Request");
+        problemDetail.setType(URI.create("urn:indiestream:error:bad-request"));
         return problemDetail;
     }
 
@@ -78,7 +82,7 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleInvalidTrackState(InvalidTrackStateException ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
         problemDetail.setTitle("State Machine Transition Violation");
-        problemDetail.setType(URI.create("https://indiestream.com/errors/invalid-track-state"));
+        problemDetail.setType(URI.create("urn:indiestream:error:invalid-track-state"));
         return problemDetail;
     }
 
@@ -86,22 +90,22 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleAppealNotAllowed(AppealNotAllowedException ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
         problemDetail.setTitle("Appeal Not Allowed");
-        problemDetail.setType(URI.create("https://indiestream.com/errors/appeal-denied"));
+        problemDetail.setType(URI.create("urn:indiestream:error:appeal-denied"));
         return problemDetail;
     }
 
     /**
-     * Handles validation errors for @RequestParam and @PathVariable (e.g., regex mismatches).
+     * Handles validation errors for @RequestParam and @PathVariable.
      */
     @ExceptionHandler(ConstraintViolationException.class)
     public ProblemDetail handleConstraintViolation(ConstraintViolationException ex) {
         String errorMessage = ex.getConstraintViolations().stream()
-                .map(violation -> violation.getMessage())
+                .map(ConstraintViolation::getMessage)
                 .collect(Collectors.joining(", "));
 
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, errorMessage);
         problemDetail.setTitle("Invalid Request Parameters");
-        problemDetail.setType(URI.create("https://indiestream.com/errors/validation-failure"));
+        problemDetail.setType(URI.create("urn:indiestream:error:validation-failure"));
         return problemDetail;
     }
 
@@ -116,7 +120,7 @@ public class GlobalExceptionHandler {
 
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, errorMessage);
         problemDetail.setTitle("Malformed Payload");
-        problemDetail.setType(URI.create("https://indiestream.com/errors/payload-validation-failure"));
+        problemDetail.setType(URI.create("urn:indiestream:error:payload-validation-failure"));
         return problemDetail;
     }
 
@@ -125,16 +129,32 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleMediaNotFound(MediaNotFoundException ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
         problemDetail.setTitle("Media Blob Not Found");
-        problemDetail.setType(URI.create("https://indiestream.com/errors/media-not-found"));
+        problemDetail.setType(URI.create("urn:indiestream:error:media-not-found"));
         return problemDetail;
     }
 
     @ExceptionHandler(MediaStreamException.class)
     public ProblemDetail handleMediaStream(MediaStreamException ex) {
-        // HTTP 503 for storage provider connection issues
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, "The storage provider is temporarily unavailable or returning errors.");
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                "The storage provider is temporarily unavailable or returning errors."
+        );
         problemDetail.setTitle("Storage Streaming Failure");
-        problemDetail.setType(URI.create("https://indiestream.com/errors/storage-unavailable"));
+        problemDetail.setType(URI.create("urn:indiestream:error:storage-unavailable"));
+        return problemDetail;
+    }
+
+    /**
+     * Handles AI recommendation pipeline failures.
+     */
+    @ExceptionHandler(EmbeddingGenerationException.class)
+    public ProblemDetail handleEmbeddingGeneration(EmbeddingGenerationException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                "The embedding system is temporarily unavailable or returning errors."
+        );
+        problemDetail.setTitle("AI Embedding Generation Failed");
+        problemDetail.setType(URI.create("urn:indiestream:error:embedding-failure"));
         return problemDetail;
     }
 
@@ -146,7 +166,7 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleRateLimitExceeded(RateLimitExceededException ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage());
         problemDetail.setTitle("Rate Limit Exceeded");
-        problemDetail.setType(URI.create("https://indiestream.com/errors/rate-limit"));
+        problemDetail.setType(URI.create("urn:indiestream:error:rate-limit"));
         return problemDetail;
     }
 }
