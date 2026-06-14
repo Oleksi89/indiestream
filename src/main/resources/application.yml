@@ -66,3 +66,21 @@ minio:
   access-key: ${MINIO_ROOT_USER}
   secret-key: ${MINIO_ROOT_PASSWORD}
   bucket: indiestream-tracks
+
+
+resilience4j:
+  retry:
+    instances:
+      openai-embedding:
+        max-attempts: 3
+        wait-duration: 2s
+        retry-exceptions:
+          - org.springframework.web.client.RestClientException
+          - java.io.IOException
+  circuitbreaker:
+    instances:
+      openai-embedding:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 3
