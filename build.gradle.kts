@@ -48,6 +48,9 @@ dependencies {
     implementation("org.flywaydb:flyway-database-postgresql")
     runtimeOnly("org.postgresql:postgresql")
 
+    // --- Recommendation Engine: pgvector support ---
+    implementation("org.hibernate.orm:hibernate-vector:6.6.0.Final")
+
     implementation("org.springframework.boot:spring-boot-starter-security")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.security:spring-security-test")
@@ -70,7 +73,11 @@ dependencies {
     // --- Media Module: Resilience & AI Dependencies ---
     implementation("org.springframework.retry:spring-retry")
     implementation("org.springframework.boot:spring-boot-starter-aop")
+
+    // Google GenAI for Multimodal Moderation
     implementation("org.springframework.ai:spring-ai-starter-model-google-genai")
+    // OpenAI for 768-dimensional Vector Embeddings
+    implementation("org.springframework.ai:spring-ai-starter-model-openai")
 
     // --- Telemetry Module: High-Throughput & Resilience ---
     implementation("io.github.resilience4j:resilience4j-spring-boot3:2.2.0")
