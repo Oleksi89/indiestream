@@ -12,10 +12,7 @@ import com.indiestream.playlist.PlaylistModuleApi;
 import com.indiestream.playlist.domain.*;
 import com.indiestream.playlist.PlaylistDto;
 import com.indiestream.playlist.dto.PlaylistTrackDetailsDto;
-import com.indiestream.playlist.event.PlaylistCopiedEvent;
-import com.indiestream.playlist.event.PlaylistFollowedEvent;
-import com.indiestream.playlist.event.TrackAddedToPlaylistEvent;
-import com.indiestream.playlist.event.TrackLikedEvent;
+import com.indiestream.playlist.event.*;
 import com.indiestream.playlist.exception.PlaylistNotFoundException;
 import com.indiestream.playlist.repository.PlaylistCollaboratorRepository;
 import com.indiestream.playlist.repository.PlaylistFollowerRepository;
@@ -434,6 +431,12 @@ public class PlaylistService implements PlaylistModuleApi {
         playlist.setTrackCount(Math.max(0, playlist.getTrackCount() - 1));
         playlist.setTotalDurationSeconds(Math.max(0, playlist.getTotalDurationSeconds() - track.durationSeconds()));
         playlistRepository.save(playlist);
+
+        if (playlist.getIsSystem()) {
+            events.publishEvent(new TrackUnlikedEvent(userId, trackId, Instant.now()));
+        } else {
+            events.publishEvent(new TrackRemovedFromPlaylistEvent(userId, playlistId, trackId, Instant.now()));
+        }
     }
 
     /**
