@@ -75,4 +75,24 @@ public interface PlaylistRepository extends JpaRepository<Playlist, UUID> {
     @Modifying
     @Query(value = "UPDATE playlists SET like_count = like_count + :likes WHERE id = :id", nativeQuery = true)
     void incrementPlaylistCounters(@Param("id") UUID id, @Param("likes") int likes);
+
+    /**
+     * AI CORE: Real-time Centroid Vector recalculation.
+     * Executes natively in PostgreSQL using pgvector's avg() function.
+     * Bypasses the JVM completely, operating in O(1) memory space regardless of playlist size.
+     * If the playlist becomes empty, AVG() inherently returns NULL, resetting it to a "Cold Start" state.
+     */
+    @Modifying
+    @Query(value = """
+            UPDATE playlists 
+            SET centroid_vector = (
+                SELECT avg(t.vector) 
+                FROM tracks t 
+                JOIN playlist_tracks pt ON t.id = pt.track_id 
+                WHERE pt.playlist_id = :playlistId 
+                  AND t.vector IS NOT NULL
+            ) 
+            WHERE id = :playlistId
+            """, nativeQuery = true)
+    void recalculateCentroidVector(@Param("playlistId") UUID playlistId);
 }

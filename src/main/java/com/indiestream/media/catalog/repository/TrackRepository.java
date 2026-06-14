@@ -27,6 +27,7 @@ public interface TrackRepository extends JpaRepository<Track, UUID>, JpaSpecific
     Page<Track> findAllByArtistIdAndStatusOrderByCreatedAtDesc(UUID artistId, TrackStatus status, Pageable pageable);
 
     List<Track> findAllByArtistId(UUID artistId);
+
     /**
      * Retrieves a paginated list of all public tracks across the platform.
      * Ordered by creation date descending
@@ -79,4 +80,13 @@ public interface TrackRepository extends JpaRepository<Track, UUID>, JpaSpecific
     @Modifying
     @Query(value = "UPDATE tracks SET play_count = play_count + :plays, skip_count = skip_count + :skips, like_count = like_count + :likes WHERE id = :id", nativeQuery = true)
     void incrementTrackCounters(@Param("id") UUID id, @Param("plays") int plays, @Param("skips") int skips, @Param("likes") int likes);
+
+    /**
+     * Atomically updates the 768-dimensional AI vector space for a given track.
+     * Uses JPQL because Hibernate 6 @JdbcTypeCode(SqlTypes.VECTOR) handles float[]-to-pgvector mapping safely.
+     * Prevents overwriting other fields (like playCount) that might have changed concurrently.
+     */
+    @Modifying
+    @Query("UPDATE Track t SET t.vector = :vector WHERE t.id = :id")
+    void updateTrackVector(@Param("id") UUID id, @Param("vector") float[] vector);
 }
