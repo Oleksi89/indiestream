@@ -74,6 +74,17 @@ public class Track {
     @Column(columnDefinition = "jsonb", nullable = false)
     private TrackTags tags = TrackTags.empty();
 
+    // --- Recommendation Engine Vector Space ---
+
+    /**
+     * The 768-dimensional static mathematical representation of the track.
+     * Generated asynchronously via LLM embeddings using Genre + AI Tags + Mood + Tempo.
+     * Indexed via HNSW for O(log n) cosine distance similarity searches (<=>).
+     */
+    @JdbcTypeCode(SqlTypes.VECTOR)
+    @Column(name = "vector", columnDefinition = "vector(768)")
+    private float[] vector;
+
     // --- Moderation Human-In-The-Loop Fields ---
 
     @Column(name = "has_appealed", nullable = false)

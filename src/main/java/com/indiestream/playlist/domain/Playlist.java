@@ -2,6 +2,8 @@ package com.indiestream.playlist.domain;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -41,6 +43,16 @@ public class Playlist {
     @Column(name = "is_collaborative", nullable = false)
     @Builder.Default
     private Boolean isCollaborative = false;
+
+    // --- Recommendation Engine Vector Space ---
+
+    /**
+     * The 768-dimensional mathematical centroid (average) of all tracks in the playlist.
+     * Recalculated asynchronously when tracks are added/removed. Nullable for empty playlists.
+     */
+    @JdbcTypeCode(SqlTypes.VECTOR)
+    @Column(name = "centroid_vector", columnDefinition = "vector(768)")
+    private float[] centroidVector;
 
     // Cached aggregates to optimize read queries for the UI
     @Column(name = "track_count", nullable = false)
