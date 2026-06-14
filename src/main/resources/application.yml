@@ -4,6 +4,11 @@ server:
 spring:
   application:
     name: indiestream
+
+  autoconfigure:
+    exclude:
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiChatAutoConfiguration
+
   datasource:
     url: jdbc:postgresql://localhost:5432/indiestream_db
     username: ${POSTGRES_USER}
@@ -31,11 +36,17 @@ spring:
         queue-capacity: 50
       thread-name-prefix: media-worker-
   ai:
-    model:
-      chat: google-genai
+    # Google GenAI for HITL & Moderation (Chat Model)
     google:
       genai:
         api-key: ${GEMINI_API_KEY}
+    # OpenAI for Recommendation Engine Embeddings (Vector Model)
+    openai:
+      api-key: ${OPENAI_API_KEY}
+      embedding:
+        options:
+          model: text-embedding-3-small
+          dimensions: 768
 
 management:
   endpoints:
