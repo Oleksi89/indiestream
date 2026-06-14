@@ -1,7 +1,7 @@
-package com.indiestream.media.pipeline.controller;
+package com.indiestream.recommendation.controller;
 
-import com.indiestream.media.pipeline.dto.ReindexRequestDto;
-import com.indiestream.media.pipeline.service.SemanticReindexingService;
+import com.indiestream.recommendation.dto.ReindexRequestDto;
+import com.indiestream.recommendation.service.SemanticReindexingService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
