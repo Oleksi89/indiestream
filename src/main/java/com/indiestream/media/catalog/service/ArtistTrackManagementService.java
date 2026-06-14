@@ -1,15 +1,18 @@
 package com.indiestream.media.catalog.service;
 
+import com.indiestream.media.api.TrackPublishedEvent;
 import com.indiestream.media.catalog.domain.Track;
 import com.indiestream.media.catalog.domain.TrackStatus;
 import com.indiestream.media.catalog.repository.TrackRepository;
 import com.indiestream.media.moderation.service.TrackTransitionEngine;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -23,6 +26,7 @@ public class ArtistTrackManagementService {
 
     private final TrackRepository trackRepository;
     private final TrackTransitionEngine transitionEngine;
+    private final ApplicationEventPublisher events;
 
     /**
      * Publishes an APPROVED or READY track to the public feed.
@@ -32,11 +36,13 @@ public class ArtistTrackManagementService {
         Track track = getTrackAndVerifyOwnership(trackId, artistId);
 
         transitionEngine.transitionTrack(
-                trackId,
+                track.getId(),
                 TrackStatus.PUBLISHED,
                 "Artist formally published the track to the global feed.",
                 null
         );
+
+        events.publishEvent(new TrackPublishedEvent(track.getId(), Instant.now()));
         log.info("Artist {} successfully published track {}", artistId, trackId);
     }
 
