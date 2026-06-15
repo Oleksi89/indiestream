@@ -4,6 +4,7 @@ import com.indiestream.media.catalog.domain.Track;
 import com.indiestream.media.catalog.domain.TrackStatus;
 import com.indiestream.media.moderation.dto.ModerationQueueProjection;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
@@ -11,6 +12,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.domain.Page;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -72,6 +74,9 @@ public interface TrackRepository extends JpaRepository<Track, UUID>, JpaSpecific
      * Orders by oldest first.
      */
     Page<ModerationQueueProjection> findAllByStatusOrderByCreatedAtAsc(TrackStatus status, Pageable pageable);
+
+    @Query("SELECT t.id FROM Track t WHERE t.status IN :statuses")
+    Slice<UUID> findAllIdsByStatusIn(@Param("statuses") Collection<TrackStatus> statuses, Pageable pageable);
 
     /**
      * Retrieves all tracks for the Artist Studio Dashboard.

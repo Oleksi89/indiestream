@@ -2,6 +2,7 @@ import {create} from 'zustand';
 import {persist, createJSONStorage} from 'zustand/middleware';
 import type {TrackDto} from '@/features/media/types';
 import type {TelemetrySourceType} from '@/features/telemetry/types';
+import type {AutoplayMode} from "@/features/recommendations/types";
 
 export type PlaybackMode = 'master' | 'stems';
 export type RepeatMode = 'OFF' | 'CONTEXT' | 'TRACK';
@@ -54,6 +55,15 @@ interface PlayerState {
     setPlaybackMode: (mode: PlaybackMode) => void;
     setStemVolume: (stemName: string, volume: number) => void;
     initializeStems: (stemsMetadata: Record<string, string>) => void;
+
+    // Autoplay Engine State
+    isAutoplayActive: boolean;
+    autoplayMode: AutoplayMode | null;
+    autoplayContextId: string | null;
+
+    // Autoplay Actions
+    setAutoplay: (isActive: boolean, mode?: AutoplayMode | null, contextId?: string | null) => void;
+    appendAutoplayTracks: (tracks: TrackDto[]) => void;
 }
 
 // Fisher-Yates Shuffle O(n)
@@ -82,6 +92,10 @@ export const usePlayerStore = create<PlayerState>()(
             isShuffle: false,
             repeatMode: 'OFF',
             isQueueOpen: false,
+
+            isAutoplayActive: true, // Default to continuous playback for better UX
+            autoplayMode: 'TASTE',  // Default to general taste profiling
+            autoplayContextId: null,
 
             playbackMode: 'master',
             stemVolumes: {},
@@ -134,6 +148,7 @@ export const usePlayerStore = create<PlayerState>()(
             addToQueue: (track) => set((state) => ({
                 queue: [track, ...state.queue]
             })),
+
 
             /**
              * Appends an entire array of tracks to the END of the current queue.
@@ -236,13 +251,33 @@ export const usePlayerStore = create<PlayerState>()(
                     initialVolumes[stem] = 0.8;
                 });
                 set({stemVolumes: initialVolumes});
-            }
+            },
+
+            setAutoplay: (isActive, mode = null, contextId = null) => set({
+                isAutoplayActive: isActive,
+                autoplayMode: mode,
+                autoplayContextId: contextId
+            }),
+
+            appendAutoplayTracks: (newTracks) => set((state) => {
+                // Strict FSD filtering to prevent duplicate playback in the continuous session
+                const existingIds = new Set([
+                    ...state.history.map(t => t.id),
+                    ...state.queue.map(t => t.id),
+                    ...(state.currentTrack ? [state.currentTrack.id] : [])
+                ]);
+
+                const uniqueNewTracks = newTracks.filter(t => !existingIds.has(t.id));
+
+                return {queue: [...state.queue, ...uniqueNewTracks]};
+            }),
         }),
         {
             name: 'indiestream-player-storage',
             storage: createJSONStorage(() => localStorage),
             partialize: (state) => ({
                 currentTrack: state.currentTrack,
+                progress: state.progress,
                 volume: state.volume,
                 queue: state.queue,
                 originalQueue: state.originalQueue,
@@ -250,7 +285,11 @@ export const usePlayerStore = create<PlayerState>()(
                 playbackContext: state.playbackContext,
                 isShuffle: state.isShuffle,
                 repeatMode: state.repeatMode,
-                stemVolumes: state.stemVolumes
+                stemVolumes: state.stemVolumes,
+
+                isAutoplayActive: state.isAutoplayActive,
+                autoplayMode: state.autoplayMode,
+                autoplayContextId: state.autoplayContextId
             }),
             onRehydrateStorage: () => (state) => {
                 if (state) {
