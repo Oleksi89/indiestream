@@ -1,4 +1,3 @@
-import React from 'react';
 import {useAuthStore} from '@/shared/store/authStore';
 import {PublicFeed} from '@/features/media/ui/PublicFeed';
 import {TrackCard} from '@/features/media/ui/TrackCard';

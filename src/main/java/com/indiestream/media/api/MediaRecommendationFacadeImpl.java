@@ -2,23 +2,28 @@ package com.indiestream.media.api;
 
 import com.indiestream.media.api.dto.TrackSemanticMetadataDto;
 import com.indiestream.media.catalog.domain.Track;
+import com.indiestream.media.catalog.domain.TrackStatus;
 import com.indiestream.media.catalog.domain.TrackTags;
 import com.indiestream.media.catalog.repository.TrackRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
 public class MediaRecommendationFacadeImpl implements MediaRecommendationFacade {
 
     private final TrackRepository trackRepository;
+
+    private static final Set<TrackStatus> INDEXABLE_STATUSES = Set.of(
+            TrackStatus.APPROVED,
+            TrackStatus.PUBLISHED,
+            TrackStatus.HIDDEN
+    );
 
     @Override
     public Optional<TrackSemanticMetadataDto> getTrackSemanticMetadata(UUID trackId) {
@@ -46,8 +51,8 @@ public class MediaRecommendationFacadeImpl implements MediaRecommendationFacade 
     }
 
     @Override
-    public Page<UUID> getAllTrackIds(Pageable pageable) {
-        return trackRepository.findAll(pageable).map(Track::getId);
+    public Slice<UUID> getTrackIdsForRecommendationIndexing(Pageable pageable) {
+        return trackRepository.findAllIdsByStatusIn(INDEXABLE_STATUSES, pageable);
     }
 
     @Override
