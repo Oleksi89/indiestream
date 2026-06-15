@@ -56,7 +56,7 @@ public class TasteMutationListener {
     }
 
     @Async
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onTrackNotInterested(TrackNotInterestedEvent event) {
         if (acquireIdempotencyLock(event.userId(), event.trackId(), "NOT_INTERESTED")) {

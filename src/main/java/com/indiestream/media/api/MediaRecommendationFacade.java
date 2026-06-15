@@ -1,9 +1,13 @@
 package com.indiestream.media.api;
 
 import com.indiestream.media.api.dto.TrackSemanticMetadataDto;
+import com.indiestream.media.catalog.domain.TrackStatus;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -20,7 +24,7 @@ public interface MediaRecommendationFacade {
 
     Optional<float[]> getTrackVector(UUID trackId);
 
-    Page<UUID> getAllTrackIds(Pageable pageable);
+    Slice<UUID> getTrackIdsForRecommendationIndexing(Pageable pageable);
 
     List<UUID> getExistingTrackIds(List<UUID> requestedIds);
 }

@@ -4,8 +4,8 @@ import com.indiestream.media.api.MediaRecommendationFacade;
 import com.indiestream.recommendation.dto.ReindexRequestDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -47,12 +47,12 @@ public class SemanticReindexingService {
 
     private void reindexEntirePlatform() {
         int page = 0;
-        Page<UUID> trackIdPage;
+        Slice<UUID> trackIdSlice;
         do {
-            trackIdPage = mediaRecommendationFacade.getAllTrackIds(PageRequest.of(page, BATCH_SIZE));
-            processBatch(trackIdPage.getContent());
+            trackIdSlice = mediaRecommendationFacade.getTrackIdsForRecommendationIndexing(PageRequest.of(page, BATCH_SIZE));
+            processBatch(trackIdSlice.getContent());
             page++;
-        } while (trackIdPage.hasNext());
+        } while (trackIdSlice.hasNext());
     }
 
     private void processBatch(List<UUID> trackIds) {

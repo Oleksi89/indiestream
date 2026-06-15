@@ -2,21 +2,16 @@ import {useEffect, useRef, useState} from 'react';
 import {usePlayerStore} from '@/shared/store/playerStore.ts';
 import {useAuthStore} from '@/shared/store/authStore.ts';
 import {mediaApi} from '../../../api/media.api.ts';
-import {useSecureUrl} from '@/shared/hooks/useSecureUrl.ts';
 import {useWebAudio} from '../hooks/useWebAudio.ts';
 import {
     Play, Pause, SkipForward, SkipBack, Volume2, Disc3, Settings2,
-    Loader2, Heart, PlusCircle, Shuffle, Repeat, Repeat1, ListVideo
+    Loader2, Shuffle, Repeat, Repeat1, ListVideo
 } from 'lucide-react';
 import {cn} from '@/shared/lib/utils.ts';
 import {audioEngine} from "@/features/media/sub-features/playback/lib/webAudioEngine.ts";
 import Hls from "hls.js";
-import {useToggleLike, useUserLibrary} from "@/features/playlist/hooks/usePlaylists.ts";
-import {useQuery} from "@tanstack/react-query";
-import {playlistApi} from "@/features/playlist/api/playlist.api.ts";
-import type {TrackMetadataPayload} from "@/features/playlist/types";
-import {AddToPlaylistDropdown} from "@/features/playlist/ui/AddToPlaylistDropdown.tsx";
-import {useInteractionTracker} from "@/features/telemetry";
+import {PlayerTrackInfo} from "@/features/media/sub-features/playback/ui/components/PlayerTrackInfo";
+import {useAutoplayEngine} from "@/features/media/sub-features/playback/hooks/useAutoplayEngine";
 
 /**
  * Global Player Bar Component.
@@ -29,11 +24,10 @@ export const PlayerBar = () => {
         progress, setProgress, duration, setDuration, setPlaying,
         playbackMode, setPlaybackMode, stemVolumes, setStemVolume,
         playNext, playPrevious, isShuffle, toggleShuffle, repeatMode, setRepeatMode, toggleQueue, isQueueOpen,
-        playbackContext
-    } = usePlayerStore();
+     } = usePlayerStore();
 
     const token = useAuthStore(state => state.token);
-    const {trackInteraction} = useInteractionTracker();
+    useAutoplayEngine();
 
     const [isMixerOpen, setIsMixerOpen] = useState(false);
     const [isPlaylistMenuOpen, setIsPlaylistMenuOpen] = useState(false);
@@ -45,46 +39,6 @@ export const PlayerBar = () => {
 
     const trackId = currentTrack?.id;
     const hasStems = currentTrack?.stemsMetadata && Object.keys(currentTrack.stemsMetadata).length > 0;
-
-    // Securely fetch cover image
-    const {url: coverUrl} = useSecureUrl(
-        `cover-player-${trackId || 'idle'}`,
-        () => trackId ? mediaApi.getTrackCoverBlob(trackId) : Promise.reject('No track loaded'),
-        !!currentTrack?.coverMinioPath && !!trackId
-    );
-
-    const toggleLike = useToggleLike();
-    const {data: library} = useUserLibrary();
-
-    const likedPlaylistId = library?.content.find(p => p.isSystem && p.name === 'Liked Tracks')?.id;
-
-    const {data: likedTracksData} = useQuery({
-        queryKey: ['playlists', 'tracks', likedPlaylistId],
-        queryFn: () => playlistApi.getPlaylistTracks(likedPlaylistId as string),
-        enabled: !!likedPlaylistId && !!trackId,
-    });
-
-    const isLiked = !!trackId && (likedTracksData?.content.some(pt => pt.trackId === trackId) || false);
-
-    const trackMetadata: TrackMetadataPayload | null = currentTrack ? {
-        id: currentTrack.id,
-        title: currentTrack.title,
-        artistId: currentTrack.artistId,
-        artistUsername: currentTrack.artistUsername,
-        artistAlias: currentTrack.artistAlias,
-        durationSeconds: currentTrack.durationSeconds || 0,
-        stemsMetadata: currentTrack.stemsMetadata,
-        coverMinioPath: currentTrack.coverMinioPath || null
-    } : null;
-
-    const handleLike = () => {
-        if (!trackMetadata || !trackId) return;
-        toggleLike.mutate({track: trackMetadata, isLiked});
-
-        if (!isLiked) {
-            trackInteraction(trackId, 'LIKE', playbackContext?.type || 'PUBLIC_FEED', 'PLAYER_BAR');
-        }
-    };
 
     useEffect(() => {
         if (!isPlaylistMenuOpen) return;
@@ -229,53 +183,7 @@ export const PlayerBar = () => {
             />
 
             {/* Track Info & Status */}
-            <div className="flex items-center gap-4 w-[25%]">
-                <div
-                    className="relative h-14 w-14 rounded-lg bg-slate-800 overflow-hidden border border-slate-700 shrink-0">
-                    {coverUrl ? (
-                        <img src={coverUrl} alt={currentTrack.title} className="h-full w-full object-cover"/>
-                    ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                            <Disc3 className="text-slate-600"/>
-                        </div>
-                    )}
-                    {isStemsLoading && (
-                        <div
-                            className="absolute inset-0 bg-slate-900/60 flex items-center justify-center backdrop-blur-[2px]">
-                            <Loader2 className="text-violet-400 animate-spin" size={20}/>
-                        </div>
-                    )}
-                </div>
-                <div className="flex flex-col truncate">
-                    <span className="text-white font-semibold truncate">{currentTrack.title}</span>
-                    <div className="flex items-center gap-2">
-                        <span className={cn(
-                            "text-[10px] uppercase tracking-wider font-bold",
-                            playbackMode === 'stems' ? "text-violet-400" : "text-slate-500"
-                        )}>
-                            {isStemsLoading ? 'Syncing Stems...' : playbackMode === 'stems' ? 'Multi-Stem Mode' : 'Master Track'}
-                        </span>
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-1 opacity-80 hover:opacity-100 transition-opacity shrink-0">
-                    <button
-                        onClick={handleLike}
-                        disabled={toggleLike.isPending}
-                        className={cn("p-2 rounded-full hover:bg-slate-800 transition-colors", isLiked ? "text-violet-400" : "text-slate-400 hover:text-white")}
-                    >
-                        <Heart size={18}
-                               className={cn(isLiked && "fill-current", toggleLike.isPending && "opacity-50")}/>
-                    </button>
-
-                    <AddToPlaylistDropdown track={trackMetadata!}>
-                        <button
-                            className="p-2 rounded-full text-slate-400 hover:bg-slate-800 hover:text-white transition-colors outline-none focus:bg-slate-800">
-                            <PlusCircle size={18}/>
-                        </button>
-                    </AddToPlaylistDropdown>
-                </div>
-            </div>
+            <PlayerTrackInfo isStemsLoading={isStemsLoading}/>
 
             {/* Main Controls */}
             <div className="flex flex-col items-center gap-2 w-[45%]">
