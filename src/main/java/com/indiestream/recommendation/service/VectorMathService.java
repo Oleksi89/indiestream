@@ -12,7 +12,7 @@ import java.util.UUID;
 
 /**
  * Pure Mathematical Engine for the Recommendation Domain.
- * Handles Exponential Moving Average (EMA) shifts for the 768D User Taste Vector ($V_{user}$).
+ * Handles Exponential Moving Average (EMA) shifts for the 768D User Taste Vector).
  */
 @Slf4j
 @Service
@@ -43,7 +43,7 @@ public class VectorMathService {
     @Transactional
     public void shiftUserTasteVector(UUID userId, float[] trackVector, float alpha) {
         if (trackVector == null || trackVector.length != DIMENSIONS) {
-            log.warn("Invalid track vector length. Expected {}, got {}. Cannot shift $V_user$ for User {}", DIMENSIONS, trackVector == null ? "null" : trackVector.length, userId);
+            log.warn("Invalid track vector length. Expected {}, got {}. Cannot shift Vector for User {}", DIMENSIONS, trackVector == null ? "null" : trackVector.length, userId);
             return;
         }
 
@@ -62,7 +62,7 @@ public class VectorMathService {
 
         // Cold Start Scenario
         if (currentVector == null || currentVector.length != DIMENSIONS) {
-            log.debug("Cold Start initialization of $V_user$");
+            log.debug("Cold Start initialization of user Vector");
             return trackVector.clone();
         }
 

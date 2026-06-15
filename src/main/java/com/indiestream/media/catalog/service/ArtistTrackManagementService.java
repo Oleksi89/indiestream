@@ -26,7 +26,6 @@ public class ArtistTrackManagementService {
 
     private final TrackRepository trackRepository;
     private final TrackTransitionEngine transitionEngine;
-    private final ApplicationEventPublisher events;
 
     /**
      * Publishes an APPROVED or READY track to the public feed.
@@ -42,7 +41,6 @@ public class ArtistTrackManagementService {
                 null
         );
 
-        events.publishEvent(new TrackPublishedEvent(track.getId(), Instant.now()));
         log.info("Artist {} successfully published track {}", artistId, trackId);
     }
 
