@@ -578,6 +578,33 @@ public class PlaylistService implements PlaylistModuleApi {
         playlistRepository.save(playlist);
     }
 
+    /**
+     * Implementation of the public API for batch playlist resolution.
+     * Executes an optimized bulk fetch and maps the results dynamically,
+     * maintaining the specific sorting order dictated by the caller (e.g., AI Proximity).
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<PlaylistDto> getPlaylistsByIds(List<UUID> playlistIds) {
+        if (playlistIds == null || playlistIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // DB-level privacy guard to save heap memory
+        List<Playlist> playlists = playlistRepository.findByIdInAndIsPublicTrueAndIsSystemFalse(playlistIds);
+
+        // Security Guard: For AI batch resolution, we strictly drop private playlists
+        // to prevent accidental leakage in "Discover Playlists" shelves.
+        Map<UUID, PlaylistDto> playlistMap = playlists.stream()
+                .collect(Collectors.toMap(Playlist::getId, this::mapToDto));
+
+        // Reconstruct honoring the requested ranking order
+        return playlistIds.stream()
+                .map(playlistMap::get)
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
     // --- Private Guards & Aggregation ---
 
     private void enforceOwnerAccess(Playlist playlist, UUID userId) {

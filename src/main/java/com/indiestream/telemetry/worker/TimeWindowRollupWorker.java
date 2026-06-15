@@ -1,10 +1,8 @@
 package com.indiestream.telemetry.worker;
 
-import com.indiestream.recommendation.api.RecommendationModuleApi;
-import com.indiestream.recommendation.api.dto.PassiveTasteShiftDto;
-import com.indiestream.recommendation.service.PassiveTasteProcessor;
 import com.indiestream.shared.event.PlaylistCountersAggregatedEvent;
 import com.indiestream.shared.event.TrackCountersAggregatedEvent;
+import com.indiestream.telemetry.api.event.PassiveTasteShiftsAggregatedEvent;
 import com.indiestream.telemetry.repository.RawPlaybackRecord;
 import com.indiestream.telemetry.repository.TelemetryRollupRepository;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +30,6 @@ public class TimeWindowRollupWorker {
 
     private final TelemetryRollupRepository rollupRepository;
     private final ApplicationEventPublisher eventPublisher;
-    private final RecommendationModuleApi recommendationModuleApi;
 
     /**
      * MICRO-BATCH: Executes every 5 minutes.
@@ -52,13 +49,15 @@ public class TimeWindowRollupWorker {
             List<RawPlaybackRecord> rawRecords = rollupRepository.fetchAuthenticatedPlaybacksForWindow(start, end);
 
             // Map raw telemetry to cross-module DTOs to enforce strict Modulith boundaries
-            List<PassiveTasteShiftDto> shifts = rawRecords.stream()
+            List<PassiveTasteShiftsAggregatedEvent.PassiveTasteShiftRecord> shifts = rawRecords.stream()
                     .filter(r -> "FULL".equals(r.playbackStatus()) || "SKIP".equals(r.playbackStatus()))
-                    .map(r -> new PassiveTasteShiftDto(r.userId(), r.trackId(), r.playbackStatus()))
+                    .map(r -> new PassiveTasteShiftsAggregatedEvent.PassiveTasteShiftRecord(r.userId(), r.trackId(), r.playbackStatus()))
                     .toList();
 
-            log.debug("[AI CORE] Pushing {} passive taste shifts to Recommendation Engine.", shifts.size());
-            recommendationModuleApi.processPassiveTasteShifts(shifts);
+            if (!shifts.isEmpty()) {
+                log.debug("[AI CORE] Broadcasting {} passive taste shifts.", shifts.size());
+                eventPublisher.publishEvent(new PassiveTasteShiftsAggregatedEvent(shifts));
+            }
         } catch (Exception e) {
             // Catch to prevent analytical rollups from failing if the AI engine stalls
             log.error("[AI CORE] Failed to process passive taste shifts during micro-batch: {}", e.getMessage(), e);

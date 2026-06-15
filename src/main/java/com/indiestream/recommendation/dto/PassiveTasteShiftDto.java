@@ -1,4 +1,4 @@
-package com.indiestream.recommendation.api.dto;
+package com.indiestream.recommendation.dto;
 
 import java.util.UUID;
 

@@ -1,5 +1,7 @@
 package com.indiestream.media.moderation.service;
 
+import com.indiestream.media.api.TrackApprovedEvent;
+import com.indiestream.media.api.TrackPublishedEvent;
 import com.indiestream.media.catalog.domain.Track;
 import com.indiestream.media.moderation.domain.TrackAuditLog;
 import com.indiestream.media.catalog.domain.TrackStatus;
@@ -90,8 +92,10 @@ public class TrackTransitionEngine {
         trackRepository.save(track);
         auditLogRepository.save(auditLog);
 
-        if (targetStatus == TrackStatus.ARCHIVED) {
-            eventPublisher.publishEvent(new TrackArchivedEvent(trackId, Instant.now()));
+        switch (targetStatus) {
+            case ARCHIVED -> eventPublisher.publishEvent(new TrackArchivedEvent(trackId, Instant.now()));
+            case APPROVED -> eventPublisher.publishEvent(new TrackApprovedEvent(track.getId(), Instant.now()));
+            case PUBLISHED -> eventPublisher.publishEvent(new TrackPublishedEvent(track.getId(), Instant.now()));
         }
     }
 
