@@ -1,12 +1,9 @@
 package com.indiestream.recommendation.worker;
 
 import com.indiestream.media.api.MediaRecommendationFacade;
-import com.indiestream.media.api.TrackPublishedEvent;
-import com.indiestream.media.catalog.domain.Track;
-import com.indiestream.media.catalog.repository.TrackRepository;
+import com.indiestream.media.api.TrackApprovedEvent;
 import com.indiestream.recommendation.service.EmbeddingProviderService;
 import com.indiestream.recommendation.service.SemanticPayloadExtractor;
-import com.indiestream.recommendation.api.RecommendationModuleApi;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -36,7 +33,7 @@ public class TrackVectorizationWorker {
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void processTrackVectorization(TrackPublishedEvent event) {
+    public void processTrackVectorization(TrackApprovedEvent event) {
         if (mediaRecommendationFacade.hasVector(event.trackId())) return;
 
         mediaRecommendationFacade.getTrackSemanticMetadata(event.trackId()).ifPresentOrElse(
@@ -45,7 +42,7 @@ public class TrackVectorizationWorker {
                         String semanticPayload = payloadExtractor.extract(meta);
                         float[] vector = embeddingProviderService.generateEmbedding(semanticPayload);
                         mediaRecommendationFacade.updateTrackVector(event.trackId(), vector);
-                        log.info("Successfully generated $V_track$ for track: {}", event.trackId());
+                        log.info("Successfully generated Vector for track: {}", event.trackId());
                     } catch (Exception e) {
                         log.error("Vector generation failed for track {}: {}", event.trackId(), e.getMessage());
                     }

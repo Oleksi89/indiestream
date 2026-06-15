@@ -2,7 +2,6 @@ package com.indiestream.recommendation.service;
 
 import com.indiestream.media.api.MediaRecommendationFacade;
 import com.indiestream.recommendation.dto.ReindexRequestDto;
-import com.indiestream.recommendation.api.RecommendationModuleApi;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
