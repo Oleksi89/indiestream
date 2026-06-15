@@ -21,6 +21,12 @@ import java.util.UUID;
 public interface TrackRepository extends JpaRepository<Track, UUID>, JpaSpecificationExecutor<Track> {
 
     /**
+     * Highly optimized batch fetch enforcing strict FSM state visibility.
+     * Prevents fetching BANNED or ARCHIVED tracks into JVM memory.
+     */
+    List<Track> findByIdInAndStatus(List<UUID> ids, TrackStatus status);
+
+    /**
      * Retrieves a paginated list of tracks for a specific artist.
      * Ordered by creation date descending to show the newest uploads first.
      */

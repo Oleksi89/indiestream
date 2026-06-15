@@ -406,4 +406,26 @@ public class AnalyticsQueryRepository {
         Long count = jdbcTemplate.queryForObject(sql, params, Long.class);
         return count != null ? count : 0L;
     }
+
+
+    /**
+     * Retrieves a distinct list of tracks the user has listened to recently.
+     * Used by the Recommendation Engine to prevent repetitive Autoplay loops and ensure fresh discovery.
+     */
+    public List<UUID> getRecentTrackIdsForUser(UUID userId, OffsetDateTime since) {
+        String sql = """
+            
+                SELECT DISTINCT track_id
+            FROM raw_playback_logs
+            WHERE user_id = :userId
+              AND created_at >= :since
+              AND playback_status IN ('FULL', 'PARTIAL')
+            """;
+
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("userId", userId)
+                .addValue("since", since);
+
+        return jdbcTemplate.queryForList(sql, params, UUID.class);
+    }
 }

@@ -19,6 +19,12 @@ import java.util.UUID;
 @Repository
 public interface PlaylistRepository extends JpaRepository<Playlist, UUID> {
 
+    /**
+     * Batch fetch enforcing strict privacy constraints.
+     * Prevents private or system playlists from being loaded into JVM memory.
+     */
+    List<Playlist> findByIdInAndIsPublicTrueAndIsSystemFalse(List<UUID> ids);
+
     // Identifies the unique system playlist for a specific user
     Optional<Playlist> findByOwnerIdAndIsSystemTrue(UUID ownerId);
 

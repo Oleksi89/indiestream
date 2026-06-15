@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -238,6 +239,33 @@ public class TrackService implements MediaModuleApi {
                         t.getStatus().name()
                 ))
                 .orElseThrow(() -> new IllegalArgumentException("Track not found"));
+    }
+
+    /**
+     * Implementation of the public module API for batch resolution.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<TrackMetadata> getPublicTracksMetadata(List<UUID> trackIds) {
+        if (trackIds == null || trackIds.isEmpty()) return Collections.emptyList();
+
+        // DB-level filtering preventing leak of non-published tracks into memory
+        List<Track> tracks = trackRepository.findByIdInAndStatus(trackIds, TrackStatus.PUBLISHED);
+
+        Map<UUID, TrackMetadata> metadataMap = tracks.stream()
+                .collect(Collectors.toMap(Track::getId, t -> new TrackMetadata(
+                        t.getId(), t.getTitle(), t.getArtistId(), t.getDurationSeconds(),
+                        t.getStemsMetadata(), t.getCoverMinioPath(), t.getGenre(), t.isExplicit(),
+                        t.getTags() != null ? t.getTags().custom() : Set.of(),
+                        t.getTags() != null ? t.getTags().aiGenerated() : Set.of(),
+                        t.getStatus().name()
+                )));
+
+        // Preserve AI engine ranking order
+        return trackIds.stream()
+                .map(metadataMap::get)
+                .filter(Objects::nonNull)
+                .toList();
     }
 
     /**
