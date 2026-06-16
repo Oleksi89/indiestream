@@ -1,13 +1,9 @@
 package com.indiestream.media.api;
 
-import com.indiestream.media.api.dto.TrackSemanticMetadataDto;
-import com.indiestream.media.catalog.domain.TrackStatus;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
+import com.indiestream.media.catalog.dto.TrackSemanticMetadataDto;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;

@@ -1,7 +1,6 @@
 package com.indiestream.recommendation.service;
 
-import com.indiestream.media.api.dto.TrackSemanticMetadataDto;
-import org.springframework.stereotype.Component;
+import com.indiestream.media.catalog.dto.TrackSemanticMetadataDto;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 

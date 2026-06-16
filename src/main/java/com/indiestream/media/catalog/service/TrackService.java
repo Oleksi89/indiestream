@@ -104,6 +104,18 @@ public class TrackService implements MediaModuleApi {
         return mapToDto(savedTrack);
     }
 
+    @Override
+    public Set<String> getAllowedGenres() {
+        return ALLOWED_GENRES;
+    }
+
+    @Override
+    @Transactional
+    public TrackDto uploadTrackForSeeder(UUID artistId, String title, MultipartFile file, MultipartFile cover, String genre, boolean isExplicit, Set<String> customTags) {
+        // Delegates to the internal business logic
+        return uploadTrack(artistId, title, file, cover, null, null, genre, isExplicit, customTags);
+    }
+
 
     /**
      * Updates technical media paths without modifying the FSM status.

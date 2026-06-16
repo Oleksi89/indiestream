@@ -1,5 +1,7 @@
 package com.indiestream.auth;
 
+import com.indiestream.auth.dto.UserDto;
+import com.indiestream.auth.dto.UserProfileResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -58,4 +60,9 @@ public interface AuthModuleApi {
     void updateTasteVector(UUID userId, float[] vector);
 
     void clearTasteVector(UUID userId);
+
+
+    UserProfileResponse register(com.indiestream.auth.dto.RegisterRequestDto request);
+
+    Optional<UserDto> getUserByEmail(String email);
 }

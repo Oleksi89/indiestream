@@ -4,7 +4,7 @@ import com.indiestream.auth.AuthModuleApi;
 import com.indiestream.media.api.MediaModuleApi;
 import com.indiestream.media.api.TrackMetadata;
 import com.indiestream.playlist.PlaylistDto;
-import com.indiestream.playlist.PlaylistModuleApi;
+import com.indiestream.playlist.api.PlaylistModuleApi;
 import com.indiestream.playlist.api.PlaylistRecommendationFacade;
 import com.indiestream.recommendation.dto.AutoplayMode;
 import com.indiestream.recommendation.dto.DiscoveryShelvesDto;
@@ -16,7 +16,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Orchestrates cross-module AI recommendations.

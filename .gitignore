@@ -5,6 +5,8 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
+
+/seed-data/
 # Environment variables
 .env
 

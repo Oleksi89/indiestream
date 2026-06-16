@@ -1,6 +1,6 @@
 package com.indiestream.media.api;
 
-import com.indiestream.media.api.dto.TrackSemanticMetadataDto;
+import com.indiestream.media.catalog.dto.TrackSemanticMetadataDto;
 import com.indiestream.media.catalog.domain.Track;
 import com.indiestream.media.catalog.domain.TrackStatus;
 import com.indiestream.media.catalog.domain.TrackTags;
