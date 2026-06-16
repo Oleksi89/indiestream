@@ -1,9 +1,12 @@
 package com.indiestream.media.api;
 
+import com.indiestream.media.catalog.dto.TrackDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -27,4 +30,9 @@ public interface MediaModuleApi {
      * Enforces strict TrackStatus.PUBLISHED visibility guard.
      */
     Page<TrackMetadata> searchPublicTracks(String query, String genre, String tagsCsv, Pageable pageable);
+
+
+    Set<String> getAllowedGenres();
+
+    TrackDto uploadTrackForSeeder(UUID artistId, String title, MultipartFile file, MultipartFile cover, String genre, boolean isExplicit, Set<String> customTags);
 }
