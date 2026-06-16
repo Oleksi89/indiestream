@@ -86,7 +86,7 @@ public class SearchAggregationService {
         CompletableFuture.allOf(profilesFuture, tracksFuture, playlistsFuture).join();
 
         return new GlobalSearchResponseDto(
-                enrichTracksWithArtistProfiles(tracksFuture.join()),
+                tracksFuture.join(),
                 playlistsFuture.join(),
                 profilesFuture.join()
         );
@@ -113,37 +113,9 @@ public class SearchAggregationService {
         // Playlists and Profiles do not currently support GIN tag semantics.
         // Returning empty lists for them instantly.
         return new GlobalSearchResponseDto(
-                enrichTracksWithArtistProfiles(tracksFuture.join()),
+                tracksFuture.join(),
                 Collections.emptyList(),
                 Collections.emptyList()
         );
-    }
-
-    /**
-     * Bulk resolves artist profiles.
-     */
-    private List<SearchTrackDto> enrichTracksWithArtistProfiles(List<TrackMetadata> rawTracks) {
-        if (rawTracks.isEmpty()) return Collections.emptyList();
-
-        Set<UUID> artistIds = rawTracks.stream()
-                .map(TrackMetadata::artistId)
-                .collect(Collectors.toSet());
-
-        Map<UUID, UserPublicProfile> profilesMap = authModuleApi.getPublicProfiles(artistIds)
-                .stream()
-                .collect(Collectors.toMap(UserPublicProfile::id, p -> p));
-
-        return rawTracks.stream().map(t -> {
-            UserPublicProfile profile = profilesMap.get(t.artistId());
-            String alias = profile != null ? profile.alias() : "Unknown Artist";
-            String username = profile != null ? profile.username() : "unknown";
-
-            return new SearchTrackDto(
-                    t.id(), t.title(), t.artistId(), username, alias,
-                    t.durationSeconds(), t.stemsMetadata(), t.coverMinioPath(),
-                    t.genre(), t.isExplicit(),
-                    new SearchTrackDto.SearchTrackTagsDto(t.customTags(), Collections.emptySet(), t.aiGeneratedTags())
-            );
-        }).toList();
     }
 }
