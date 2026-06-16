@@ -219,49 +219,76 @@ public class TrackService implements MediaModuleApi {
 
     /**
      * Implementation of the public module API.
-     * Projects the internal entity to a public metadata record, now including semantic tags.
+     * Projects the internal entity to a public metadata record, resolving cross-module artist identity.
      */
     @Override
     @Transactional(readOnly = true)
     public TrackMetadata getTrackMetadata(UUID trackId) {
-        return trackRepository.findById(trackId)
-                .map(t -> new TrackMetadata(
-                        t.getId(),
-                        t.getTitle(),
-                        t.getArtistId(),
-                        t.getDurationSeconds(),
-                        t.getStemsMetadata(),
-                        t.getCoverMinioPath(),
-                        t.getGenre(),
-                        t.isExplicit(),
-                        t.getTags().custom(),
-                        t.getTags().aiGenerated(),
-                        t.getStatus().name()
-                ))
+        Track track = trackRepository.findById(trackId)
                 .orElseThrow(() -> new IllegalArgumentException("Track not found"));
+
+        var profile = authModuleApi.getUserPublicProfile(track.getArtistId()).orElse(null);
+        String username = profile != null ? profile.username() : "unknown";
+        String alias = profile != null ? profile.alias() : "Unknown Artist";
+
+        return new TrackMetadata(
+                track.getId(),
+                track.getTitle(),
+                track.getArtistId(),
+                username,
+                alias,
+                track.getDurationSeconds(),
+                track.getStemsMetadata(),
+                track.getCoverMinioPath(),
+                track.getGenre(),
+                track.isExplicit(),
+                track.getTags() != null ? track.getTags().custom() : Set.of(),
+                track.getTags() != null ? track.getTags().aiGenerated() : Set.of(),
+                track.getStatus().name()
+        );
     }
 
     /**
      * Implementation of the public module API for batch resolution.
+     * Optimizes database I/O and minimizes heap allocations by mapping profiles into a single lookup table.
      */
     @Override
     @Transactional(readOnly = true)
     public List<TrackMetadata> getPublicTracksMetadata(List<UUID> trackIds) {
         if (trackIds == null || trackIds.isEmpty()) return Collections.emptyList();
 
-        // DB-level filtering preventing leak of non-published tracks into memory
         List<Track> tracks = trackRepository.findByIdInAndStatus(trackIds, TrackStatus.PUBLISHED);
+        if (tracks.isEmpty()) return Collections.emptyList();
+
+        // Cross-module batch fetch to prevent N+1 DB calls
+        Set<UUID> artistIds = tracks.stream().map(Track::getArtistId).collect(Collectors.toSet());
+
+        // Single optimized map for fast in-memory O(1) lookups
+        Map<UUID, com.indiestream.auth.UserPublicProfile> profileMap = authModuleApi.getPublicProfiles(artistIds)
+                .stream()
+                .collect(Collectors.toMap(com.indiestream.auth.UserPublicProfile::id, p -> p));
 
         Map<UUID, TrackMetadata> metadataMap = tracks.stream()
-                .collect(Collectors.toMap(Track::getId, t -> new TrackMetadata(
-                        t.getId(), t.getTitle(), t.getArtistId(), t.getDurationSeconds(),
-                        t.getStemsMetadata(), t.getCoverMinioPath(), t.getGenre(), t.isExplicit(),
-                        t.getTags() != null ? t.getTags().custom() : Set.of(),
-                        t.getTags() != null ? t.getTags().aiGenerated() : Set.of(),
-                        t.getStatus().name()
-                )));
+                .collect(Collectors.toMap(Track::getId, t -> {
+                    var profile = profileMap.get(t.getArtistId());
+                    return new TrackMetadata(
+                            t.getId(),
+                            t.getTitle(),
+                            t.getArtistId(),
+                            profile != null ? profile.username() : "unknown",
+                            profile != null ? profile.alias() : "Unknown Artist",
+                            t.getDurationSeconds(),
+                            t.getStemsMetadata(),
+                            t.getCoverMinioPath(),
+                            t.getGenre(),
+                            t.isExplicit(),
+                            t.getTags() != null ? t.getTags().custom() : Set.of(),
+                            t.getTags() != null ? t.getTags().aiGenerated() : Set.of(),
+                            t.getStatus().name()
+                    );
+                }));
 
-        // Preserve AI engine ranking order
+        // Reconstruct the list honoring the original ID sequence (AI vector proximity order)
         return trackIds.stream()
                 .map(metadataMap::get)
                 .filter(Objects::nonNull)
@@ -270,7 +297,8 @@ public class TrackService implements MediaModuleApi {
 
     /**
      * Cross-module unified search engine.
-     * Extracts pagination metadata into primitive types to bypass Hibernate translation constraints.
+     * Extracts pagination metadata to bypass Hibernate translation constraints.
+     * Fully hydrates the TrackMetadata records with Auth identity in a single O(1) batch pass.
      */
     @Override
     @Transactional(readOnly = true)
@@ -278,7 +306,7 @@ public class TrackService implements MediaModuleApi {
         int limit = pageable.getPageSize();
         int offset = (int) pageable.getOffset();
 
-        // One single call handling every combination of active filters smoothly
+        // 1. Fetch raw physical entities
         List<Track> tracks = trackRepository.searchTracksUnifiedNative(
                 query,
                 genre,
@@ -288,13 +316,36 @@ public class TrackService implements MediaModuleApi {
                 offset
         );
 
+        if (tracks.isEmpty()) {
+            return new PageImpl<>(Collections.emptyList(), pageable, 0);
+        }
+
+        // 2. Cross-module batch fetch to guarantee O(1) Auth resolution
+        Set<UUID> artistIds = tracks.stream().map(Track::getArtistId).collect(Collectors.toSet());
+        Map<UUID, com.indiestream.auth.UserPublicProfile> profileMap = authModuleApi.getPublicProfiles(artistIds)
+                .stream()
+                .collect(Collectors.toMap(com.indiestream.auth.UserPublicProfile::id, p -> p));
+
+        // 3. Hydrate DTOs
         List<TrackMetadata> metadataList = tracks.stream()
-                .map(t -> new TrackMetadata(
-                        t.getId(), t.getTitle(), t.getArtistId(), t.getDurationSeconds(),
-                        t.getStemsMetadata(), t.getCoverMinioPath(), t.getGenre(),
-                        t.isExplicit(), t.getTags().custom(), t.getTags().aiGenerated(),
-                        t.getStatus().name()
-                ))
+                .map(t -> {
+                    var profile = profileMap.get(t.getArtistId());
+                    return new TrackMetadata(
+                            t.getId(),
+                            t.getTitle(),
+                            t.getArtistId(),
+                            profile != null ? profile.username() : "unknown",
+                            profile != null ? profile.alias() : "Unknown Artist",
+                            t.getDurationSeconds(),
+                            t.getStemsMetadata(),
+                            t.getCoverMinioPath(),
+                            t.getGenre(),
+                            t.isExplicit(),
+                            t.getTags() != null ? t.getTags().custom() : Set.of(),
+                            t.getTags() != null ? t.getTags().aiGenerated() : Set.of(),
+                            t.getStatus().name()
+                    );
+                })
                 .toList();
 
         return new PageImpl<>(metadataList, pageable, metadataList.size());

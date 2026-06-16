@@ -8,6 +8,7 @@ public record UserProfileDto(
         String bannerPath,
         boolean isPrivate,
         boolean hideSubscriptions,
+        boolean needsTasteCalibration,
         Instant updatedAt
 ) {
 }

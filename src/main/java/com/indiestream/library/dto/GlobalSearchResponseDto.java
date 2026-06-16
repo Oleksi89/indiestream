@@ -10,7 +10,7 @@ import java.util.List;
  * Aggregates cross-module DTOs into a single, strongly-typed JSON structure.
  */
 public record GlobalSearchResponseDto(
-        List<SearchTrackDto> tracks,
+        List<com.indiestream.media.api.TrackMetadata> tracks,
         List<PlaylistDto> playlists,
         List<UserPublicProfile> profiles
 ) {
