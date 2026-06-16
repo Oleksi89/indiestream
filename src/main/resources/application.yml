@@ -5,29 +5,25 @@ spring:
   application:
     name: indiestream
 
+  profiles:
+    active: dev
+
   autoconfigure:
     exclude:
       - org.springframework.ai.model.openai.autoconfigure.OpenAiChatAutoConfiguration
 
+  # Infrastructure connections are shared across profiles as requested
   datasource:
     url: jdbc:postgresql://localhost:5432/indiestream_db
     username: ${POSTGRES_USER}
     password: ${POSTGRES_PASSWORD}
     driver-class-name: org.postgresql.Driver
-  jpa:
-    hibernate:
-      ddl-auto: validate
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
-  flyway:
-    enabled: true
-    baseline-on-migrate: true
+
   servlet:
     multipart:
       max-file-size: 50MB
       max-request-size: 500MB
+
   task:
     execution:
       pool:
@@ -35,7 +31,10 @@ spring:
         max-size: 4
         queue-capacity: 50
       thread-name-prefix: media-worker-
+
   ai:
+    retry:
+      max-attempts: 1
     # Google GenAI for HITL & Moderation (Chat Model)
     google:
       genai:
@@ -48,18 +47,9 @@ spring:
           model: text-embedding-3-small
           dimensions: 768
 
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info
-  endpoint:
-    health:
-      show-details: always
-
 jwt:
   secret: ${JWT_SECRET}
-  expiration: 86400000 # 24 hours in ms
+  expiration: 86400000
 
 minio:
   url: ${MINIO_URL:http://localhost:9000}

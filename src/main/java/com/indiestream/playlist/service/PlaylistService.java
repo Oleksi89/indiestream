@@ -8,7 +8,7 @@ import com.indiestream.media.api.MediaModuleApi;
 import com.indiestream.media.api.TrackMetadata;
 import com.indiestream.media.api.TrackArchivedEvent;
 import com.indiestream.playlist.PlaylistLibraryProjection;
-import com.indiestream.playlist.PlaylistModuleApi;
+import com.indiestream.playlist.api.PlaylistModuleApi;
 import com.indiestream.playlist.domain.*;
 import com.indiestream.playlist.PlaylistDto;
 import com.indiestream.playlist.dto.PlaylistTrackDetailsDto;

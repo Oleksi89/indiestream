@@ -4,7 +4,7 @@ import com.indiestream.auth.AuthModuleApi;
 import com.indiestream.auth.FollowedUserProfileProjection;
 import com.indiestream.library.domain.LibraryItemType;
 import com.indiestream.library.dto.LibraryItemDto;
-import com.indiestream.playlist.PlaylistModuleApi;
+import com.indiestream.playlist.api.PlaylistModuleApi;
 import com.indiestream.playlist.PlaylistLibraryProjection;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

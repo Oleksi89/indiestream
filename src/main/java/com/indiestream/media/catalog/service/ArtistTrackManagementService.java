@@ -1,5 +1,6 @@
 package com.indiestream.media.catalog.service;
 
+import com.indiestream.media.api.ArtistModuleApi;
 import com.indiestream.media.api.TrackPublishedEvent;
 import com.indiestream.media.catalog.domain.Track;
 import com.indiestream.media.catalog.domain.TrackStatus;
@@ -22,7 +23,7 @@ import java.util.UUID;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ArtistTrackManagementService {
+public class ArtistTrackManagementService implements ArtistModuleApi {
 
     private final TrackRepository trackRepository;
     private final TrackTransitionEngine transitionEngine;
@@ -30,6 +31,7 @@ public class ArtistTrackManagementService {
     /**
      * Publishes an APPROVED or READY track to the public feed.
      */
+    @Override
     @Transactional
     public void publishTrack(UUID trackId, UUID artistId) {
         Track track = getTrackAndVerifyOwnership(trackId, artistId);
@@ -73,7 +75,7 @@ public class ArtistTrackManagementService {
         Track track = getTrackAndVerifyOwnership(trackId, artistId);
 
         transitionEngine.transitionTrack(
-                trackId,
+                track.getId(),
                 TrackStatus.ARCHIVED,
                 "Artist executed a soft-delete (ARCHIVED). Removed from dashboard and public feeds.",
                 null

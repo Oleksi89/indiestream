@@ -230,4 +230,23 @@ public class MinioStorageService {
             throw new RuntimeException("Failed to bulk upload directory to storage.", e);
         }
     }
+
+
+    /**
+     * Safely deletes an object from MinIO.
+     * Fails silently to prevent breaking teardown operations if the file is already missing.
+     */
+    public void deleteFile(String objectName) {
+        if (objectName == null || objectName.isBlank()) return;
+        try {
+            minioClient.removeObject(
+                    RemoveObjectArgs.builder()
+                            .bucket(minioProperties.bucket())
+                            .object(objectName)
+                            .build()
+            );
+        } catch (Exception e) {
+            log.warn("Failed to delete asset from MinIO (may already be deleted): {}", objectName);
+        }
+    }
 }

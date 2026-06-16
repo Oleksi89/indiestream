@@ -1,5 +1,7 @@
-package com.indiestream.playlist;
+package com.indiestream.playlist.api;
 
+import com.indiestream.playlist.PlaylistDto;
+import com.indiestream.playlist.PlaylistLibraryProjection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -30,4 +32,8 @@ public interface PlaylistModuleApi {
      * Cross-module search API enforcing visibility (isPublic = true AND isSystem = false).
      */
     Page<PlaylistDto> searchPublicPlaylists(String query, Pageable pageable);
+
+    PlaylistDto createCustomPlaylist(UUID ownerId, String name, String description, boolean isPublic, boolean isCollaborative);
+
+    void addTrackToPlaylist(UUID playlistId, UUID trackId, UUID userId);
 }

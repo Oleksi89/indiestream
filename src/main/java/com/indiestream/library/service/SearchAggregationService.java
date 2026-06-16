@@ -3,10 +3,9 @@ package com.indiestream.library.service;
 import com.indiestream.auth.AuthModuleApi;
 import com.indiestream.auth.UserPublicProfile;
 import com.indiestream.library.dto.GlobalSearchResponseDto;
-import com.indiestream.library.dto.SearchTrackDto;
 import com.indiestream.media.api.MediaModuleApi;
 import com.indiestream.media.api.TrackMetadata;
-import com.indiestream.playlist.PlaylistModuleApi;
+import com.indiestream.playlist.api.PlaylistModuleApi;
 import com.indiestream.playlist.PlaylistDto;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -18,7 +17,6 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
