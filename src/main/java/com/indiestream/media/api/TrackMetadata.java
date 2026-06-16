@@ -12,6 +12,8 @@ public record TrackMetadata(
         UUID id,
         String title,
         UUID artistId,
+        String artistUsername,
+        String artistAlias,
         Integer durationSeconds,
         Map<String, String> stemsMetadata,
         String coverMinioPath,

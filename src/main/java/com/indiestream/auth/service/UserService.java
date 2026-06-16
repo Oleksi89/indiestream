@@ -360,6 +360,7 @@ public class UserService implements AuthModuleApi {
                 user.getProfile().getBannerPath(),
                 user.getProfile().isPrivate(),
                 user.getProfile().isHideSubscriptions(),
+                user.getProfile().getTasteVector() == null,
                 user.getProfile().getUpdatedAt()
         );
     }
