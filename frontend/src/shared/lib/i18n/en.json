@@ -1,0 +1,40 @@
+{
+  "common": {
+    "cancel": "Cancel"
+  },
+  "settings": {
+    "title": "Account Settings",
+    "subtitle": "Manage your account preferences and algorithmic data.",
+    "general": {
+      "heading": "General Information",
+      "username": "Username",
+      "email": "Email Address"
+    },
+    "security": {
+      "heading": "Security",
+      "currentPassword": "Current Password",
+      "newPassword": "New Password",
+      "confirmPassword": "Confirm New Password",
+      "updatePassword": "Update Password",
+      "passwordPlaceholder": "••••••••"
+    },
+    "preferences": {
+      "heading": "Preferences",
+      "language": {
+        "title": "Language",
+        "description": "Select your preferred interface language."
+      }
+    },
+    "dangerZone": {
+      "heading": "Danger Zone",
+      "resetTaste": {
+        "title": "Reset AI Taste Algorithm",
+        "description": "This will permanently delete your taste profile and clear your blocklists. Your recommendations will be reset to a \"Cold Start\" state. Your library and playlists will remain unaffected.",
+        "trigger": "Reset Profile",
+        "confirmTitle": "Are you absolutely sure?",
+        "confirmDescription": "This action cannot be undone. This will permanently flush your AI vector data and recommendation history. You will be redirected to the onboarding flow to recalibrate your algorithm.",
+        "submit": "Yes, Reset Algorithm"
+      }
+    }
+  }
+}

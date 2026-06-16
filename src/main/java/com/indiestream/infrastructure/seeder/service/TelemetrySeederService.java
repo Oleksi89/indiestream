@@ -67,6 +67,7 @@ public class TelemetrySeederService {
             String status = isSkip ? "SKIP" : "FULL";
 
             MapSqlParameterSource params = new MapSqlParameterSource()
+                    .addValue("eventId", UUID.randomUUID())
                     .addValue("userId", userId)
                     .addValue("trackId", trackId)
                     .addValue("sessionId", UUID.randomUUID())
@@ -87,10 +88,10 @@ public class TelemetrySeederService {
 
         jdbcTemplate.batchUpdate("""
                 INSERT INTO raw_playback_logs 
-                (user_id, track_id, session_id, start_position_ms, end_position_ms, 
+                (event_id, user_id, track_id, session_id, start_position_ms, end_position_ms, 
                  playback_duration_ms, client_ip, user_agent, is_suspected_bot, 
                  playback_status, source_type, source_id, client_country, created_at) 
-                VALUES (:userId, :trackId, :sessionId, :startPositionMs, :endPositionMs, 
+                VALUES (:eventId, :userId, :trackId, :sessionId, :startPositionMs, :endPositionMs, 
                         :playbackDurationMs, :clientIp, :userAgent, :isSuspectedBot, 
                         :playbackStatus, :sourceType, :sourceId, :clientCountry, :createdAt)
                 """, batchArgs.toArray(new MapSqlParameterSource[0]));
@@ -102,6 +103,7 @@ public class TelemetrySeederService {
 
         for (int i = 0; i < INTERACTION_COUNT; i++) {
             MapSqlParameterSource params = new MapSqlParameterSource()
+                    .addValue("eventId", UUID.randomUUID())
                     .addValue("userId", userIds.get(random.nextInt(userIds.size())))
                     .addValue("targetId", trackIds.get(random.nextInt(trackIds.size())))
                     .addValue("interactionType", "LIKE")
@@ -114,8 +116,8 @@ public class TelemetrySeederService {
 
         jdbcTemplate.batchUpdate("""
                 INSERT INTO raw_interaction_logs 
-                (user_id, target_id, interaction_type, source_type, ui_surface, created_at) 
-                VALUES (:userId, :targetId, :interactionType, :sourceType, :uiSurface, :createdAt)
+                (event_id, user_id, target_id, interaction_type, source_type, ui_surface, created_at) 
+                VALUES (:eventId, :userId, :targetId, :interactionType, :sourceType, :uiSurface, :createdAt)
                 """, batchArgs.toArray(new MapSqlParameterSource[0]));
     }
 
