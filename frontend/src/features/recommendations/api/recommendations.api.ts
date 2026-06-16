@@ -29,5 +29,12 @@ export const recommendationsApi = {
      */
     markNotInterested: async (trackId: string): Promise<void> => {
         await apiClient.post(`/recommendations/interactions/not-interested/${trackId}`);
+    },
+
+    /**
+     * Danger Zone: Resets the user's taste profile to a Cold Start state.
+     */
+    resetTasteProfile: async (): Promise<void> => {
+        await apiClient.delete('/recommendations/taste/reset');
     }
 };
