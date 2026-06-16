@@ -1,4 +1,4 @@
-package com.indiestream.media.api.dto;
+package com.indiestream.media.catalog.dto;
 
 import java.util.Set;
 
