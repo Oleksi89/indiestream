@@ -36,6 +36,7 @@ export interface UserProfileDto {
     bannerPath: string | null;
     isPrivate: boolean;
     hideSubscriptions: boolean;
+    needsTasteCalibration?: boolean;
     updatedAt: string;
 }
 

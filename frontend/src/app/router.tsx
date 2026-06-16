@@ -14,7 +14,9 @@ import {SearchPage} from "@/pages/search/SearchPage.tsx";
 import {AdminTrackRegistryPage} from "@/pages/admin/AdminTrackRegistryPage.tsx";
 import {AdminReviewInspectorPage} from "@/pages/admin/AdminReviewInspectorPage.tsx";
 import {TelemetryProvider} from '@/features/telemetry';
-import {AdminPlatformAnalyticsPage} from "@/pages/admin/AdminPlatformAnalyticsPage.tsx"; // Added import
+import {AdminPlatformAnalyticsPage} from "@/pages/admin/AdminPlatformAnalyticsPage.tsx";
+import {SettingsPage} from "@/pages/profile/SettingsPage.tsx";
+import {OnboardingPage} from "@/pages/dashboard/OnboardingPage.tsx"; // Added import
 
 const routes = [
     // Guest Only Routes
@@ -48,6 +50,10 @@ const routes = [
                         element: <DashboardPage/>,
                     },
                     {
+                        path: '/onboarding',
+                        element: <OnboardingPage/>,
+                    },
+                    {
                         path: '/search',
                         element: <SearchPage/>,
                     },
@@ -58,6 +64,10 @@ const routes = [
                     {
                         path: '/user/:username',
                         element: <ProfilePage/>
+                    },
+                    {
+                        path: '/settings',
+                        element: <SettingsPage/>,
                     },
                     // Role-Protected Routes
                     {

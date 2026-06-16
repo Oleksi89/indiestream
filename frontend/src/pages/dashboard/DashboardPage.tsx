@@ -1,18 +1,30 @@
+import {useEffect} from 'react';
 import {useAuthStore} from '@/shared/store/authStore';
 import {PublicFeed} from '@/features/media/ui/PublicFeed';
 import {TrackCard} from '@/features/media/ui/TrackCard';
 import {CarouselShelf} from '@/features/recommendations/ui/CarouselShelf';
 import {CarouselShelfSkeleton} from '@/features/recommendations/ui/CarouselShelfSkeleton';
 import {useDiscoveryShelves} from '@/features/recommendations/hooks/useRecommendationQueries';
-import {Disc3, ArrowRight} from 'lucide-react';
-import {Link} from 'react-router-dom';
+import {Disc3} from 'lucide-react';
+import {Link, useNavigate} from 'react-router-dom';
 
 export const DashboardPage = () => {
+    const navigate = useNavigate();
     const user = useAuthStore((state) => state.user);
-    const {data: shelves, isLoading, isError, error} = useDiscoveryShelves();
+    const needsCalibration = user?.profile?.needsTasteCalibration === true;
 
-    // Type casting error to check for specific 400 Bad Request status (Cold Start trigger)
-    const isColdStart = isError && (error as any)?.response?.status === 400;
+    // Don't waste DB calls if they need onboarding.
+    const {data: shelves, isLoading} = useDiscoveryShelves(!needsCalibration);
+
+    // --- ROUTER GUARD ---
+    useEffect(() => {
+        if (needsCalibration) {
+            navigate('/onboarding', {replace: true});
+        }
+    }, [needsCalibration, navigate]);
+
+    // Render nothing while redirecting to prevent flash
+    if (needsCalibration) return null;
 
     return (
         <div className="container mx-auto px-4 py-8 max-w-7xl space-y-12">
@@ -29,24 +41,6 @@ export const DashboardPage = () => {
                     <CarouselShelfSkeleton/>
                     <CarouselShelfSkeleton/>
                 </>
-            ) : isColdStart ? (
-                <section
-                    className="bg-slate-900/50 border border-violet-500/30 rounded-2xl p-8 flex flex-col items-center text-center space-y-4">
-                    <div
-                        className="w-16 h-16 bg-violet-500/20 rounded-full flex items-center justify-center text-violet-400 mb-2">
-                        <Disc3 size={32}/>
-                    </div>
-                    <h2 className="text-2xl font-bold text-white">Let's fine-tune your algorithm</h2>
-                    <p className="text-slate-400 max-w-md">
-                        We need to know what you like before we can generate your personalized feeds.
-                    </p>
-                    <Link
-                        to="/onboarding"
-                        className="mt-4 px-6 py-3 bg-violet-600 hover:bg-violet-500 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
-                    >
-                        Start Discovery <ArrowRight size={18}/>
-                    </Link>
-                </section>
             ) : shelves ? (
                 <div className="flex flex-col gap-4">
                     <CarouselShelf
@@ -56,8 +50,6 @@ export const DashboardPage = () => {
                         renderItem={(track) => <TrackCard track={track as any} variant="grid"/>}
                     />
 
-                    {/* Utilizing standard DOM mapping for Playlists to prevent missing component errors.
-                        Refactor to LibraryItem if required. */}
                     <CarouselShelf
                         title="Discover Playlists"
                         items={shelves.discoverPlaylists}
@@ -88,7 +80,7 @@ export const DashboardPage = () => {
                         title="Listeners Like You"
                         items={shelves.listenersLikeYou}
                         keyExtractor={(t) => t.id}
-                        renderItem={(track) => <TrackCard track={track as any} variant="grid"/>}
+                        renderItem={(track) => <TrackCard track={track} variant="grid"/>}
                     />
                 </div>
             ) : null}
