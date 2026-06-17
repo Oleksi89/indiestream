@@ -3,7 +3,11 @@
     "cancel": "Cancel",
     "save": "Save",
     "close": "Close",
-    "create": "Create"
+    "create": "Create",
+    "back": "Back",
+    "loading": "Loading...",
+    "error": "Something went wrong.",
+    "by": "By"
   },
   "auth": {
     "login": {
@@ -13,6 +17,7 @@
       "submitting": "Signing in...",
       "noAccount": "Don't have an account?",
       "registerLink": "Register here",
+      "pageTitle": "IndieStream Login",
       "errors": {
         "invalidCredentials": "Invalid email or password.",
         "network": "An unexpected network error occurred."
@@ -30,6 +35,8 @@
       "submitting": "Creating account...",
       "haveAccount": "Already have an account?",
       "loginLink": "Sign In",
+      "pageTitle": "Join IndieStream",
+      "pageSubtitle": "Create an account to start streaming independent music.",
       "successMessage": "Account created successfully. Please log in.",
       "errors": {
         "failed": "Registration failed. Please try again.",
@@ -292,6 +299,456 @@
     "page": {
       "loading": "Loading playlist...",
       "notFound": "Playlist not found"
+    }
+  },
+  "media": {
+    "explicit": {
+      "label": "E",
+      "title": "Explicit"
+    },
+    "feed": {
+      "noReleases": "No new releases available right now.",
+      "loadingLabel": "Loading new releases"
+    },
+    "track": {
+      "stemsLabel": "Stems",
+      "playLabel": "Play",
+      "pauseLabel": "Pause",
+      "playTrack": "Play {title}",
+      "pauseTrack": "Pause {title}",
+      "contentUnavailable": "Content Unavailable",
+      "addedDate": "Date added"
+    },
+    "contextMenu": {
+      "playNow": "Play Now",
+      "addToQueue": "Add to Queue",
+      "goToArtist": "Go to Artist",
+      "copyLink": "Copy Link",
+      "notInterested": "Not Interested",
+      "contentUnavailable": "Content Unavailable",
+      "addToPlaylist": "Add to Playlist",
+      "excludeFromPlaylist": "Exclude from Playlist",
+      "loading": "Loading...",
+      "noEditablePlaylists": "No editable playlists",
+      "toastAddedToQueue": "Added to queue",
+      "toastLinkCopied": "Link copied to clipboard",
+      "toastNotInterested": "We'll tune your recommendations"
+    },
+    "player": {
+      "shuffle": "Shuffle",
+      "shuffleOn": "Shuffle: On",
+      "shuffleOff": "Shuffle: Off",
+      "previous": "Previous track",
+      "play": "Play",
+      "pause": "Pause",
+      "next": "Next track",
+      "repeat": "Repeat",
+      "repeatOff": "Repeat: Off",
+      "repeatContext": "Repeat: Context",
+      "repeatTrack": "Repeat: Track",
+      "seekBar": "Seek",
+      "volume": "Volume",
+      "openQueue": "Open play queue",
+      "closeQueue": "Close play queue",
+      "openMixer": "Open stem mixer",
+      "closeMixer": "Close stem mixer",
+      "masterMode": "Master audio mode",
+      "stemsMode": "Stems mixing mode",
+      "syncFailed": "Sync Failed: Switching to Master",
+      "syncing": "Syncing Stems...",
+      "multiStem": "Multi-Stem Mode",
+      "masterTrack": "Master Track",
+      "mixerTitle": "Console",
+      "stemVolume": "Volume for {name} stem",
+      "likeTrack": "Like track",
+      "unlikeTrack": "Unlike track",
+      "addToPlaylist": "Add to playlist",
+      "moreOptions": "More options"
+    },
+    "queue": {
+      "title": "Play Queue",
+      "close": "Close queue",
+      "nowPlaying": "Now Playing",
+      "nextUp": "Next Up",
+      "recentlyPlayed": "Recently Played",
+      "empty": "Queue is empty",
+      "drag": "Drag to reorder"
+    },
+    "statusBadge": {
+      "approved": "Approved",
+      "live": "Live",
+      "published": "Published",
+      "needsRevision": "Needs Revision",
+      "inReview": "In Review",
+      "processing": "Processing",
+      "aiAnalysis": "AI Analysis",
+      "banned": "Banned",
+      "rejected": "Rejected",
+      "failed": "Failed",
+      "hidden": "Hidden",
+      "archived": "Deleted",
+      "draft": "Draft"
+    },
+    "studio": {
+      "trackTable": {
+        "columnTrack": "Track",
+        "columnStatus": "Status",
+        "columnDate": "Uploaded Date",
+        "columnActions": "Actions",
+        "loading": "Loading your tracks...",
+        "error": "Failed to load tracks. Please try again.",
+        "emptyTitle": "Your catalog is empty.",
+        "emptySubtitle": "Upload your first track using the wizard above."
+      },
+      "dropdown": {
+        "manageTrack": "Manage Track",
+        "resolveAiFeedback": "Resolve AI Feedback",
+        "submitAppeal": "Submit Appeal",
+        "appealPending": "Appeal Pending",
+        "publishTrack": "Publish Track",
+        "editMetadata": "Edit Metadata",
+        "hideFromPublic": "Hide from Public",
+        "makePublic": "Make Public",
+        "archiveTrack": "Archive Track",
+        "processing": "Processing...",
+        "openMenu": "Open track options for {title}"
+      },
+      "publish": {
+        "title": "Publish Track",
+        "description": "Are you ready to release \"{title}\"? Once published, the track will be visible in the global feed and your public profile.",
+        "note": "Note: Future metadata changes will require a brief re-moderation period.",
+        "cancel": "Cancel",
+        "confirm": "Publish Now",
+        "confirming": "Publishing..."
+      },
+      "archive": {
+        "title": "Archive Track",
+        "description": "Are you sure you want to archive \"{title}\"? Archiving will immediately remove this track from your studio dashboard, public profile, and global search.",
+        "warning": "This action cannot be fully undone from the dashboard.",
+        "cancel": "Keep Track",
+        "confirm": "Yes, Archive",
+        "confirming": "Archiving..."
+      },
+      "edit": {
+        "title": "Edit Track",
+        "subtitle": "Update metadata and cover art",
+        "close": "Close edit modal",
+        "titleLabel": "Track Title",
+        "genreLabel": "Genre",
+        "genrePlaceholder": "Select a genre...",
+        "coverLabel": "Cover Art",
+        "coverDragHint": "Drag & drop new cover",
+        "coverFormats": "JPEG, PNG, WEBP up to 5MB",
+        "currentCover": "Current Cover",
+        "removeCover": "Remove cover",
+        "customTagsLabel": "Custom Tags",
+        "addTagPlaceholder": "Add tag...",
+        "removeTag": "Remove tag {tag}",
+        "explicitLabel": "Explicit Content",
+        "explicitDescription": "Contains profanity/mature themes",
+        "aiLockedNote": "This setting is locked because the track has already been verified by the AI Moderation engine.",
+        "cancel": "Cancel",
+        "save": "Save Changes",
+        "saving": "Saving..."
+      }
+    },
+    "moderation": {
+      "appeal": {
+        "title": "Appeal Moderation Decision",
+        "trackLabel": "Track:",
+        "close": "Close appeal dialog",
+        "warning": "You have one appeal opportunity per track. Please provide a detailed explanation of why you believe this track complies with our guidelines.",
+        "placeholder": "Explain why the moderation decision should be reversed... (minimum 20 characters)",
+        "charCount": "{count}/1000 characters",
+        "cancel": "Cancel",
+        "submit": "Submit Appeal",
+        "submitting": "Submitting..."
+      },
+      "resolution": {
+        "title": "AI Metadata Review",
+        "close": "Close review dialog",
+        "description": "Our AI moderation engine has suggested semantic tags based on the audio profile. Accepting these ensures maximum visibility in discovery feeds.",
+        "yourTags": "Your Tags",
+        "aiSuggestions": "AI Suggestions",
+        "none": "None",
+        "proposeChanges": "Propose Changes",
+        "acceptSuggestions": "Accept AI Suggestions",
+        "accepting": "Approving...",
+        "justificationLabel": "Justification for override",
+        "justificationPlaceholder": "Explain why the AI tags are incorrect for your track...",
+        "adminReviewNote": "Overrides require Admin review (up to 48h).",
+        "back": "Back",
+        "submitForReview": "Submit for Review",
+        "submitting": "Submitting..."
+      }
+    },
+    "upload": {
+      "trigger": "Upload New Release",
+      "title": "Publish Track",
+      "close": "Close upload wizard",
+      "steps": {
+        "metadata": "Metadata",
+        "media": "Media",
+        "stems": "Stems",
+        "process": "Process"
+      },
+      "metadata": {
+        "titleLabel": "Track Title",
+        "titlePlaceholder": "Enter track title",
+        "genreLabel": "Primary Genre",
+        "genrePlaceholder": "Select a genre...",
+        "explicitLabel": "Explicit Content",
+        "explicitDescription": "Contains profanity or mature themes",
+        "explicitSwitch": "Toggle explicit content flag",
+        "tagsLabel": "Custom Tags",
+        "tagInputPlaceholder": "Type tag, press Enter",
+        "tagsMaxReached": "Max 10 tags reached",
+        "tagsHint": "Lowercase, alphanumeric, max 30 chars. These will be merged with AI auto-tags.",
+        "removeTag": "Remove tag {tag}",
+        "continueToMedia": "Continue to Media"
+      },
+      "media": {
+        "masterLabel": "Master Audio",
+        "masterDragHint": "Drag & drop master track",
+        "masterFormats": "WAV, FLAC, MP3 up to 50MB",
+        "removeMaster": "Remove master audio",
+        "coverLabel": "Cover Art (Optional)",
+        "coverDragHint": "Drag & drop cover art",
+        "coverFormats": "JPEG, PNG, WEBP up to 5MB",
+        "removeCover": "Remove cover art",
+        "back": "Back",
+        "continueToStems": "Continue to Stems"
+      },
+      "stems": {
+        "title": "Interactive Stems",
+        "optional": "(Optional)",
+        "hint": "Upload separated instruments (e.g., Vocals, Drums) for the dynamic player.",
+        "bulkAdd": "Bulk Add",
+        "addStem": "Add Stem",
+        "stemNamePlaceholder": "e.g. Drums, Vocals",
+        "chooseAudio": "Choose Audio",
+        "removeStem": "Remove stem {index}",
+        "noStems": "No stems added",
+        "noStemsHint": "Your track will be uploaded as a standard stereo file.",
+        "back": "Back",
+        "skip": "Skip Stems",
+        "uploadWithStems": "Upload with Stems",
+        "processTrack": "Process Track"
+      },
+      "progress": {
+        "uploading": "Uploading Media Assets...",
+        "processing": "Running Server Pipeline",
+        "safeClose": "You can safely close this window. Processing will continue in the background.",
+        "stepAudio": "FFmpeg Audio Processing & Anti-Spoofing",
+        "stepAi": "Gemini AI Moderation & Auto-Tagging",
+        "finalState": "Final State:",
+        "failedTitle": "Upload Failed",
+        "retryButton": "Review Details & Try Again",
+        "closeWizard": "Close Wizard"
+      }
+    },
+    "admin": {
+      "registry": {
+        "title": "Global Track Registry",
+        "subtitle": "Advanced moderation workspace and cross-module audit center.",
+        "pageTitle": "Global Track Registry",
+        "pageSubtitle": "Advanced moderation workspace and cross-module audit center.",
+        "loadingData": "Loading global registry data...",
+        "failedTitle": "Failed to load registry",
+        "failedSubtitle": "Please check your connection or try again later."
+      },
+      "filters": {
+        "searchPlaceholder": "Search by title or artist alias...",
+        "searchLabel": "Search tracks by title or artist",
+        "clearSearch": "Clear search query",
+        "sortLabel": "Sort tracks",
+        "newest": "Newest Uploads",
+        "oldest": "Oldest Uploads",
+        "filterByStatus": "Filter By Track Status",
+        "clearFilters": "Clear Filters ({count})"
+      },
+      "table": {
+        "columnId": "ID",
+        "columnTrack": "Track Details",
+        "columnArtist": "Artist",
+        "columnStatus": "Status",
+        "columnDate": "Uploaded Date",
+        "columnAction": "Action",
+        "noTracks": "No tracks found",
+        "noTracksHint": "Try adjusting your search query or status filters.",
+        "openInspector": "Open inspector for {title}"
+      },
+      "inspector": {
+        "pageTitle": "Review Inspector",
+        "backToRegistry": "Back to registry",
+        "tabReview": "Moderation & Audit",
+        "tabAnalytics": "Telemetry & Deep Dive"
+      },
+      "workspace": {
+        "playbackContext": "Playback Context",
+        "artistAlias": "Artist Alias",
+        "artistHandle": "Artist Handle",
+        "appealed": "Appealed",
+        "appealYes": "Yes (Requires Priority)",
+        "appealNo": "No",
+        "guardedTransitions": "Guarded Transitions",
+        "forceApprove": "Force Approve",
+        "reject": "Reject (Needs Revision)",
+        "restore": "Restore to Registry",
+        "forceArchive": "Force Archive (DMCA)",
+        "suspendTrack": "Suspend Track (Strike)",
+        "banArtist": "Ban Artist",
+        "unbanArtist": "Unban Artist",
+        "auditHistoryTitle": "Audit History Timeline",
+        "auditHistorySubtitle": "Chronological record of state mutations, actor actions, and raw AI decisions."
+      },
+      "actionDialog": {
+        "approveTitle": "Force Approve Track",
+        "approveDesc": "This will bypass standard moderation and publish the track.",
+        "rejectTitle": "Reject Track",
+        "rejectDesc": "The artist will be asked to revise the metadata and re-submit.",
+        "banTitle": "Suspend Track (BAN)",
+        "banDesc": "Immediate takedown for severe policy violations. Issues a strike.",
+        "restoreTitle": "Restore Track",
+        "restoreDesc": "Unbans the track and restores it to the public registry.",
+        "forceArchiveTitle": "Force Archive (DMCA)",
+        "forceArchiveDesc": "Soft-deletes the track without issuing a policy strike.",
+        "close": "Close dialog",
+        "reasonLabel": "Audit Reasoning (Required)",
+        "reasonPlaceholder": "Explain why this action is being taken. This will be recorded in the immutable audit log...",
+        "cancel": "Cancel",
+        "execute": "Execute Verdict",
+        "executing": "Executing..."
+      },
+      "banModal": {
+        "title": "Ban Artist Account",
+        "description": "You are executing a high-privilege administrative lockdown. This action will emit a global UserBannedEvent for @{username}.",
+        "reasonLabel": "Account Termination Reason",
+        "cancel": "Cancel",
+        "confirm": "Confirm Ban",
+        "confirming": "Confirming..."
+      },
+      "unbanModal": {
+        "title": "Restore Artist Account",
+        "description": "Lifting the suspension for @{username}. Banned tracks must be manually restored.",
+        "reasonLabel": "Restoration Reasoning",
+        "cancel": "Cancel",
+        "confirm": "Confirm Unban",
+        "confirming": "Confirming..."
+      },
+      "timeline": {
+        "noHistory": "No audit history available.",
+        "defaultReason": "State transition executed without specific reasoning.",
+        "systemActor": "System / AI",
+        "userActor": "User / Admin",
+        "viewPayload": "View AI Payload",
+        "hidePayload": "Hide Payload"
+      },
+      "analytics": {
+        "pageTitle": "Platform Telemetry Center",
+        "pageSubtitle": "Global performance, engagement aggregates, and system health monitoring."
+      }
+    }
+  },
+  "dashboard": {
+    "greeting": "Good to see you,",
+    "subtitle": "Discover new independent music tailored for you.",
+    "recommendations": {
+      "madeForYou": "Made For You",
+      "discoverPlaylists": "Discover Playlists",
+      "listenersLikeYou": "Listeners Like You"
+    },
+    "newReleases": "New Releases",
+    "discoveryShelves": "AI Discovery Shelves",
+    "showAll": "Show all"
+  },
+  "onboarding": {
+    "genreTitle": "What music moves you?",
+    "genreSubtitle": "Select genres you love. We'll build a personalized AI Taste Profile to power your recommendations.",
+    "genreGroupLabel": "Genre selection",
+    "genreContinue": "Continue",
+    "skipHint": "You can always update your preferences later in settings.",
+    "tracksTitle": "Your curated starter pack",
+    "tracksSubtitle": "Like tracks you enjoy to train your algorithm in real-time.",
+    "curatedTracksLabel": "Curated tracks for your genres",
+    "saving": "Saving profile...",
+    "finishSetup": "Finish Setup",
+    "readyTitle": "You're all set!",
+    "readySubtitle": "Taking you to your personalized feed...",
+    "step1": {
+      "title": "Let's build your algorithm",
+      "subtitle": "Select at least 3 genres you enjoy. We'll generate a custom radio station to kickstart your personalized AI Taste Profile.",
+      "minGenres": "at least 3 genres",
+      "generateButton": "Generate Custom Radio",
+      "selectGenre": "Select genre {genre}",
+      "deselectGenre": "Deselect genre {genre}"
+    },
+    "step2": {
+      "title": "Train Your Algorithm",
+      "description": "We are playing your curated tracks. Use the player bar to Like the ones you enjoy. This instantly shapes your mathematical taste profile.",
+      "finish": "Finish Calibration"
+    },
+    "toasts": {
+      "minGenres": "Please select at least 3 genres.",
+      "noTracks": "Could not find tracks for those genres. Please try others.",
+      "started": "Curated radio started! Like tracks to build your profile.",
+      "failed": "Failed to generate feed.",
+      "complete": "Algorithm initialized. Welcome to your Discovery Feed!"
+    }
+  },
+  "artist": {
+    "studio": {
+      "title": "Artist Studio",
+      "welcomeBack": "Manage your catalog and monitor your performance.",
+      "tabCatalog": "My Catalog",
+      "tabAnalytics": "Audience & Analytics",
+      "trackRegistry": "Track Registry",
+      "refreshStatuses": "Refresh Statuses"
+    },
+    "dashboard": {
+      "title": "Artist Studio",
+      "subtitle": "Manage your catalog, upload new releases, and track your performance.",
+      "tabCatalog": "My Catalog",
+      "tabAnalytics": "Audience & Analytics",
+      "trackRegistry": "Track Registry",
+      "refreshStatuses": "Refresh Statuses"
+    }
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "Sorry, we couldn't find the page you're looking for.",
+    "goHome": "Go back home"
+  },
+  "search": {
+    "placeholder": "Search for tracks, artists, or playlists...",
+    "searchLabel": "Search IndieStream",
+    "pageTitle": "Search",
+    "inputPlaceholder": "Search for tracks, artists, or playlists...",
+    "inputLabel": "Search IndieStream",
+    "genreFilterLabel": "Browse by genre",
+    "browseByGenre": "Browse by genre",
+    "allGenres": "All",
+    "resultsLabel": "Search results",
+    "tabs": {
+      "all": "All",
+      "tracks": "Tracks",
+      "artists": "Artists",
+      "playlists": "Playlists"
+    },
+    "quickSearchPlaceholder": "What do you want to listen to?",
+    "noResultsFor": "No results found for",
+    "seeAllResults": "See all results for",
+    "genres": "Genres",
+    "tags": "Tags",
+    "tagInputPlaceholder": "Type a tag & press Enter...",
+    "topTracks": "Top Tracks",
+    "emptyState": {
+      "title": "Discover Music",
+      "subtitle": "Search for your favorite tracks, artists, or playlists."
+    },
+    "noResults": {
+      "title": "No results found",
+      "subtitle": "Try adjusting your keywords, tags, or genres."
     }
   }
 }

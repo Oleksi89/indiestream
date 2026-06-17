@@ -7,6 +7,7 @@ import {cn} from '@/shared/lib/utils';
 import React from 'react';
 import {Link} from 'react-router-dom';
 import {ExplicitBadge} from "@/features/media/ui/ExplicitBadge.tsx";
+import {useTranslation} from '@/shared/lib/i18n/useTranslation';
 
 export interface TrackCardProps {
     track: TrackDto;
@@ -20,6 +21,7 @@ export interface TrackCardProps {
 
 export const TrackCard = ({track, variant, className, index, addedAt, onClick, onPlayOverride}: TrackCardProps) => {
     const {currentTrack, isPlaying, setTrack, togglePlay} = usePlayerStore();
+    const {t} = useTranslation();
     const isCurrentTrack = currentTrack?.id === track.id;
 
     // Securely fetch cover image
@@ -53,12 +55,17 @@ export const TrackCard = ({track, variant, className, index, addedAt, onClick, o
             : '0:00';
     };
 
+    const playAriaLabel = isCurrentTrack && isPlaying
+        ? t.media.track.pauseTrack.replace('{title}', track.title)
+        : t.media.track.playTrack.replace('{title}', track.title);
+
     const renderCover = (sizeClass: string = "w-full h-full") => {
         if (isUnavailable) {
             return (
                 <div className={`${sizeClass} flex items-center justify-center bg-slate-900 border border-red-500/20`}>
                     <Ban size={variant === 'compact' || variant === 'playlist-row' ? 16 : 32}
-                         className="text-red-500/40"/>
+                         className="text-red-500/40"
+                         aria-hidden="true"/>
                 </div>
             );
         }
@@ -66,7 +73,8 @@ export const TrackCard = ({track, variant, className, index, addedAt, onClick, o
             return (
                 <div className={`${sizeClass} flex items-center justify-center bg-slate-800`}>
                     <Disc3 size={variant === 'compact' || variant === 'playlist-row' ? 16 : 32}
-                           className="text-slate-600"/>
+                           className="text-slate-600"
+                           aria-hidden="true"/>
                 </div>
             );
         }
@@ -74,7 +82,8 @@ export const TrackCard = ({track, variant, className, index, addedAt, onClick, o
             return (
                 <div className={`${sizeClass} flex items-center justify-center bg-slate-800 animate-pulse`}>
                     <ImageIcon size={variant === 'compact' || variant === 'playlist-row' ? 16 : 32}
-                               className="text-slate-600"/>
+                               className="text-slate-600"
+                               aria-hidden="true"/>
                 </div>
             );
         }
@@ -91,6 +100,8 @@ export const TrackCard = ({track, variant, className, index, addedAt, onClick, o
         return (
             <div
                 onDoubleClick={handlePlayClick}
+                role="row"
+                aria-label={track.title}
                 className={cn(
                     "group grid grid-cols-[48px_minmax(120px,1fr)_120px_60px] md:grid-cols-[48px_minmax(120px,1fr)_150px_60px] gap-4 px-4 py-2.5 items-center rounded-md hover:bg-white/5 transition-colors cursor-pointer w-full border border-transparent",
                     isCurrentTrack && "bg-slate-800/30 border-slate-800/50",
@@ -101,23 +112,26 @@ export const TrackCard = ({track, variant, className, index, addedAt, onClick, o
                     {isCurrentTrack && isPlaying && !isUnavailable ? (
                         <button
                             onClick={handlePlayClick}
+                            aria-label={playAriaLabel}
+                            title={playAriaLabel}
                             className="w-4 h-4 flex items-end justify-between gap-[2px]">
                             <div className="w-1 bg-violet-500 h-full animate-[bounce_1s_infinite]"/>
                             <div className="w-1 bg-violet-500 h-2/3 animate-[bounce_1s_infinite_100ms]"/>
                             <div className="w-1 bg-violet-500 h-3/4 animate-[bounce_1s_infinite_200ms]"/>
                         </button>
                     ) : isCurrentTrack && !isPlaying && !isUnavailable ? (
-                            <>
-                                <Play size={16} fill="currentColor" onClick={handlePlayClick}
-                                      className="hidden group-hover:block text-slate-300 hover:text-violet-500"/>
-                        <span className="text-violet-500 font-bold group-hover:hidden">{index}</span></>
-
-                    ) :  !isUnavailable ? (
                         <>
                             <Play size={16} fill="currentColor" onClick={handlePlayClick}
+                                  aria-label={playAriaLabel}
+                                  className="hidden group-hover:block text-slate-300 hover:text-violet-500"/>
+                            <span className="text-violet-500 font-bold group-hover:hidden">{index}</span>
+                        </>
+                    ) : !isUnavailable ? (
+                        <>
+                            <Play size={16} fill="currentColor" onClick={handlePlayClick}
+                                  aria-label={playAriaLabel}
                                   className="hidden group-hover:block text-slate-300 hover:text-violet-500"/>
                             <span className="group-hover:hidden">{index}</span>
-
                         </>
                     ) : (
                         <span>{index}</span>
@@ -136,8 +150,10 @@ export const TrackCard = ({track, variant, className, index, addedAt, onClick, o
                             {isExplicit && <ExplicitBadge/>}
                             {hasStems && (
                                 <span
+                                    aria-label={t.media.track.stemsLabel}
+                                    title={t.media.track.stemsLabel}
                                     className="bg-slate-800 text-violet-400 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded flex items-center gap-1 ml-2">
-                                    <Layers size={10}/>
+                                    <Layers size={10} aria-hidden="true"/>
                                 </span>
                             )}
                         </span>
@@ -180,12 +196,14 @@ export const TrackCard = ({track, variant, className, index, addedAt, onClick, o
                     {renderCover()}
                     <button
                         onClick={handlePlayClick}
+                        aria-label={playAriaLabel}
+                        title={playAriaLabel}
                         className="absolute inset-0 bg-slate-900/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-slate-900/80"
                     >
                         {isCurrentTrack && isPlaying ? (
-                            <Pause size={20} fill="currentColor" className="text-violet-400"/>
+                            <Pause size={20} fill="currentColor" className="text-violet-400" aria-hidden="true"/>
                         ) : (
-                            <Play size={20} fill="currentColor" className="text-white ml-0.5"/>
+                            <Play size={20} fill="currentColor" className="text-white ml-0.5" aria-hidden="true"/>
                         )}
                     </button>
                 </div>
@@ -218,12 +236,14 @@ export const TrackCard = ({track, variant, className, index, addedAt, onClick, o
                         {renderCover()}
                         <button
                             onClick={handlePlayClick}
+                            aria-label={playAriaLabel}
+                            title={playAriaLabel}
                             className="absolute inset-0 bg-slate-900/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-slate-900/80"
                         >
                             {isCurrentTrack && isPlaying ? (
-                                <Pause size={20} fill="currentColor" className="text-violet-400"/>
+                                <Pause size={20} fill="currentColor" className="text-violet-400" aria-hidden="true"/>
                             ) : (
-                                <Play size={20} fill="currentColor" className="text-white ml-0.5"/>
+                                <Play size={20} fill="currentColor" className="text-white ml-0.5" aria-hidden="true"/>
                             )}
                         </button>
                     </div>
@@ -236,13 +256,15 @@ export const TrackCard = ({track, variant, className, index, addedAt, onClick, o
                             {isExplicit && <ExplicitBadge/>}
                             {hasStems && (
                                 <span
+                                    aria-label={t.media.track.stemsLabel}
+                                    title={t.media.track.stemsLabel}
                                     className="bg-slate-800 text-violet-400 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded flex items-center gap-1 ml-2">
-                                    <Layers size={10}/> Stems
+                                    <Layers size={10} aria-hidden="true"/> {t.media.track.stemsLabel}
                                 </span>
                             )}
                         </span>
                         <div className="flex items-center gap-1 text-slate-400 text-xs mt-0.5">
-                            <User size={12} className="shrink-0"/>
+                            <User size={12} className="shrink-0" aria-hidden="true"/>
                             {isUnavailable ? (
                                 <span
                                     className="truncate text-slate-500 line-through opacity-70">{track.artistAlias}</span>
@@ -260,7 +282,7 @@ export const TrackCard = ({track, variant, className, index, addedAt, onClick, o
                 </div>
                 <div className="flex items-center gap-6 text-sm text-slate-400 flex-shrink-0 ml-4 px-2">
                     <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider">
-                        <Clock size={14}/>
+                        <Clock size={14} aria-hidden="true"/>
                         <span>{formatDuration(track.durationSeconds)}</span>
                     </div>
                 </div>
@@ -284,9 +306,11 @@ export const TrackCard = ({track, variant, className, index, addedAt, onClick, o
                 {/* STEMS Badge Overlay */}
                 {hasStems && (
                     <div
+                        aria-label={t.media.track.stemsLabel}
+                        title={t.media.track.stemsLabel}
                         className="absolute top-3 right-3 bg-slate-900/80 backdrop-blur-sm border border-violet-500/50 text-violet-300 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md flex items-center gap-1.5 shadow-xl">
-                        <Layers size={12}/>
-                        Stems
+                        <Layers size={12} aria-hidden="true"/>
+                        {t.media.track.stemsLabel}
                     </div>
                 )}
             </div>
@@ -304,7 +328,7 @@ export const TrackCard = ({track, variant, className, index, addedAt, onClick, o
                     {/* Added Artist Alias */}
                     <div
                         className="flex items-center gap-1.5 mt-0.5 text-slate-400 text-xs hover:text-slate-300 transition-colors truncate">
-                        <User size={12} className="shrink-0"/>
+                        <User size={12} className="shrink-0" aria-hidden="true"/>
                         {isUnavailable ? (
                             <span className="truncate text-slate-500 line-through opacity-70">{track.artistAlias}</span>
                         ) : (
@@ -319,7 +343,7 @@ export const TrackCard = ({track, variant, className, index, addedAt, onClick, o
                     </div>
                     <div
                         className="flex items-center gap-2 mt-1.5 text-slate-500 text-[11px] uppercase tracking-wider font-semibold">
-                        <Clock size={12}/>
+                        <Clock size={12} aria-hidden="true"/>
                         <span>{formatDuration(track.durationSeconds)}</span>
                     </div>
                 </div>
@@ -327,6 +351,8 @@ export const TrackCard = ({track, variant, className, index, addedAt, onClick, o
                 {/* Controls */}
                 <button
                     onClick={handlePlayClick}
+                    aria-label={playAriaLabel}
+                    title={playAriaLabel}
                     className={cn(
                         "h-10 w-10 flex-shrink-0 rounded-full flex items-center justify-center transition-all shadow-md",
                         isCurrentTrack && isPlaying
@@ -335,9 +361,9 @@ export const TrackCard = ({track, variant, className, index, addedAt, onClick, o
                     )}
                 >
                     {isCurrentTrack && isPlaying ? (
-                        <Pause size={18} fill="currentColor"/>
+                        <Pause size={18} fill="currentColor" aria-hidden="true"/>
                     ) : (
-                        <Play size={18} fill="currentColor" className="ml-0.5"/>
+                        <Play size={18} fill="currentColor" className="ml-0.5" aria-hidden="true"/>
                     )}
                 </button>
             </div>

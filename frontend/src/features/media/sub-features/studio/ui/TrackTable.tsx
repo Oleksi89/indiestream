@@ -3,6 +3,7 @@ import {Loader2} from 'lucide-react';
 import {TrackTableRow} from './TrackTableRow';
 import type {TrackDto} from '../../../types';
 import type {TrackModalType} from './OwnedTrackDropdownMenu';
+import {useTranslation} from '@/shared/lib/i18n/useTranslation';
 
 // Dynamically imported Modals to keep initial bundle size small
 import {EditTrackModal} from './EditTrackModal';
@@ -21,6 +22,8 @@ interface ModalState {
 export const TrackTable = () => {
     const {data, isLoading, error} = useStudioTracks();
     const [activeModal, setActiveModal] = useState<ModalState | null>(null);
+    const {t} = useTranslation();
+    const tbl = t.media.studio.trackTable;
 
     const handleCloseModal = () => setActiveModal(null);
 
@@ -31,8 +34,10 @@ export const TrackTable = () => {
     if (isLoading) {
         return (
             <div
-                className="flex justify-center items-center h-64 w-full rounded-2xl border border-slate-800 bg-slate-900/50">
-                <Loader2 className="animate-spin text-violet-500" size={32}/>
+                className="flex justify-center items-center h-64 w-full rounded-2xl border border-slate-800 bg-slate-900/50"
+                aria-busy="true"
+                aria-label={tbl.loading}>
+                <Loader2 className="animate-spin text-violet-500" size={32} aria-hidden="true"/>
             </div>
         );
     }
@@ -40,8 +45,9 @@ export const TrackTable = () => {
     if (error || !data) {
         return (
             <div
+                role="alert"
                 className="flex justify-center items-center h-64 w-full rounded-2xl border border-red-900/50 bg-red-900/10 text-red-400">
-                Failed to load tracks. Please try again.
+                {tbl.error}
             </div>
         );
     }
@@ -50,8 +56,8 @@ export const TrackTable = () => {
         return (
             <div
                 className="flex flex-col justify-center items-center h-64 w-full rounded-2xl border border-slate-800 bg-slate-900/50 text-slate-400">
-                <p className="mb-2 font-medium text-slate-300">Your catalog is empty.</p>
-                <p className="text-sm">Upload your first track using the wizard above.</p>
+                <p className="mb-2 font-medium text-slate-300">{tbl.emptyTitle}</p>
+                <p className="text-sm">{tbl.emptySubtitle}</p>
             </div>
         );
     }
@@ -62,10 +68,10 @@ export const TrackTable = () => {
                 <table className="w-full text-left text-sm text-slate-300">
                     <thead className="bg-slate-950/50 text-xs uppercase text-slate-500 border-b border-slate-800">
                     <tr>
-                        <th className="px-6 py-4 font-medium">Track</th>
-                        <th className="px-6 py-4 font-medium">Status</th>
-                        <th className="px-6 py-4 font-medium hidden md:table-cell">Uploaded Date</th>
-                        <th className="px-6 py-4 font-medium text-right">Actions</th>
+                        <th scope="col" className="px-6 py-4 font-medium">{tbl.columnTrack}</th>
+                        <th scope="col" className="px-6 py-4 font-medium">{tbl.columnStatus}</th>
+                        <th scope="col" className="px-6 py-4 font-medium hidden md:table-cell">{tbl.columnDate}</th>
+                        <th scope="col" className="px-6 py-4 font-medium text-right">{tbl.columnActions}</th>
                     </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800">

@@ -12,6 +12,7 @@ import {audioEngine} from "@/features/media/sub-features/playback/lib/webAudioEn
 import Hls from "hls.js";
 import {PlayerTrackInfo} from "@/features/media/sub-features/playback/ui/components/PlayerTrackInfo";
 import {useAutoplayEngine} from "@/features/media/sub-features/playback/hooks/useAutoplayEngine";
+import {useTranslation} from '@/shared/lib/i18n/useTranslation';
 
 /**
  * Global Player Bar Component.
@@ -24,9 +25,10 @@ export const PlayerBar = () => {
         progress, setProgress, duration, setDuration, setPlaying,
         playbackMode, setPlaybackMode, stemVolumes, setStemVolume,
         playNext, playPrevious, isShuffle, toggleShuffle, repeatMode, setRepeatMode, toggleQueue, isQueueOpen,
-     } = usePlayerStore();
+    } = usePlayerStore();
 
     const token = useAuthStore(state => state.token);
+    const {t} = useTranslation();
     useAutoplayEngine();
 
     const [isMixerOpen, setIsMixerOpen] = useState(false);
@@ -150,10 +152,22 @@ export const PlayerBar = () => {
         else setRepeatMode('OFF');
     };
 
+    const repeatAriaLabel = repeatMode === 'OFF'
+        ? t.media.player.repeatOff
+        : repeatMode === 'CONTEXT'
+            ? t.media.player.repeatContext
+            : t.media.player.repeatTrack;
+
+    const shuffleAriaLabel = isShuffle ? t.media.player.shuffleOn : t.media.player.shuffleOff;
+    const queueAriaLabel = isQueueOpen ? t.media.player.closeQueue : t.media.player.openQueue;
+    const mixerAriaLabel = isMixerOpen ? t.media.player.closeMixer : t.media.player.openMixer;
+
     if (!currentTrack || !trackId) return null;
 
     return (
         <div
+            role="region"
+            aria-label={t.media.player.pause}
             className="fixed bottom-0 left-0 right-0 h-24 bg-slate-950/95 backdrop-blur-md border-t border-slate-800 px-6 py-3 flex items-center justify-between z-50">
             {/* Master Engine (Hidden) */}
             <audio
@@ -190,41 +204,58 @@ export const PlayerBar = () => {
                 <div className="flex items-center gap-6">
                     <button
                         onClick={toggleShuffle}
+                        aria-label={shuffleAriaLabel}
+                        title={shuffleAriaLabel}
+                        aria-pressed={isShuffle}
                         className={cn("transition-colors", isShuffle ? "text-violet-400" : "text-slate-400 hover:text-white")}
                     >
-                        <Shuffle size={16}/>
+                        <Shuffle size={16} aria-hidden="true"/>
                     </button>
 
                     <button
                         onClick={playPrevious}
+                        aria-label={t.media.player.previous}
+                        title={t.media.player.previous}
                         className="text-slate-400 hover:text-white transition-colors disabled:opacity-30"
                         disabled={isStemsLoading}
                     >
-                        <SkipBack size={20}/>
+                        <SkipBack size={20} aria-hidden="true"/>
                     </button>
 
                     <button
                         onClick={togglePlay}
                         disabled={isStemsLoading}
+                        aria-label={isPlaying ? t.media.player.pause : t.media.player.play}
+                        title={isPlaying ? t.media.player.pause : t.media.player.play}
                         className="h-10 w-10 rounded-full bg-white flex items-center justify-center text-black hover:scale-105 transition-transform disabled:bg-slate-700 disabled:scale-100"
                     >
-                        {isStemsLoading ? <Loader2 className="animate-spin" size={20}/> : isPlaying ?
-                            <Pause size={20} fill="black"/> : <Play size={20} fill="black" className="ml-1"/>}
+                        {isStemsLoading ? (
+                            <Loader2 className="animate-spin" size={20} aria-hidden="true"/>
+                        ) : isPlaying ? (
+                            <Pause size={20} fill="black" aria-hidden="true"/>
+                        ) : (
+                            <Play size={20} fill="black" className="ml-1" aria-hidden="true"/>
+                        )}
                     </button>
 
                     <button
                         onClick={playNext}
+                        aria-label={t.media.player.next}
+                        title={t.media.player.next}
                         className="text-slate-400 hover:text-white transition-colors disabled:opacity-30"
                         disabled={isStemsLoading}
                     >
-                        <SkipForward size={20}/>
+                        <SkipForward size={20} aria-hidden="true"/>
                     </button>
 
                     <button
                         onClick={handleRepeatClick}
+                        aria-label={repeatAriaLabel}
+                        title={repeatAriaLabel}
+                        aria-pressed={repeatMode !== 'OFF'}
                         className={cn("transition-colors relative", repeatMode !== 'OFF' ? "text-violet-400" : "text-slate-400 hover:text-white")}
                     >
-                        {repeatMode === 'TRACK' ? <Repeat1 size={16}/> : <Repeat size={16}/>}
+                        {repeatMode === 'TRACK' ? <Repeat1 size={16} aria-hidden="true"/> : <Repeat size={16} aria-hidden="true"/>}
                         {repeatMode !== 'OFF' && <span
                             className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 bg-violet-400 rounded-full"/>}
                     </button>
@@ -232,7 +263,7 @@ export const PlayerBar = () => {
 
                 {/* Progress Slider */}
                 <div className="w-full flex items-center gap-3 max-w-md">
-                    <span className="text-[10px] text-slate-500 font-mono w-10 text-right">{formatTime(progress)}</span>
+                    <span className="text-[10px] text-slate-500 font-mono w-10 text-right" aria-hidden="true">{formatTime(progress)}</span>
                     <div className="relative flex-1 h-1 bg-slate-800 rounded-full group flex items-center">
                         <div className="absolute left-0 h-full bg-violet-500 rounded-full group-hover:bg-violet-400"
                              style={{width: `${duration > 0 ? (progress / duration) * 100 : 0}%`}}/>
@@ -244,11 +275,15 @@ export const PlayerBar = () => {
                             value={progress}
                             disabled={isStemsLoading}
                             onChange={handleSeek}
+                            aria-label={t.media.player.seekBar}
+                            aria-valuemin={0}
+                            aria-valuemax={duration || 100}
+                            aria-valuenow={Math.round(progress)}
                             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
                         />
                     </div>
 
-                    <span className="text-[10px] text-slate-500 font-mono w-10">{formatTime(duration)}</span>
+                    <span className="text-[10px] text-slate-500 font-mono w-10" aria-hidden="true">{formatTime(duration)}</span>
                 </div>
             </div>
 
@@ -256,15 +291,22 @@ export const PlayerBar = () => {
             <div className="flex items-center justify-end gap-4 w-[30%] relative">
                 {stemsError && (
                     <span
+                        role="alert"
                         className="text-[10px] text-red-400 font-medium absolute -top-8 right-0 bg-red-400/10 px-2 py-1 rounded">
-                        Sync Failed: Switching to Master
+                        {t.media.player.syncFailed}
                     </span>
                 )}
 
                 {hasStems && (
-                    <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-1 shadow-inner">
+                    <div
+                        role="group"
+                        aria-label="Playback mode"
+                        className="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-1 shadow-inner">
                         <button
                             onClick={() => setPlaybackMode('master')}
+                            aria-label={t.media.player.masterMode}
+                            title={t.media.player.masterMode}
+                            aria-pressed={playbackMode === 'master'}
                             className={cn("px-2 py-1 text-[10px] font-bold rounded-md transition-all", playbackMode === 'master' ? "bg-slate-800 text-white shadow-sm" : "text-slate-500 hover:text-slate-300")}
                         >
                             MASTER
@@ -272,12 +314,15 @@ export const PlayerBar = () => {
                         <button
                             onClick={() => setPlaybackMode('stems')}
                             disabled={isStemsLoading}
+                            aria-label={t.media.player.stemsMode}
+                            title={t.media.player.stemsMode}
+                            aria-pressed={playbackMode === 'stems'}
                             className={cn(
                                 "px-2 py-1 text-[10px] font-bold rounded-md transition-all flex items-center gap-1",
                                 playbackMode === 'stems' ? "bg-violet-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-300 disabled:opacity-50"
                             )}
                         >
-                            {isStemsLoading && <Loader2 size={10} className="animate-spin"/>}
+                            {isStemsLoading && <Loader2 size={10} className="animate-spin" aria-hidden="true"/>}
                             STEMS
                         </button>
                     </div>
@@ -285,44 +330,65 @@ export const PlayerBar = () => {
 
                 <button
                     onClick={toggleQueue}
+                    aria-label={queueAriaLabel}
+                    title={queueAriaLabel}
+                    aria-expanded={isQueueOpen}
                     className={cn("p-2 rounded-lg transition-colors", isQueueOpen ? "text-violet-400" : "text-slate-400 hover:text-white hover:bg-slate-800")}
                 >
-                    <ListVideo size={20}/>
+                    <ListVideo size={20} aria-hidden="true"/>
                 </button>
 
                 {/* Mixer Popover Trigger */}
                 {hasStems && playbackMode === 'stems' && (
                     <button
                         onClick={() => setIsMixerOpen(!isMixerOpen)}
+                        aria-label={mixerAriaLabel}
+                        title={mixerAriaLabel}
+                        aria-expanded={isMixerOpen}
                         className={cn("p-2 rounded-lg transition-colors", isMixerOpen ? "bg-violet-500/20 text-violet-400" : "text-slate-400 hover:text-white hover:bg-slate-800")}
                     >
-                        <Settings2 size={20}/>
+                        <Settings2 size={20} aria-hidden="true"/>
                     </button>
                 )}
 
                 <div className="flex items-center gap-3">
-                    <Volume2 size={18} className="text-slate-400"/>
+                    <Volume2 size={18} className="text-slate-400" aria-hidden="true"/>
                     <div className="relative w-24 h-1 bg-slate-800 rounded-full group flex items-center">
                         <div className="absolute left-0 h-full bg-violet-500 rounded-full group-hover:bg-violet-400"
                              style={{width: `${volume * 100}%`}}/>
-                        <input type="range" min="0" max="1" step="0.01" value={volume}
-                               onChange={(e) => setVolume(parseFloat(e.target.value))}
-                               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"/>
+                        <input
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.01"
+                            value={volume}
+                            onChange={(e) => setVolume(parseFloat(e.target.value))}
+                            aria-label={t.media.player.volume}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-valuenow={Math.round(volume * 100)}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"/>
                     </div>
                 </div>
 
                 {/* Stem Mixer Popover */}
                 {isMixerOpen && hasStems && (
                     <div
+                        role="dialog"
+                        aria-label={t.media.player.mixerTitle}
                         className="absolute bottom-full right-0 mb-4 w-72 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-5 animate-in fade-in slide-in-from-bottom-2 z-[60]">
                         <div className="flex items-center justify-between mb-4">
                             <div
                                 className="flex items-center gap-2 text-slate-200 font-bold text-xs uppercase tracking-widest">
-                                <Settings2 size={14} className="text-violet-400"/>
-                                Console
+                                <Settings2 size={14} className="text-violet-400" aria-hidden="true"/>
+                                {t.media.player.mixerTitle}
                             </div>
-                            <button onClick={() => setIsMixerOpen(false)} className="text-slate-500 hover:text-white">
-                                <Disc3 size={14} className="animate-spin-slow"/>
+                            <button
+                                onClick={() => setIsMixerOpen(false)}
+                                aria-label={t.media.player.closeMixer}
+                                title={t.media.player.closeMixer}
+                                className="text-slate-500 hover:text-white">
+                                <Disc3 size={14} className="animate-spin-slow" aria-hidden="true"/>
                             </button>
                         </div>
                         <div className="space-y-5 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
@@ -345,6 +411,10 @@ export const PlayerBar = () => {
                                             step="0.01"
                                             value={stemVolumes[name] || 0}
                                             onChange={(e) => setStemVolume(name, parseFloat(e.target.value))}
+                                            aria-label={t.media.player.stemVolume.replace('{name}', name)}
+                                            aria-valuemin={0}
+                                            aria-valuemax={100}
+                                            aria-valuenow={Math.round((stemVolumes[name] || 0) * 100)}
                                             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                         />
                                     </div>

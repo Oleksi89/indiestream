@@ -5,6 +5,7 @@ import {useFullSearch} from '@/features/search/hooks/useSearch';
 import {GenreCarousel} from '@/features/search/ui/GenreCarousel';
 import {TagFilterInput} from '@/features/search/ui/TagFilterInput';
 import {SearchResults} from '@/features/search/ui/SearchResults';
+import {useTranslation} from '@/shared/lib/i18n/useTranslation';
 
 export const SearchPage = () => {
     const {query, tab, genre, tags, setFilters} = useSearchFilters();
@@ -29,6 +30,8 @@ export const SearchPage = () => {
     };
 
     const hasSearched = query.length >= 2 || activeTags.length > 0 || genre.length > 0;
+    const {t} = useTranslation();
+    const sp = t.search;
 
     return (
         <div className="flex flex-col h-full w-full overflow-hidden bg-slate-950">
@@ -46,8 +49,10 @@ export const SearchPage = () => {
                                     type="text"
                                     value={query}
                                     onChange={(e) => setFilters({q: e.target.value})}
-                                    placeholder="Search for tracks, artists, or playlists..."
-                                    className="w-full bg-slate-900 border border-slate-700 rounded-full py-3 pl-12 pr-6 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-all text-lg shadow-inner shadow-black/50"
+                                    placeholder={sp.inputPlaceholder}
+                                    aria-label={sp.inputLabel}
+                                    className="w-full pl-12 pr-6 py-4 rounded-2xl border border-slate-800 bg-slate-900 text-white placeholder-slate-500 text-lg focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none transition-all"
+                                    autoFocus
                                 />
                             </div>
                         </div>
