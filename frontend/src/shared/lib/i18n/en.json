@@ -2,6 +2,38 @@
   "common": {
     "cancel": "Cancel"
   },
+  "auth": {
+    "login": {
+      "emailLabel": "Email",
+      "passwordLabel": "Password",
+      "submit": "Sign In",
+      "submitting": "Signing in...",
+      "noAccount": "Don't have an account?",
+      "registerLink": "Register here",
+      "errors": {
+        "invalidCredentials": "Invalid email or password.",
+        "network": "An unexpected network error occurred."
+      }
+    },
+    "register": {
+      "emailLabel": "Email",
+      "usernameLabel": "Username",
+      "usernamePlaceholder": "john_doe",
+      "aliasLabel": "Display Name",
+      "aliasPlaceholder": "John Doe",
+      "passwordLabel": "Password",
+      "confirmPasswordLabel": "Confirm Password",
+      "submit": "Create Account",
+      "submitting": "Creating account...",
+      "haveAccount": "Already have an account?",
+      "loginLink": "Sign In",
+      "successMessage": "Account created successfully. Please log in.",
+      "errors": {
+        "failed": "Registration failed. Please try again.",
+        "unexpected": "An unexpected error occurred."
+      }
+    }
+  },
   "settings": {
     "title": "Account Settings",
     "subtitle": "Manage your account preferences and algorithmic data.",

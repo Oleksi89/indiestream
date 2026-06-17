@@ -2,6 +2,38 @@
   "common": {
     "cancel": "Скасувати"
   },
+  "auth": {
+    "login": {
+      "emailLabel": "Електронна пошта",
+      "passwordLabel": "Пароль",
+      "submit": "Увійти",
+      "submitting": "Вхід...",
+      "noAccount": "Немає акаунту?",
+      "registerLink": "Зареєструватися",
+      "errors": {
+        "invalidCredentials": "Невірна електронна пошта або пароль.",
+        "network": "Сталася неочікувана мережева помилка."
+      }
+    },
+    "register": {
+      "emailLabel": "Електронна пошта",
+      "usernameLabel": "Ім'я користувача",
+      "usernamePlaceholder": "john_doe",
+      "aliasLabel": "Відображуване ім'я",
+      "aliasPlaceholder": "Іван Петренко",
+      "passwordLabel": "Пароль",
+      "confirmPasswordLabel": "Підтвердіть пароль",
+      "submit": "Створити акаунт",
+      "submitting": "Створення акаунту...",
+      "haveAccount": "Вже маєте акаунт?",
+      "loginLink": "Увійти",
+      "successMessage": "Акаунт успішно створено. Будь ласка, увійдіть.",
+      "errors": {
+        "failed": "Не вдалося зареєструватися. Спробуйте ще раз.",
+        "unexpected": "Сталася неочікувана помилка."
+      }
+    }
+  },
   "settings": {
     "title": "Налаштування акаунту",
     "subtitle": "Керуйте налаштуваннями вашого акаунту та алгоритмічними даними.",
