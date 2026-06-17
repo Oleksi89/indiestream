@@ -36,5 +36,81 @@
         "submit": "Так, скинути алгоритм"
       }
     }
+  },
+  "analytics": {
+    "emptyState": {
+      "defaultTitle": "Поки що недостатньо даних",
+      "defaultMessage": "Завітайте пізніше, коли трек набере більше прослуховувань.",
+      "noLocationData": "Немає даних про регіони",
+      "noAttributionData": "Немає даних про джерела",
+      "noTimelineData": "Немає даних часового ряду",
+      "noData": "Дані відсутні."
+    },
+    "metrics": {
+      "totalPlays": "Усього прослуховувань",
+      "uniqueListeners": "Унікальні слухачі",
+      "listeners": "Слухачі",
+      "completionRate": "Частка дослухувань",
+      "skipRate": "Частка пропусків",
+      "totalSystemPlays": "Усього прослуховувань у системі",
+      "globalCompletionRate": "Глобальна частка дослухувань",
+      "globalLikes": "Глобальні вподобання",
+      "trackSaves": "Збереження треків (вподобання)",
+      "vsPreviousPeriod": "порівняно з попереднім періодом",
+      "live": "У прямому ефірі",
+      "score": "Оцінка"
+    },
+    "charts": {
+      "topRegions": "Топ регіонів (слухачі)",
+      "trafficSources": "Джерела трафіку",
+      "listeningTrends": "Тенденції прослуховування"
+    },
+    "platform": {
+      "title": "Телеметрія платформи",
+      "subtitle": "Глобальні показники продуктивності та залученості."
+    },
+    "adminTrack": {
+      "title": "Системна телеметрія",
+      "subtitle": "Необмежений адміністративний огляд"
+    },
+    "dashboard": {
+      "trackDeepDiveTitle": "Детальний аналіз треку",
+      "trackDeepDiveSubtitle": "Деталізована телеметрія та дані прослуховування в реальному часі.",
+      "globalPerformanceTitle": "Загальна продуктивність",
+      "globalPerformanceSubtitle": "Макроперспектива всього вашого каталогу.",
+      "back": "Назад до загального огляду"
+    },
+    "deepDive": {
+      "exportCsv": "Експорт CSV",
+      "exporting": "Експортування CSV"
+    },
+    "overview": {
+      "topTracks": "Найрезультативніші треки",
+      "columns": {
+        "track": "Трек",
+        "plays": "Прослуховування",
+        "listeners": "Слухачі",
+        "skipRate": "Частка пропусків",
+        "popularity": "Популярність"
+      },
+      "openTrackRow": "Відкрити аналітику треку"
+    },
+    "timeRange": {
+      "presets": {
+        "4h": "4 год",
+        "12h": "12 год",
+        "24h": "24 год",
+        "7d": "7 днів",
+        "30d": "30 днів",
+        "all": "Усі"
+      },
+      "custom": "Власний",
+      "customRange": "Власний діапазон",
+      "startDateTime": "Дата й час початку",
+      "endDateTime": "Дата й час завершення",
+      "applyRange": "Застосувати діапазон",
+      "openCustomRange": "Відкрити вибір власного діапазону дат",
+      "closeCustomRange": "Закрити вибір власного діапазону дат"
+    }
   }
 }

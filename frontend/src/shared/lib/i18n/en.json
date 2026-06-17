@@ -36,5 +36,81 @@
         "submit": "Yes, Reset Algorithm"
       }
     }
+  },
+  "analytics": {
+    "emptyState": {
+      "defaultTitle": "Not enough data yet",
+      "defaultMessage": "Check back after your track gets a few more plays.",
+      "noLocationData": "No location data",
+      "noAttributionData": "No attribution data",
+      "noTimelineData": "No timeline data",
+      "noData": "No data available."
+    },
+    "metrics": {
+      "totalPlays": "Total Plays",
+      "uniqueListeners": "Unique Listeners",
+      "listeners": "Listeners",
+      "completionRate": "Completion Rate",
+      "skipRate": "Skip Rate",
+      "totalSystemPlays": "Total System Plays",
+      "globalCompletionRate": "Global Completion Rate",
+      "globalLikes": "Global Likes",
+      "trackSaves": "Track Saves (Likes)",
+      "vsPreviousPeriod": "vs previous period",
+      "live": "Live",
+      "score": "Score"
+    },
+    "charts": {
+      "topRegions": "Top Regions (Listeners)",
+      "trafficSources": "Traffic Sources",
+      "listeningTrends": "Listening Trends"
+    },
+    "platform": {
+      "title": "Platform Telemetry",
+      "subtitle": "Global performance and engagement aggregates."
+    },
+    "adminTrack": {
+      "title": "System Telemetry",
+      "subtitle": "Unrestricted administrative overview"
+    },
+    "dashboard": {
+      "trackDeepDiveTitle": "Track Deep Dive",
+      "trackDeepDiveSubtitle": "Granular telemetry and real-time listening data.",
+      "globalPerformanceTitle": "Global Performance",
+      "globalPerformanceSubtitle": "Macro perspective of your entire catalog.",
+      "back": "Back to global overview"
+    },
+    "deepDive": {
+      "exportCsv": "Export CSV",
+      "exporting": "Exporting CSV"
+    },
+    "overview": {
+      "topTracks": "Top Performing Tracks",
+      "columns": {
+        "track": "Track",
+        "plays": "Plays",
+        "listeners": "Listeners",
+        "skipRate": "Skip Rate",
+        "popularity": "Popularity"
+      },
+      "openTrackRow": "Open analytics for track"
+    },
+    "timeRange": {
+      "presets": {
+        "4h": "4h",
+        "12h": "12h",
+        "24h": "24h",
+        "7d": "7 Days",
+        "30d": "30 Days",
+        "all": "All"
+      },
+      "custom": "Custom",
+      "customRange": "Custom Range",
+      "startDateTime": "Start Date & Time",
+      "endDateTime": "End Date & Time",
+      "applyRange": "Apply Range",
+      "openCustomRange": "Open custom date range picker",
+      "closeCustomRange": "Close custom date range picker"
+    }
   }
 }

@@ -1,6 +1,7 @@
 import {PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend} from 'recharts';
 import type {AttributionMetricDto} from '../types';
 import {AnalyticsEmptyState} from './AnalyticsEmptyState.tsx';
+import {useTranslation} from '@/shared/lib/i18n/useTranslation.ts';
 
 const COLORS = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#64748b'];
 
@@ -9,8 +10,10 @@ interface AttributionChartProps {
 }
 
 export const AttributionChart = ({data}: AttributionChartProps) => {
+    const {t} = useTranslation();
+
     if (!data || data.length === 0) {
-        return <AnalyticsEmptyState title="No attribution data"/>;
+        return <AnalyticsEmptyState title={t.analytics.emptyState.noAttributionData}/>;
     }
 
     const chartData = data.map(d => ({
@@ -20,7 +23,7 @@ export const AttributionChart = ({data}: AttributionChartProps) => {
 
     return (
         <div className="w-full bg-slate-900/30 border border-slate-800 rounded-xl p-6 h-[350px] flex flex-col">
-            <h3 className="text-sm font-semibold text-slate-300 mb-2">Traffic Sources</h3>
+            <h3 className="text-sm font-semibold text-slate-300 mb-2">{t.analytics.charts.trafficSources}</h3>
             <div className="flex-1 min-h-0">
                 <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
