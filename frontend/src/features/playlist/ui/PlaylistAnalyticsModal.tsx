@@ -3,6 +3,7 @@ import {useAnalyticsTimeRange} from '@/features/analytics/hooks/useAnalyticsTime
 import {SummaryMetricCard} from '@/features/analytics/ui/SummaryMetricCard';
 import {TimeRangeSelector} from '@/features/analytics/ui/TimeRangeSelector';
 import {MetricCardSkeleton} from '@/features/analytics/ui/AnalyticsSkeletons';
+import {useTranslation} from '@/shared/lib/i18n/useTranslation';
 import type {PlaylistDto} from '../types';
 import {BarChart2} from 'lucide-react';
 import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle} from "@/shared/ui/Dialog.tsx";
@@ -14,6 +15,7 @@ interface PlaylistAnalyticsModalProps {
 }
 
 export const PlaylistAnalyticsModal = ({playlist, isOpen, onClose}: PlaylistAnalyticsModalProps) => {
+    const {t} = useTranslation();
     const {preset, setRange, startDate, endDate} = useAnalyticsTimeRange('7D');
     const {data, isLoading} = useCuratorAnalytics(isOpen ? playlist.id : undefined, startDate, endDate);
 
@@ -24,11 +26,11 @@ export const PlaylistAnalyticsModal = ({playlist, isOpen, onClose}: PlaylistAnal
                 <div className="p-6 border-b border-slate-800 shrink-0">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-xl">
-                            <BarChart2 className="text-violet-400"/>
-                            Playlist Analytics: {playlist.name}
+                            <BarChart2 className="text-violet-400" aria-hidden="true"/>
+                            {t.playlist.analytics.title.replace('{name}', playlist.name)}
                         </DialogTitle>
                         <DialogDescription className="text-slate-400">
-                            Monitor the performance and audience growth of your curated list.
+                            {t.playlist.analytics.subtitle}
                         </DialogDescription>
                     </DialogHeader>
                 </div>
@@ -53,13 +55,13 @@ export const PlaylistAnalyticsModal = ({playlist, isOpen, onClose}: PlaylistAnal
                             </>
                         ) : (
                             <>
-                                <SummaryMetricCard title="Total Plays" value={data.summary.totalPlays}
+                                <SummaryMetricCard title={t.playlist.analytics.totalPlays} value={data.summary.totalPlays}
                                                    growthPercentage={data.summary.playsGrowthPercentage}/>
-                                <SummaryMetricCard title="Unique Listeners" value={data.summary.uniqueListeners}
+                                <SummaryMetricCard title={t.playlist.analytics.uniqueListeners} value={data.summary.uniqueListeners}
                                                    growthPercentage={data.summary.listenersGrowthPercentage}/>
-                                <SummaryMetricCard title="Saves / Likes" value={data.summary.totalLikes}
+                                <SummaryMetricCard title={t.playlist.analytics.saves} value={data.summary.totalLikes}
                                                    growthPercentage={data.summary.likesGrowthPercentage}/>
-                                <SummaryMetricCard title="Engagement Score"
+                                <SummaryMetricCard title={t.playlist.analytics.engagementScore}
                                                    value={data.summary.totalPlays > 0 ? (data.summary.uniqueListeners / data.summary.totalPlays) * 100 : 0}
                                                    format="percent"/>
                             </>

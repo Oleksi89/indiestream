@@ -1,6 +1,9 @@
 {
   "common": {
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "save": "Save",
+    "close": "Close",
+    "create": "Create"
   },
   "auth": {
     "login": {
@@ -143,6 +146,152 @@
       "applyRange": "Apply Range",
       "openCustomRange": "Open custom date range picker",
       "closeCustomRange": "Close custom date range picker"
+    }
+  },
+  "library": {
+    "title": "Your Library",
+    "toggleView": "Toggle library layout",
+    "createPlaylist": "Create playlist",
+    "searchPlaceholder": "Search in Library...",
+    "searchLabel": "Search in your library",
+    "filters": {
+      "all": "All",
+      "playlists": "Playlists",
+      "profiles": "Profiles"
+    },
+    "item": {
+      "unknownTitle": "Unknown",
+      "playlistPrefix": "Playlist",
+      "systemPlaylist": "System Playlist",
+      "lockedSystem": "System playlist",
+      "ownerBadge": "You own this collaborative playlist",
+      "collaboratorBadge": "You collaborate on this playlist"
+    }
+  },
+  "playlist": {
+    "actions": {
+      "play": "Play playlist",
+      "save": "Save",
+      "saved": "Saved",
+      "saveAria": "Save playlist to your library",
+      "unsaveAria": "Remove playlist from your library",
+      "participants": "Participants",
+      "openParticipants": "Open participants list",
+      "stats": "Stats",
+      "openStats": "Open playlist analytics",
+      "moreOptions": "More options"
+    },
+    "header": {
+      "cover": "Playlist cover",
+      "editCover": "Edit Cover",
+      "editCoverAria": "Edit playlist cover",
+      "publicPlaylist": "Public Playlist",
+      "privatePlaylist": "Private Playlist",
+      "system": "(System)",
+      "collaborative": "Collaborative",
+      "openCollaborators": "Open collaborators",
+      "saves": "{count} saves",
+      "tracks": "{count} tracks",
+      "minutes": "{count} min"
+    },
+    "trackList": {
+      "columnIndex": "#",
+      "columnTitle": "Title",
+      "columnAddedAt": "Added At",
+      "durationColumn": "Track duration",
+      "syncing": "Syncing library..."
+    },
+    "create": {
+      "title": "Create Playlist",
+      "nameLabel": "Name",
+      "namePlaceholder": "My Awesome Playlist",
+      "descriptionLabel": "Description (Optional)",
+      "descriptionPlaceholder": "What's this playlist about?",
+      "privacyLabel": "Privacy",
+      "public": "Public",
+      "private": "Private",
+      "selectPublic": "Set playlist to public",
+      "selectPrivate": "Set playlist to private",
+      "submit": "Create",
+      "submitting": "Creating..."
+    },
+    "edit": {
+      "title": "Edit details",
+      "namePlaceholder": "Add a name",
+      "descriptionPlaceholder": "Add an optional description",
+      "chooseImage": "Choose Image",
+      "replace": "Replace",
+      "coverDropzone": "Upload playlist cover",
+      "preview": "Cover preview",
+      "publicTitle": "Public Playlist",
+      "publicDescription": "Make this playlist visible on your profile.",
+      "collaborativeTitle": "Collaborative",
+      "collaborativeDescription": "Allow invited users to add tracks.",
+      "errors": {
+        "nameRequired": "Name is required",
+        "nameTooLong": "Name is too long",
+        "descriptionTooLong": "Description is too long"
+      }
+    },
+    "collaborators": {
+      "title": "Manage Collaborators",
+      "searchPlaceholder": "Search users by name or @username...",
+      "searchLabel": "Search users to add as collaborators",
+      "noUsersFound": "No new users found.",
+      "addCollaborator": "Add collaborator",
+      "participants": "Participants",
+      "owner": "Owner",
+      "you": "(You)",
+      "leave": "Leave playlist",
+      "remove": "Remove collaborator"
+    },
+    "analytics": {
+      "title": "Playlist Analytics: {name}",
+      "subtitle": "Monitor the performance and audience growth of your curated list.",
+      "totalPlays": "Total Plays",
+      "uniqueListeners": "Unique Listeners",
+      "saves": "Saves / Likes",
+      "engagementScore": "Engagement Score"
+    },
+    "menu": {
+      "addToQueue": "Add to Queue",
+      "editDetails": "Edit details",
+      "makePrivate": "Make Private",
+      "makePublic": "Make Public",
+      "disableCollab": "Disable Collab",
+      "enableCollab": "Enable Collab",
+      "addToPlaylist": "Add to Playlist",
+      "noMutablePlaylists": "No mutable playlists available",
+      "noOptions": "No options",
+      "clone": "Clone to Library (Copy)",
+      "clonePlaylist": "Clone Playlist",
+      "copyLink": "Copy Link",
+      "removeFromLibrary": "Remove from Library",
+      "saveFollow": "Save (Follow)",
+      "deletePlaylist": "Delete Playlist",
+      "heading": "Add to Playlist"
+    },
+    "toasts": {
+      "linkCopied": "Link copied to clipboard",
+      "loadingTracks": "Loading tracks...",
+      "playlistEmpty": "Playlist is empty",
+      "addedToQueue": "Added {count} tracks to queue",
+      "queueLoadFailed": "Failed to load playlist tracks",
+      "synchronizing": "Synchronizing tracks...",
+      "sourceEmpty": "Source playlist is empty",
+      "tracksInjected": "Tracks successfully injected",
+      "injectedInto": "Injected tracks into {name}",
+      "bulkFailed": "Partial failure during bulk insertion",
+      "bulkFailedShort": "Bulk operation failed",
+      "nowPublic": "Playlist is now public",
+      "nowPrivate": "Playlist is now private",
+      "collabEnabled": "Collaboration enabled",
+      "collabDisabled": "Collaboration disabled",
+      "deleteConfirm": "Delete \"{name}\" permanently?"
+    },
+    "page": {
+      "loading": "Loading playlist...",
+      "notFound": "Playlist not found"
     }
   }
 }

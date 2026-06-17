@@ -15,6 +15,7 @@ import {
 import {useAuthStore} from '@/shared/store/authStore';
 import {usePlayerStore} from '@/shared/store/playerStore';
 import {useLibrary} from '@/features/library/hooks/useLibrary';
+import {useTranslation} from '@/shared/lib/i18n/useTranslation';
 import {playlistApi} from '../api/playlist.api';
 import {EditPlaylistModal} from './EditPlaylistModal';
 import {CollaboratorsModal} from './CollaboratorsModal';
@@ -33,6 +34,7 @@ export const PlaylistContextMenu = ({playlist, item, children}: PlaylistContextM
     const {user: currentUser} = useAuthStore();
     const {addContextToQueue} = usePlayerStore();
     const queryClient = useQueryClient();
+    const {t} = useTranslation();
 
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [isCollabOpen, setIsCollabOpen] = useState(false);
@@ -76,73 +78,73 @@ export const PlaylistContextMenu = ({playlist, item, children}: PlaylistContextM
     const handleCopyLink = () => {
         if (!id) return;
         navigator.clipboard.writeText(`${window.location.origin}/playlist/${id}`)
-            .then(() => toast.success('Link copied to clipboard'));
+            .then(() => toast.success(t.playlist.toasts.linkCopied));
     };
 
     const handleAddToQueue = async () => {
         if (!id) return;
-        const toastId = toast.loading('Loading tracks...');
+        const toastId = toast.loading(t.playlist.toasts.loadingTracks);
         try {
             const tracksData = await playlistApi.getPlaylistTracks(id, 0, 500);
-            const mappedTracks: TrackDto[] = tracksData.content.map(t => ({
-                id: t.trackId,
-                title: t.title,
-                artistId: t.artistId,
-                artistUsername: t.artistUsername,
-                artistAlias: t.artistAlias,
-                durationSeconds: t.durationSeconds,
-                coverMinioPath: t.coverMinioPath,
-                stemsMetadata: t.stemsMetadata,
+            const mappedTracks: TrackDto[] = tracksData.content.map(pt => ({
+                id: pt.trackId,
+                title: pt.title,
+                artistId: pt.artistId,
+                artistUsername: pt.artistUsername,
+                artistAlias: pt.artistAlias,
+                durationSeconds: pt.durationSeconds,
+                coverMinioPath: pt.coverMinioPath,
+                stemsMetadata: pt.stemsMetadata,
                 minioBucketPath: '',
                 status: 'READY',
-                genre: t.genre,
-                isExplicit: t.isExplicit ?? false,
-                tags: t.tags ?? {custom: [], moods: [], aiGenerated: []}
+                genre: pt.genre,
+                isExplicit: pt.isExplicit ?? false,
+                tags: pt.tags ?? {custom: [], moods: [], aiGenerated: []}
             }));
             if (mappedTracks.length === 0) {
-                toast.error('Playlist is empty', {id: toastId});
+                toast.error(t.playlist.toasts.playlistEmpty, {id: toastId});
                 return;
             }
             addContextToQueue(mappedTracks);
-            toast.success(`Added ${mappedTracks.length} tracks to queue`, {id: toastId});
+            toast.success(t.playlist.toasts.addedToQueue.replace('{count}', String(mappedTracks.length)), {id: toastId});
         } catch {
-            toast.error('Failed to load playlist tracks', {id: toastId});
+            toast.error(t.playlist.toasts.queueLoadFailed, {id: toastId});
         }
     };
 
     const handleBulkAddToTargetPlaylist = async (targetPlaylistId: string) => {
         if (!id) return;
-        const toastId = toast.loading('Synchronizing tracks...');
+        const toastId = toast.loading(t.playlist.toasts.synchronizing);
         try {
             const tracksData = await playlistApi.getPlaylistTracks(id, 0, 500);
-            const trackIds = tracksData.content.map(t => t.trackId);
+            const trackIds = tracksData.content.map(pt => pt.trackId);
             if (trackIds.length === 0) {
-                toast.success('Source playlist is empty', {id: toastId});
+                toast.success(t.playlist.toasts.sourceEmpty, {id: toastId});
                 return;
             }
             for (const trackId of trackIds) {
                 await playlistApi.addTrack(targetPlaylistId, trackId);
             }
-            toast.success('Tracks successfully injected', {id: toastId});
+            toast.success(t.playlist.toasts.tracksInjected, {id: toastId});
         } catch {
-            toast.error('Partial failure during bulk insertion', {id: toastId});
+            toast.error(t.playlist.toasts.bulkFailed, {id: toastId});
         }
     };
 
     const handleTogglePrivacy = () => {
         if (!id) return;
         updatePlaylist.mutate({id, payload: {isPublic: !isPublic}});
-        toast.success(!isPublic ? 'Playlist is now public' : 'Playlist is now private');
+        toast.success(!isPublic ? t.playlist.toasts.nowPublic : t.playlist.toasts.nowPrivate);
     };
 
     const handleToggleCollaboration = () => {
         if (!id || isSystem) return;
         updatePlaylist.mutate({id, payload: {isCollaborative: !isCollaborative}});
-        toast.success(!isCollaborative ? 'Collaboration enabled' : 'Collaboration disabled');
+        toast.success(!isCollaborative ? t.playlist.toasts.collabEnabled : t.playlist.toasts.collabDisabled);
     };
 
     const handleDelete = () => {
-        if (id && window.confirm(`Delete "${title}" permanently?`)) {
+        if (id && window.confirm(t.playlist.toasts.deleteConfirm.replace('{name}', title ?? ''))) {
             deletePlaylist.mutate(id);
         }
     };
@@ -178,7 +180,7 @@ export const PlaylistContextMenu = ({playlist, item, children}: PlaylistContextM
                     </div>
 
                     <ContextMenuItem onSelect={handleAddToQueue} className="focus:bg-slate-800 cursor-pointer">
-                        <ListPlus className="mr-2 h-4 w-4 text-violet-400"/> Add to Queue
+                        <ListPlus className="mr-2 h-4 w-4 text-violet-400" aria-hidden="true"/> {t.playlist.menu.addToQueue}
                     </ContextMenuItem>
 
                     <ContextMenuSeparator className="bg-slate-800"/>
@@ -186,7 +188,7 @@ export const PlaylistContextMenu = ({playlist, item, children}: PlaylistContextM
                     {canEditMetadata && !isSystem && (
                         <ContextMenuItem onSelect={() => setIsEditOpen(true)}
                                          className="focus:bg-slate-800 cursor-pointer">
-                            <Edit3 className="mr-2 h-4 w-4"/> Edit details
+                            <Edit3 className="mr-2 h-4 w-4" aria-hidden="true"/> {t.playlist.menu.editDetails}
                         </ContextMenuItem>
                     )}
 
@@ -197,9 +199,9 @@ export const PlaylistContextMenu = ({playlist, item, children}: PlaylistContextM
                                 e.preventDefault();
                                 handleTogglePrivacy();
                             }} className="focus:bg-slate-800 cursor-pointer">
-                                {isPublic ? <EyeOff className="mr-2 h-4 w-4"/> :
-                                    <Eye className="mr-2 h-4 w-4"/>}
-                                {isPublic ? 'Make Private' : 'Make Public'}
+                                {isPublic ? <EyeOff className="mr-2 h-4 w-4" aria-hidden="true"/> :
+                                    <Eye className="mr-2 h-4 w-4" aria-hidden="true"/>}
+                                {isPublic ? t.playlist.menu.makePrivate : t.playlist.menu.makePublic}
                             </ContextMenuItem>
 
                             {!isSystem && (
@@ -208,9 +210,9 @@ export const PlaylistContextMenu = ({playlist, item, children}: PlaylistContextM
                                     handleToggleCollaboration();
                                 }} className="focus:bg-slate-800 cursor-pointer flex items-center justify-between">
                                     <span className="flex items-center">
-                                        {isCollaborative ? <User className="mr-2 h-4 w-4"/> :
-                                            <Users className="mr-2 h-4 w-4"/>}
-                                        {isCollaborative ? 'Disable Collab' : 'Enable Collab'}
+                                        {isCollaborative ? <User className="mr-2 h-4 w-4" aria-hidden="true"/> :
+                                            <Users className="mr-2 h-4 w-4" aria-hidden="true"/>}
+                                        {isCollaborative ? t.playlist.menu.disableCollab : t.playlist.menu.enableCollab}
                                     </span>
                                 </ContextMenuItem>
                             )}
@@ -220,13 +222,12 @@ export const PlaylistContextMenu = ({playlist, item, children}: PlaylistContextM
 
                     <ContextMenuSub>
                         <ContextMenuSubTrigger className="focus:bg-slate-800 cursor-pointer">
-                            <PlusCircle className="mr-2 h-4 w-4"/> Add to Playlist
+                            <PlusCircle className="mr-2 h-4 w-4" aria-hidden="true"/> {t.playlist.menu.addToPlaylist}
                         </ContextMenuSubTrigger>
                         <ContextMenuSubContent
                             className="w-48 bg-slate-900 border-slate-800 max-h-[300px] overflow-y-auto custom-scrollbar">
                             {targetPlaylists.length === 0 ? (
-                                <div className="px-2 py-3 text-xs text-center text-slate-500">No mutable playlists
-                                    available</div>
+                                <div className="px-2 py-3 text-xs text-center text-slate-500">{t.playlist.menu.noMutablePlaylists}</div>
                             ) : (
                                 targetPlaylists.map(target => (
                                     <ContextMenuItem key={target.id}
@@ -241,12 +242,12 @@ export const PlaylistContextMenu = ({playlist, item, children}: PlaylistContextM
 
                     <ContextMenuItem onSelect={() => duplicatePlaylist.mutate(id)}
                                      className="focus:bg-slate-800 cursor-pointer">
-                        <CopyPlus className="mr-2 h-4 w-4"/> Clone to Library (Copy)
+                        <CopyPlus className="mr-2 h-4 w-4" aria-hidden="true"/> {t.playlist.menu.clone}
                     </ContextMenuItem>
 
 
                     <ContextMenuItem onSelect={handleCopyLink} className="focus:bg-slate-800 cursor-pointer">
-                        <Link2 className="mr-2 h-4 w-4"/> Copy Link
+                        <Link2 className="mr-2 h-4 w-4" aria-hidden="true"/> {t.playlist.menu.copyLink}
                     </ContextMenuItem>
 
                     <ContextMenuSeparator className="bg-slate-800"/>
@@ -254,20 +255,20 @@ export const PlaylistContextMenu = ({playlist, item, children}: PlaylistContextM
                     {isFollowed && (
                         <ContextMenuItem onSelect={handleUnfollow}
                                          className="text-red-400 focus:bg-red-500/10 focus:text-red-300 cursor-pointer">
-                            <UserMinus className="mr-2 h-4 w-4"/> Remove from Library
+                            <UserMinus className="mr-2 h-4 w-4" aria-hidden="true"/> {t.playlist.menu.removeFromLibrary}
                         </ContextMenuItem>
                     )}
 
                     {!isFollowed && isPublicNotOwned && (
                         <ContextMenuItem onSelect={handleFollow} className="focus:bg-slate-800 cursor-pointer">
-                            <UserPlus className="mr-2 h-4 w-4"/> Save (Follow)
+                            <UserPlus className="mr-2 h-4 w-4" aria-hidden="true"/> {t.playlist.menu.saveFollow}
                         </ContextMenuItem>
                     )}
 
                     {isOwner && !isSystem && (
                         <ContextMenuItem onSelect={handleDelete}
                                          className="text-red-400 focus:bg-red-500/10 focus:text-red-300 cursor-pointer">
-                            <Trash2 className="mr-2 h-4 w-4"/> Delete Playlist
+                            <Trash2 className="mr-2 h-4 w-4" aria-hidden="true"/> {t.playlist.menu.deletePlaylist}
                         </ContextMenuItem>
                     )}
                 </ContextMenuContent>

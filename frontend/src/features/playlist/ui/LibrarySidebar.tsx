@@ -6,16 +6,24 @@ import {LibraryItem} from './LibraryItem';
 import {cn} from '@/shared/lib/utils';
 import {Button} from '@/shared/ui/button';
 import {CreatePlaylistModal} from "@/features/playlist/ui/CreatePlaylistModal.tsx";
+import {useTranslation} from '@/shared/lib/i18n/useTranslation';
 import type {LibraryItemDto} from '@/features/library/types';
 import type {LibraryFilter} from "@/shared/store/libraryStore.ts";
 import {useLibraryStore} from "@/shared/store/libraryStore.ts";
 
 export const LibrarySidebar = () => {
     const navigate = useNavigate();
+    const {t} = useTranslation();
     const {viewMode, cycleViewMode, activeFilter, setActiveFilter} = useLibraryStore();
     const {data: library, isLoading} = useLibrary();
     const [searchQuery, setSearchQuery] = useState('');
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+    const filterLabels: Record<LibraryFilter, string> = {
+        ALL: t.library.filters.all,
+        PLAYLISTS: t.library.filters.playlists,
+        PROFILES: t.library.filters.profiles
+    };
 
     // Apply Filter & Search Logic
     const filteredLibrary = (library || []).filter((item: LibraryItemDto) => {
@@ -56,16 +64,19 @@ export const LibrarySidebar = () => {
             viewMode === 'collapsed' ? "w-[78px]" : viewMode === 'normal' ? "w-[300px]" : "w-[480px]"
         )}>
             <div className="p-5 flex items-center justify-between shrink-0">
-                <button onClick={cycleViewMode} className="flex items-center gap-3 group outline-none">
-                    <Library className="w-6 h-6 text-slate-400 group-hover:text-indigo-400 transition-colors shrink-0"/>
+                <button onClick={cycleViewMode} className="flex items-center gap-3 group outline-none"
+                        aria-label={t.library.toggleView} title={t.library.toggleView}>
+                    <Library aria-hidden="true"
+                             className="w-6 h-6 text-slate-400 group-hover:text-indigo-400 transition-colors shrink-0"/>
                     {viewMode !== 'collapsed' && (
-                        <span className="font-bold text-base tracking-tight truncate">Your Library</span>
+                        <span className="font-bold text-base tracking-tight truncate">{t.library.title}</span>
                     )}
                 </button>
                 {viewMode !== 'collapsed' && (
                     <Button variant="ghost" size="icon" onClick={() => setIsCreateModalOpen(true)}
+                            aria-label={t.library.createPlaylist} title={t.library.createPlaylist}
                             className="hover:bg-slate-800 rounded-full w-8 h-8 shrink-0">
-                        <Plus className="w-5 h-5"/>
+                        <Plus className="w-5 h-5" aria-hidden="true"/>
                     </Button>
                 )}
             </div>
@@ -74,11 +85,13 @@ export const LibrarySidebar = () => {
             {viewMode !== 'collapsed' && (
                 <div className="px-4 pb-2 shrink-0 flex flex-col gap-3">
                     {/* Horizontal Pill Filters */}
-                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1" role="group"
+                         aria-label={t.library.filters.all}>
                         {(['ALL', 'PLAYLISTS', 'PROFILES'] as LibraryFilter[]).map(filter => (
                             <button
                                 key={filter}
                                 onClick={() => setActiveFilter(filter)}
+                                aria-pressed={activeFilter === filter}
                                 className={cn(
                                     "px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors",
                                     activeFilter === filter
@@ -86,17 +99,18 @@ export const LibrarySidebar = () => {
                                         : "bg-slate-800 text-white hover:bg-slate-700"
                                 )}
                             >
-                                {filter.charAt(0) + filter.slice(1).toLowerCase()}
+                                {filterLabels[filter]}
                             </button>
                         ))}
                     </div>
 
                     <div className="relative group">
-                        <Search
+                        <Search aria-hidden="true"
                             className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-indigo-400 transition-colors"/>
                         <input
                             type="text"
-                            placeholder="Search in Library..."
+                            aria-label={t.library.searchLabel}
+                            placeholder={t.library.searchPlaceholder}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full bg-slate-950/50 border border-slate-800 rounded-md py-2 pl-9 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500/50 focus:border-indigo-500/50 placeholder:text-slate-600 transition-all"

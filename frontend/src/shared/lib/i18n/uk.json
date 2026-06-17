@@ -1,6 +1,9 @@
 {
   "common": {
-    "cancel": "Скасувати"
+    "cancel": "Скасувати",
+    "save": "Зберегти",
+    "close": "Закрити",
+    "create": "Створити"
   },
   "auth": {
     "login": {
@@ -143,6 +146,152 @@
       "applyRange": "Застосувати діапазон",
       "openCustomRange": "Відкрити вибір власного діапазону дат",
       "closeCustomRange": "Закрити вибір власного діапазону дат"
+    }
+  },
+  "library": {
+    "title": "Ваша бібліотека",
+    "toggleView": "Перемкнути вигляд бібліотеки",
+    "createPlaylist": "Створити плейлист",
+    "searchPlaceholder": "Пошук у бібліотеці...",
+    "searchLabel": "Пошук у вашій бібліотеці",
+    "filters": {
+      "all": "Усі",
+      "playlists": "Плейлисти",
+      "profiles": "Профілі"
+    },
+    "item": {
+      "unknownTitle": "Невідомо",
+      "playlistPrefix": "Плейлист",
+      "systemPlaylist": "Системний плейлист",
+      "lockedSystem": "Системний плейлист",
+      "ownerBadge": "Ви власник цього спільного плейлиста",
+      "collaboratorBadge": "Ви співавтор цього плейлиста"
+    }
+  },
+  "playlist": {
+    "actions": {
+      "play": "Відтворити плейлист",
+      "save": "Зберегти",
+      "saved": "Збережено",
+      "saveAria": "Зберегти плейлист до вашої бібліотеки",
+      "unsaveAria": "Видалити плейлист з вашої бібліотеки",
+      "participants": "Учасники",
+      "openParticipants": "Відкрити список учасників",
+      "stats": "Статистика",
+      "openStats": "Відкрити аналітику плейлиста",
+      "moreOptions": "Більше опцій"
+    },
+    "header": {
+      "cover": "Обкладинка плейлиста",
+      "editCover": "Змінити обкладинку",
+      "editCoverAria": "Змінити обкладинку плейлиста",
+      "publicPlaylist": "Публічний плейлист",
+      "privatePlaylist": "Приватний плейлист",
+      "system": "(Системний)",
+      "collaborative": "Спільний",
+      "openCollaborators": "Відкрити співавторів",
+      "saves": "{count} збережень",
+      "tracks": "{count} треків",
+      "minutes": "{count} хв"
+    },
+    "trackList": {
+      "columnIndex": "#",
+      "columnTitle": "Назва",
+      "columnAddedAt": "Додано",
+      "durationColumn": "Тривалість треку",
+      "syncing": "Синхронізація бібліотеки..."
+    },
+    "create": {
+      "title": "Створити плейлист",
+      "nameLabel": "Назва",
+      "namePlaceholder": "Мій чудовий плейлист",
+      "descriptionLabel": "Опис (необов'язково)",
+      "descriptionPlaceholder": "Про що цей плейлист?",
+      "privacyLabel": "Приватність",
+      "public": "Публічний",
+      "private": "Приватний",
+      "selectPublic": "Зробити плейлист публічним",
+      "selectPrivate": "Зробити плейлист приватним",
+      "submit": "Створити",
+      "submitting": "Створення..."
+    },
+    "edit": {
+      "title": "Редагувати деталі",
+      "namePlaceholder": "Додайте назву",
+      "descriptionPlaceholder": "Додайте необов'язковий опис",
+      "chooseImage": "Обрати зображення",
+      "replace": "Замінити",
+      "coverDropzone": "Завантажити обкладинку плейлиста",
+      "preview": "Попередній перегляд обкладинки",
+      "publicTitle": "Публічний плейлист",
+      "publicDescription": "Зробити цей плейлист видимим у вашому профілі.",
+      "collaborativeTitle": "Спільний",
+      "collaborativeDescription": "Дозволити запрошеним користувачам додавати треки.",
+      "errors": {
+        "nameRequired": "Назва є обов'язковою",
+        "nameTooLong": "Назва занадто довга",
+        "descriptionTooLong": "Опис занадто довгий"
+      }
+    },
+    "collaborators": {
+      "title": "Керування співавторами",
+      "searchPlaceholder": "Пошук користувачів за іменем або @username...",
+      "searchLabel": "Пошук користувачів для додавання у співавтори",
+      "noUsersFound": "Нових користувачів не знайдено.",
+      "addCollaborator": "Додати співавтора",
+      "participants": "Учасники",
+      "owner": "Власник",
+      "you": "(Ви)",
+      "leave": "Залишити плейлист",
+      "remove": "Видалити співавтора"
+    },
+    "analytics": {
+      "title": "Аналітика плейлиста: {name}",
+      "subtitle": "Відстежуйте продуктивність та зростання аудиторії вашого добірного списку.",
+      "totalPlays": "Усього прослуховувань",
+      "uniqueListeners": "Унікальні слухачі",
+      "saves": "Збереження / Вподобання",
+      "engagementScore": "Оцінка залученості"
+    },
+    "menu": {
+      "addToQueue": "Додати до черги",
+      "editDetails": "Редагувати деталі",
+      "makePrivate": "Зробити приватним",
+      "makePublic": "Зробити публічним",
+      "disableCollab": "Вимкнути співпрацю",
+      "enableCollab": "Увімкнути співпрацю",
+      "addToPlaylist": "Додати до плейлиста",
+      "noMutablePlaylists": "Немає доступних редагованих плейлистів",
+      "noOptions": "Немає опцій",
+      "clone": "Клонувати до бібліотеки (копія)",
+      "clonePlaylist": "Клонувати плейлист",
+      "copyLink": "Копіювати посилання",
+      "removeFromLibrary": "Видалити з бібліотеки",
+      "saveFollow": "Зберегти (підписатися)",
+      "deletePlaylist": "Видалити плейлист",
+      "heading": "Додати до плейлиста"
+    },
+    "toasts": {
+      "linkCopied": "Посилання скопійовано в буфер обміну",
+      "loadingTracks": "Завантаження треків...",
+      "playlistEmpty": "Плейлист порожній",
+      "addedToQueue": "Додано {count} треків до черги",
+      "queueLoadFailed": "Не вдалося завантажити треки плейлиста",
+      "synchronizing": "Синхронізація треків...",
+      "sourceEmpty": "Початковий плейлист порожній",
+      "tracksInjected": "Треки успішно додано",
+      "injectedInto": "Треки додано до {name}",
+      "bulkFailed": "Часткова помилка під час масового додавання",
+      "bulkFailedShort": "Масова операція не вдалася",
+      "nowPublic": "Плейлист тепер публічний",
+      "nowPrivate": "Плейлист тепер приватний",
+      "collabEnabled": "Співпрацю увімкнено",
+      "collabDisabled": "Співпрацю вимкнено",
+      "deleteConfirm": "Видалити \"{name}\" назавжди?"
+    },
+    "page": {
+      "loading": "Завантаження плейлиста...",
+      "notFound": "Плейлист не знайдено"
     }
   }
 }
