@@ -124,7 +124,7 @@ export const ProfilePage = () => {
     const handlePlayHistory = (startIndex: number) => {
         if (!historyData?.content) return;
         const tracks = historyData.content.map(h => h.track);
-        playContext(tracks, {type: 'PROFILE', id: 'listening-history'}, startIndex);
+        playContext(tracks, {type: 'PROFILE'}, startIndex);
     };
 
     const formattedDate = new Date(profile.createdAt).toLocaleDateString(undefined, {month: 'long', year: 'numeric'});

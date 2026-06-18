@@ -58,7 +58,7 @@ export const AdminReviewInspectorPage = () => {
                 </button>
                 <div className="flex-1">
                     <h1 className="text-2xl font-bold text-white tracking-tight">{ins.pageTitle}</h1>
-                    <p className="text-sm text-slate-400 font-mono mt-1">Track ID: {details.trackId}</p>
+                    <p className="text-sm text-slate-400 font-mono mt-1">{ins.trackId}: {details.trackId}</p>
                 </div>
                 <TrackStatusBadge status={details.status}/>
             </div>

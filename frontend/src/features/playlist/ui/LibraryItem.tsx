@@ -22,13 +22,15 @@ export const LibraryItem = ({item, playlist, viewMode, isActive, onClick}: Libra
     const {user: currentUser} = useAuthStore();
     const {t} = useTranslation();
 
+    const isPlaylist = !!playlist || !!item?.type.includes('PLAYLIST');
     const isSystemLiked = (playlist?.isSystem && playlist?.name === 'Liked Tracks') ||
         (item?.type === 'OWNED_PLAYLIST' && item?.title === 'Liked Tracks');
 
     const isProfile = item?.type === 'FOLLOWED_PROFILE';
 
     const title = item?.title || playlist?.name || t.library.item.unknownTitle;
-    const subtitle = item?.subtitle || (playlist ? `${t.library.item.playlistPrefix} • ${playlist.ownerAlias}` : '');
+    const prefix = isPlaylist ? `${t.library.item.playlistPrefix} • ` : '';
+    const subtitle = `${prefix}${item?.subtitle || playlist?.ownerAlias || ''}`;
     const rawImageUrl = item?.imageUrl || playlist?.coverMinioPath;
     const targetId = item?.id || playlist?.id;
 

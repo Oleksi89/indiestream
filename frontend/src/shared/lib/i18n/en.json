@@ -188,6 +188,7 @@
   "playlist": {
     "actions": {
       "play": "Play playlist",
+      "pause": "Stop playing",
       "save": "Save",
       "saved": "Saved",
       "saveAria": "Save playlist to your library",
@@ -288,7 +289,35 @@
       "deletePlaylist": "Delete Playlist",
       "heading": "Add to Playlist"
     },
+    "common": {
+      "unknownArtist": "Unknown Artist",
+      "playlist": "Playlist"
+    },
     "toasts": {
+      "created": "Playlist created",
+      "updated": "Playlist details updated",
+      "trackAdded": "\"{track}\" added to {playlist}",
+      "trackRemoved": "\"{track}\" removed from {playlist}",
+      "liked": "Added \"{track}\" to Liked Tracks",
+      "unliked": "Removed \"{track}\" from Liked Tracks",
+      "followed": "Saved to Your Library",
+      "unfollowed": "Removed from Your Library",
+      "collabAdded": "{user} added as collaborator",
+      "collabRemoved": "Collaborator removed",
+      "createFailed": "Failed to create playlist",
+      "updateFailed": "Failed to update playlist details",
+      "coverUpdated": "Cover image updated",
+      "coverUpdateFailed": "Failed to process cover image upload",
+      "deleted": "Playlist deleted",
+      "deleteFailed": "Failed to delete playlist",
+      "duplicated": "Playlist duplicated to your library",
+      "duplicateFailed": "Failed to duplicate playlist",
+      "actionReverted": "Action failed. Reverting.",
+      "syncFailed": "Sync failed",
+      "followFailed": "Failed to follow playlist",
+      "unfollowFailed": "Failed to unfollow playlist",
+      "addCollabFailed": "Failed to add collaborator.",
+      "removeCollabFailed": "Failed to remove collaborator.",
       "linkCopied": "Link copied to clipboard",
       "loadingTracks": "Loading tracks...",
       "playlistEmpty": "Playlist is empty",
@@ -378,6 +407,7 @@
     "queue": {
       "title": "Play Queue",
       "close": "Close queue",
+      "playingFrom": "Playing from",
       "nowPlaying": "Now Playing",
       "nextUp": "Next Up",
       "recentlyPlayed": "Recently Played",
@@ -590,6 +620,7 @@
       },
       "inspector": {
         "pageTitle": "Review Inspector",
+        "trackId": "Track ID",
         "backToRegistry": "Back to registry",
         "tabReview": "Moderation & Audit",
         "tabAnalytics": "Telemetry & Deep Dive"

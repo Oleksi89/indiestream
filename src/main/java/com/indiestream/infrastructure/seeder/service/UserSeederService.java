@@ -24,7 +24,7 @@ public class UserSeederService {
     private final AuthModuleApi authModuleApi;
     private final NamedParameterJdbcTemplate jdbcTemplate;
 
-    public static final String SEED_DOMAIN = "@seed.indiestream.local";
+    public static final String SEED_DOMAIN = "artist_5@seed.indiestream.local";
     public static final String SEED_PASSWORD = "SeedPassword123!";
 
     @Getter

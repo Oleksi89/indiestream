@@ -260,14 +260,24 @@ export const usePlayerStore = create<PlayerState>()(
             }),
 
             appendAutoplayTracks: (newTracks) => set((state) => {
-                // Strict FSD filtering to prevent duplicate playback in the continuous session
-                const existingIds = new Set([
-                    ...state.history.map(t => t.id),
+                // Never duplicate tracks currently playing or already in the upcoming queue.
+                const upcomingIds = new Set([
                     ...state.queue.map(t => t.id),
                     ...(state.currentTrack ? [state.currentTrack.id] : [])
                 ]);
 
-                const uniqueNewTracks = newTracks.filter(t => !existingIds.has(t.id));
+                // Filter out the immediate history (e.g., last 30 tracks).
+                // Covers the blind spot before the backend's 5-minute telemetry micro-batch ingestion.
+                const recentHistoryIds = state.history.slice(-30).map(t => t.id);
+                const strictIds = new Set([...upcomingIds, ...recentHistoryIds]);
+
+                let uniqueNewTracks = newTracks.filter(t => !strictIds.has(t.id));
+
+                // If the vector engine only returned recently played tracks
+                // and the strict filter exhausted the payload, fallback to the absolute guard to prevent playback stalling.
+                if (uniqueNewTracks.length === 0) {
+                    uniqueNewTracks = newTracks.filter(t => !upcomingIds.has(t.id));
+                }
 
                 return {queue: [...state.queue, ...uniqueNewTracks]};
             }),

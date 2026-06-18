@@ -6,6 +6,7 @@ package com.indiestream.telemetry.domain;
  */
 public enum UiSurface {
     CONTEXT_MENU,
+    DROPDOWN_MENU,
     PLAYER_BAR,
     TRACK_CARD,
     QUICK_SEARCH_POPOVER,

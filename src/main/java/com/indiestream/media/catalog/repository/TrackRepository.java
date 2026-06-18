@@ -100,4 +100,20 @@ public interface TrackRepository extends JpaRepository<Track, UUID>, JpaSpecific
     @Modifying
     @Query("UPDATE Track t SET t.vector = :vector WHERE t.id = :id")
     void updateTrackVector(@Param("id") UUID id, @Param("vector") float[] vector);
+
+
+    /**
+     * ADMINISTRATIVE RECONCILIATION:
+     * Overwrites the incremental counters (play_count, skip_count, like_count)
+     * with the absolute totals derived from the historical telemetry warehouse.
+     * Essential for synchronizing public data after E2E simulations or massive data purges.
+     */
+    @Modifying
+    @Query(value = """
+            UPDATE tracks t
+            SET play_count = COALESCE((SELECT SUM(plays) FROM track_daily_stats WHERE track_id = t.id), 0),
+                skip_count = COALESCE((SELECT SUM(skips) FROM track_daily_stats WHERE track_id = t.id), 0),
+                like_count = COALESCE((SELECT SUM(likes) FROM track_daily_stats WHERE track_id = t.id), 0)
+            """, nativeQuery = true)
+    int syncAllTrackCountersFromTelemetry();
 }
