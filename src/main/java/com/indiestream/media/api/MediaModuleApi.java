@@ -35,4 +35,9 @@ public interface MediaModuleApi {
     Set<String> getAllowedGenres();
 
     TrackDto uploadTrackForSeeder(UUID artistId, String title, MultipartFile file, MultipartFile cover, String genre, boolean isExplicit, Set<String> customTags);
+
+    /**
+     * Synchronizes all track counters with the Telemetry historical truth.
+     */
+    int synchronizeTrackCountersWithTelemetry();
 }

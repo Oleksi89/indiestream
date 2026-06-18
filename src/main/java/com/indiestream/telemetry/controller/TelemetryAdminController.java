@@ -1,5 +1,6 @@
 package com.indiestream.telemetry.controller;
 
+import com.indiestream.media.api.MediaModuleApi;
 import com.indiestream.telemetry.dto.SimulationReportDto;
 import com.indiestream.telemetry.service.TelemetrySimulatorService;
 import com.indiestream.telemetry.worker.TimeWindowRollupWorker;
@@ -29,6 +30,7 @@ public class TelemetryAdminController {
 
     private final TimeWindowRollupWorker rollupWorker;
     private final TelemetrySimulatorService simulatorService;
+    private final MediaModuleApi mediaModuleApi;
 
     /**
      * Executes aggregation for a specific timeframe.
@@ -44,7 +46,7 @@ public class TelemetryAdminController {
         OffsetDateTime effectiveEnd = end != null ? end : OffsetDateTime.now(ZoneOffset.UTC).plusHours(1).truncatedTo(ChronoUnit.HOURS);
         OffsetDateTime effectiveStart = start != null ? start : effectiveEnd.minusHours(24).truncatedTo(ChronoUnit.HOURS);
 
-        Map<String, Integer> result = rollupWorker.executeHourlyRollup(effectiveStart, effectiveEnd);
+        Map<String, Integer> result = rollupWorker.executeHourlyRollup(effectiveStart, effectiveEnd, true);
         return ResponseEntity.ok(result);
     }
 
@@ -61,8 +63,20 @@ public class TelemetryAdminController {
         OffsetDateTime effectiveEnd = end != null ? end : OffsetDateTime.now(ZoneOffset.UTC);
         OffsetDateTime effectiveStart = start != null ? start : effectiveEnd.minusDays(2).truncatedTo(ChronoUnit.DAYS);
 
-        int rows = rollupWorker.executeDailyRollup(effectiveStart, effectiveEnd);
+        int rows = rollupWorker.executeDailyRollup(effectiveStart, effectiveEnd, true);
         return ResponseEntity.ok("Daily Rollup executed (" + effectiveStart + " to " + effectiveEnd + "). " + rows + " tracks compressed.");
+    }
+
+    /**
+     * RECONCILIATION ENDPOINT.
+     * Syncs the public UI counters on tracks with the exact analytical sums from the warehouse.
+     * Run this AFTER forcing a Daily Rollup or purging shadow traffic.
+     */
+    @PostMapping("/sync-totals")
+    @CacheEvict(value = "analytics:historical", allEntries = true)
+    public ResponseEntity<String> synchronizePublicCounters() {
+        int updatedTracks = mediaModuleApi.synchronizeTrackCountersWithTelemetry();
+        return ResponseEntity.ok("Successfully synchronized counters for " + updatedTracks + " tracks from historical telemetry.");
     }
 
     /**

@@ -8,6 +8,7 @@ import com.indiestream.telemetry.repository.TelemetryRollupRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,9 @@ public class TimeWindowRollupWorker {
     private final TelemetryRollupRepository rollupRepository;
     private final ApplicationEventPublisher eventPublisher;
 
+    @Value("${telemetry.ignored-user-agents:}")
+    private List<String> ignoredUserAgents;
+
     /**
      * MICRO-BATCH: Executes every 5 minutes.
      * Continuously upserts the current active hour to provide Near Real-Time analytics to Artists.
@@ -46,7 +50,7 @@ public class TimeWindowRollupWorker {
         log.debug("[MICRO-BATCH] Aggregating telemetry from {} to {}", start, end);
 
         try {
-            List<RawPlaybackRecord> rawRecords = rollupRepository.fetchAuthenticatedPlaybacksForWindow(start, end);
+            List<RawPlaybackRecord> rawRecords = rollupRepository.fetchAuthenticatedPlaybacksForWindow(start, end, ignoredUserAgents);
 
             // Map raw telemetry to cross-module DTOs to enforce strict Modulith boundaries
             List<PassiveTasteShiftsAggregatedEvent.PassiveTasteShiftRecord> shifts = rawRecords.stream()
@@ -63,7 +67,7 @@ public class TimeWindowRollupWorker {
             log.error("[AI CORE] Failed to process passive taste shifts during micro-batch: {}", e.getMessage(), e);
         }
 
-        executeHourlyRollup(start, end);
+        executeHourlyRollup(start, end, false);
     }
 
     /**
@@ -94,7 +98,7 @@ public class TimeWindowRollupWorker {
         OffsetDateTime targetDayStart = targetDayEnd.minusDays(3); // Auto-Heal Strategy
 
         log.info("[CRON] Starting Daily Telemetry Rollup for window: {} to {}", targetDayStart, targetDayEnd);
-        int rows = executeDailyRollup(targetDayStart, targetDayEnd);
+        int rows = executeDailyRollup(targetDayStart, targetDayEnd, false);
         log.info("[CRON] Daily aggregation complete. {} tracks preserved.", rows);
     }
 
@@ -105,8 +109,13 @@ public class TimeWindowRollupWorker {
      *
      * @return A map containing operation statistics for the caller.
      */
-    public Map<String, Integer> executeHourlyRollup(OffsetDateTime start, OffsetDateTime end) {
+    public Map<String, Integer> executeHourlyRollup(OffsetDateTime start, OffsetDateTime end, boolean isForceRecalculation) {
         log.info("Executing Hourly Rollup from {} to {}", start, end);
+
+        if (isForceRecalculation) {
+            rollupRepository.clearHourlyAggregations(start, end);
+        }
+
         int trackPlayRows = rollupRepository.aggregateHourlyTrackPlaybacks(start, end);
         int trackInteractionRows = rollupRepository.aggregateHourlyTrackInteractions(start, end);
         int playlistPlayRows = rollupRepository.aggregateHourlyPlaylistPlaybacks(start, end);
@@ -123,8 +132,13 @@ public class TimeWindowRollupWorker {
     /**
      * Executes the daily database compression logic.
      */
-    public int executeDailyRollup(OffsetDateTime start, OffsetDateTime end) {
-        log.info("Executing Daily Compression Rollup from {} to {}", start, end);
+    public int executeDailyRollup(OffsetDateTime start, OffsetDateTime end, boolean isForceRecalculation) {
+        log.info("Executing Daily Compression Rollup from {} to {} (Force: {})", start, end, isForceRecalculation);
+
+        if (isForceRecalculation) {
+            rollupRepository.clearDailyAggregations(start, end);
+        }
+
         int compressedTracksCount = rollupRepository.aggregateDailyTrackStats(start, end);
 
         rollupRepository.aggregateDailyPlaylistStats(start, end);

@@ -74,3 +74,7 @@ resilience4j:
         failure-rate-threshold: 50
         wait-duration-in-open-state: 30s
         permitted-number-of-calls-in-half-open-state: 3
+
+telemetry:
+  ignored-user-agents:
+    - "IndieStream-E2E-Simulator"
