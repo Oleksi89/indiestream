@@ -78,7 +78,7 @@ export const TrackCard = ({track, variant, className, index, addedAt, onClick, o
                 </div>
             );
         }
-        if (isCoverLoading) {
+        if (isCoverLoading || !coverUrl) {
             return (
                 <div className={`${sizeClass} flex items-center justify-center bg-slate-800 animate-pulse`}>
                     <ImageIcon size={variant === 'compact' || variant === 'playlist-row' ? 16 : 32}
@@ -89,7 +89,7 @@ export const TrackCard = ({track, variant, className, index, addedAt, onClick, o
         }
         return (
             <img
-                src={coverUrl || ''}
+                src={coverUrl || 'favicon.svg'}
                 alt={track.title}
                 className={`${sizeClass} object-cover group-hover:scale-105 transition-transform duration-500`}
             />
@@ -354,7 +354,8 @@ export const TrackCard = ({track, variant, className, index, addedAt, onClick, o
                     aria-label={playAriaLabel}
                     title={playAriaLabel}
                     className={cn(
-                        "h-10 w-10 flex-shrink-0 rounded-full flex items-center justify-center transition-all shadow-md",
+                        "h-10 w-10 flex-shrink-0 rounded-full flex items-center justify-center transition-all duration-300 shadow-md",
+                        !isCurrentTrack && "opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto",
                         isCurrentTrack && isPlaying
                             ? "bg-slate-800 text-violet-400 border border-violet-500/30 hover:bg-slate-700"
                             : "bg-violet-600 text-white hover:bg-violet-500 hover:scale-105"

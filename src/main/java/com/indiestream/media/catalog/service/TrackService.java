@@ -363,6 +363,13 @@ public class TrackService implements MediaModuleApi {
         return new PageImpl<>(metadataList, pageable, metadataList.size());
     }
 
+
+    @Override
+    @Transactional
+    public int synchronizeTrackCountersWithTelemetry() {
+        return trackRepository.syncAllTrackCountersFromTelemetry();
+    }
+
     private TrackDto mapToDto(Track track) {
         Optional<UserPublicProfile> profile = authModuleApi.getUserPublicProfile(track.getArtistId());
         String artistAlias = profile.map(UserPublicProfile::alias).orElse("Unknown Artist");

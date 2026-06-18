@@ -5,7 +5,7 @@ import uk from './uk.json';
  * schema. Every other locale must structurally conform to this shape, which the
  * compiler enforces via the `Translations` type.
  */
-export type Translations = typeof en;
+export type Translations = typeof uk;
 
 /**
  * Catalogue of locales the UI is allowed to switch to.
@@ -33,7 +33,7 @@ const dictionaries: Partial<Record<Locale, Translations>> = {
  * requested locale has not been translated yet.
  */
 export const getDictionary = (locale: Locale): Translations =>
-    dictionaries[locale] ?? en;
+    dictionaries[locale] ?? uk;
 
 /** Type guard narrowing an arbitrary string (e.g. a `<select>` value) to a {@link Locale}. */
 export const isSupportedLocale = (value: string): value is Locale =>

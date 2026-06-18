@@ -1,7 +1,9 @@
-import React from 'react';
+import React, {useMemo, useEffect} from 'react';
 import {Check, Plus, Heart} from 'lucide-react';
 import {useQueryClient} from '@tanstack/react-query';
-import {playlistKeys, useUserLibrary, useTogglePlaylistTrack} from '../hooks/usePlaylists';
+import {playlistKeys, useUserLibrary, useTogglePlaylistTrack, useToggleLike} from '../hooks/usePlaylists';
+import {playlistApi} from '@/features/playlist/api/playlist.api';
+import {useAuthStore} from '@/shared/store/authStore';
 import {useTranslation} from '@/shared/lib/i18n/useTranslation';
 import type {TrackMetadataPayload, PlaylistTrackDto} from "../types";
 import type {PageResponse} from "@/features/media/types";
@@ -12,6 +14,8 @@ import {
     DropdownMenuItem,
     DropdownMenuSeparator
 } from "@/shared/ui/DropdownMenu";
+import {useInteractionTracker} from "@/features/telemetry";
+import {usePlayerStore} from "@/shared/store/playerStore.ts";
 
 interface AddToPlaylistDropdownProps {
     track: TrackMetadataPayload;
@@ -23,11 +27,50 @@ export const AddToPlaylistDropdown = ({track, children}: AddToPlaylistDropdownPr
     const {data: library} = useUserLibrary();
     const queryClient = useQueryClient();
     const toggleTrack = useTogglePlaylistTrack();
+    const toggleLike = useToggleLike();
+    const currentUser = useAuthStore(s => s.user);
+    const {trackInteraction} = useInteractionTracker();
 
-    const playlists = library?.content || [];
+    // Exclude read-only public playlists
+    const editablePlaylists = useMemo(() => {
+        if (!library?.content) return [];
+        return library.content.filter(p =>
+            p.ownerId === currentUser?.id ||
+            (p.isCollaborative && p.collaborators?.some(c => c.id === currentUser?.id))
+        );
+    }, [library?.content, currentUser?.id]);
 
-    const handleToggleTrack = (playlistId: string, isPresent: boolean) => {
-        toggleTrack.mutate({playlistId, track, isPresent});
+    // PREFETCHING STRATEGY
+    useEffect(() => {
+        if (!editablePlaylists.length) return;
+        editablePlaylists.forEach(p => {
+            queryClient.prefetchQuery({
+                queryKey: playlistKeys.tracks(p.id),
+                queryFn: () => playlistApi.getPlaylistTracks(p.id, 0, 50),
+                staleTime: 1000 * 60 * 5,
+            });
+        });
+    }, [editablePlaylists, queryClient]);
+
+    const handleToggleTrack = (playlist: any, isPresent: boolean) => {
+        const isSystemLiked = playlist.isSystem && playlist.name === 'Liked Tracks';
+
+        if (isSystemLiked) {
+            toggleLike.mutate({track, isLiked: isPresent});
+        } else {
+            toggleTrack.mutate({
+                playlistId: playlist.id,
+                track,
+                isPresent,
+                playlistName: playlist.name
+            });
+        }
+
+        if (!isPresent) {
+            const currentContext = usePlayerStore.getState().playbackContext;
+            const interactionType = isSystemLiked ? 'LIKE' : 'ADD_TO_PLAYLIST';
+            trackInteraction(track.id, interactionType, currentContext?.type || 'PUBLIC_FEED', 'DROPDOWN_MENU');
+        }
     };
 
     return (
@@ -42,7 +85,7 @@ export const AddToPlaylistDropdown = ({track, children}: AddToPlaylistDropdownPr
                 </div>
                 <DropdownMenuSeparator/>
                 <div className="max-h-60 overflow-y-auto custom-scrollbar">
-                    {playlists.map(playlist => {
+                    {editablePlaylists.map(playlist => {
                         const tracks = queryClient.getQueryData<PageResponse<PlaylistTrackDto>>(playlistKeys.tracks(playlist.id));
                         const isPresent = tracks?.content.some(pt => pt.trackId === track.id) || false;
                         const isLiked = playlist.isSystem && playlist.name === 'Liked Tracks';
@@ -51,7 +94,7 @@ export const AddToPlaylistDropdown = ({track, children}: AddToPlaylistDropdownPr
                             <DropdownMenuItem
                                 key={playlist.id}
                                 onSelect={(e) => e.preventDefault()} // Keeps open for visual feedback
-                                onClick={() => handleToggleTrack(playlist.id, isPresent)}
+                                onClick={() => handleToggleTrack(playlist, isPresent)}
                                 className="flex items-center justify-between py-2 group cursor-pointer"
                             >
                                 <div className="flex items-center gap-2 truncate">
@@ -63,7 +106,8 @@ export const AddToPlaylistDropdown = ({track, children}: AddToPlaylistDropdownPr
                                     )}
                                     <span className="truncate font-medium">{playlist.name}</span>
                                 </div>
-                                {isPresent && <Check size={16} className="text-violet-400 shrink-0" aria-hidden="true"/>}
+                                {isPresent &&
+                                    <Check size={16} className="text-violet-400 shrink-0" aria-hidden="true"/>}
                             </DropdownMenuItem>
                         );
                     })}
@@ -72,4 +116,3 @@ export const AddToPlaylistDropdown = ({track, children}: AddToPlaylistDropdownPr
         </DropdownMenu>
     );
 };
-

@@ -234,7 +234,7 @@ export const EditProfileModal = ({isOpen, onOpenChange, user}: EditProfileModalP
 
                     <div className="flex justify-end gap-3 p-4 border-t border-white/10 shrink-0 bg-slate-900">
                         <Dialog.Close asChild>
-                            <Button type="button" variant="ghost">{t.profile.editModal.cancel}</Button>
+                            <Button type="button" variant="ghost" className="text-white">{t.profile.editModal.cancel}</Button>
                         </Dialog.Close>
                         <Button type="submit" form="profile-form"
                                 disabled={isSubmitting || updateProfileMutation.isPending}

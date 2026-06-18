@@ -3,6 +3,10 @@ import {TrackCard} from '../../../ui/TrackCard.tsx';
 import {X, ListMusic, History, GripVertical} from 'lucide-react';
 import {TrackContextMenu} from '../../../ui/TrackContextMenu.tsx';
 import {useTranslation} from '@/shared/lib/i18n/useTranslation';
+import {useQuery} from '@tanstack/react-query';
+import {playlistKeys} from '@/features/playlist/hooks/usePlaylists';
+import {playlistApi} from '@/features/playlist/api/playlist.api';
+
 import {
     DndContext,
     closestCenter,
@@ -20,6 +24,8 @@ import {
 } from '@dnd-kit/sortable';
 import {CSS} from '@dnd-kit/utilities';
 import type {TrackDto} from '../../../types';
+import {LibraryItem} from "@/features/playlist/ui/LibraryItem.tsx";
+import {useNavigate} from "react-router-dom";
 
 interface SortableTrackItemProps {
     track: TrackDto;
@@ -64,8 +70,17 @@ const SortableTrackItem = ({track, id}: SortableTrackItemProps) => {
 };
 
 export const QueueSlideover = () => {
-    const {isQueueOpen, toggleQueue, currentTrack, queue, history, reorderQueue} = usePlayerStore();
+    const {isQueueOpen, toggleQueue, currentTrack, queue, history, reorderQueue, playbackContext} = usePlayerStore();
     const {t} = useTranslation();
+    const navigate = useNavigate();
+
+    const isPlaylistContext = playbackContext?.type === 'PLAYLIST' && !!playbackContext.id;
+
+    const {data: playlistContextData} = useQuery({
+        queryKey: playlistKeys.detail(playbackContext?.id || ''),
+        queryFn: () => playlistApi.getPlaylist(playbackContext!.id!),
+        enabled: isPlaylistContext
+    });
 
     const sensors = useSensors(
         useSensor(PointerSensor, {activationConstraint: {distance: 5}}),
@@ -112,6 +127,18 @@ export const QueueSlideover = () => {
             </div>
 
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-8 custom-scrollbar">
+                {isPlaylistContext && playlistContextData && (
+                    <section className="border-b border-slate-800/50 pb-4">
+                        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 px-2">
+                            {t.media.queue.playingFrom }
+                        </h3>
+                        <LibraryItem
+                            playlist={playlistContextData}
+                            viewMode="normal"
+                            onClick={() => navigate(`/playlist/${playlistContextData.id}`)}
+                        />
+                    </section>
+                )}
 
                 {/* Now Playing */}
                 {currentTrack && (
@@ -133,19 +160,21 @@ export const QueueSlideover = () => {
                         <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 px-2">
                             {t.media.queue.nextUp}
                         </h3>
-                        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                            <SortableContext items={queueIds} strategy={verticalListSortingStrategy}>
-                                <div className="space-y-1">
-                                    {queue.map((track, idx) => (
-                                        <SortableTrackItem
-                                            key={queueIds[idx]}
-                                            id={queueIds[idx]}
-                                            track={track}
-                                        />
-                                    ))}
-                                </div>
-                            </SortableContext>
-                        </DndContext>
+                        <div className="pl-6">
+                            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                                <SortableContext items={queueIds} strategy={verticalListSortingStrategy}>
+                                    <div className="space-y-1">
+                                        {queue.map((track, idx) => (
+                                            <SortableTrackItem
+                                                key={queueIds[idx]}
+                                                id={queueIds[idx]}
+                                                track={track}
+                                            />
+                                        ))}
+                                    </div>
+                                </SortableContext>
+                            </DndContext>
+                        </div>
                     </section>
                 )}
 

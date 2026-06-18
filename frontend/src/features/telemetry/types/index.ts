@@ -27,7 +27,8 @@ export type UiSurface =
     | 'TRACK_CARD'
     | 'QUICK_SEARCH_POPOVER'
     | 'LIBRARY_SIDEBAR'
-    | 'UPLOAD_WIZARD';
+    | 'UPLOAD_WIZARD'
+    | 'DROPDOWN_MENU';
 
 export interface PlaybackTelemetryPayload {
     eventId: string;
