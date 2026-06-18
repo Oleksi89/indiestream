@@ -13,6 +13,7 @@ import {Disc3, Loader2, Heart, PlusCircle, XCircle, MoreVertical} from 'lucide-r
 import {cn} from '@/shared/lib/utils';
 import type {TrackMetadataPayload} from '@/features/playlist/types';
 import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from "@/shared/ui/DropdownMenu.tsx";
+import {useTranslation} from '@/shared/lib/i18n/useTranslation';
 
 interface PlayerTrackInfoProps {
     isStemsLoading: boolean;
@@ -25,6 +26,7 @@ interface PlayerTrackInfoProps {
 export const PlayerTrackInfo: React.FC<PlayerTrackInfoProps> = ({isStemsLoading}) => {
     const {currentTrack, playbackMode, playbackContext, playNext} = usePlayerStore();
     const currentUser = useAuthStore(state => state.user);
+    const {t} = useTranslation();
 
     const {trackInteraction} = useInteractionTracker();
     const {mutate: markNotInterested} = useNotInterestedMutation();
@@ -76,6 +78,7 @@ export const PlayerTrackInfo: React.FC<PlayerTrackInfoProps> = ({isStemsLoading}
     };
 
     const isOwner = currentUser?.id === currentTrack.artistId;
+    const likeAriaLabel = isLiked ? t.media.player.unlikeTrack : t.media.player.likeTrack;
 
     return (
         <div className="flex items-center gap-4 w-[25%] min-w-[250px]">
@@ -85,13 +88,13 @@ export const PlayerTrackInfo: React.FC<PlayerTrackInfoProps> = ({isStemsLoading}
                     <img src={coverUrl} alt={currentTrack.title} className="h-full w-full object-cover"/>
                 ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                        <Disc3 className="text-slate-600"/>
+                        <Disc3 className="text-slate-600" aria-hidden="true"/>
                     </div>
                 )}
                 {isStemsLoading && (
                     <div
                         className="absolute inset-0 bg-slate-900/60 flex items-center justify-center backdrop-blur-[2px]">
-                        <Loader2 className="text-violet-400 animate-spin" size={20}/>
+                        <Loader2 className="text-violet-400 animate-spin" size={20} aria-hidden="true"/>
                     </div>
                 )}
             </div>
@@ -102,7 +105,11 @@ export const PlayerTrackInfo: React.FC<PlayerTrackInfoProps> = ({isStemsLoading}
                     "text-[10px] uppercase tracking-wider font-bold truncate mt-0.5",
                     playbackMode === 'stems' ? "text-violet-400" : "text-slate-500"
                 )}>
-                    {isStemsLoading ? 'Syncing Stems...' : playbackMode === 'stems' ? 'Multi-Stem Mode' : 'Master Track'}
+                    {isStemsLoading
+                        ? t.media.player.syncing
+                        : playbackMode === 'stems'
+                            ? t.media.player.multiStem
+                            : t.media.player.masterTrack}
                 </span>
             </div>
 
@@ -111,17 +118,20 @@ export const PlayerTrackInfo: React.FC<PlayerTrackInfoProps> = ({isStemsLoading}
                 <button
                     onClick={handleLike}
                     disabled={toggleLike.isPending}
+                    aria-label={likeAriaLabel}
+                    title={likeAriaLabel}
+                    aria-pressed={isLiked}
                     className={cn("p-2 rounded-full transition-colors", isLiked ? "text-violet-400" : "text-slate-400 hover:text-white hover:bg-slate-800")}
-                    title={isLiked ? "Unlike" : "Like"}
                 >
-                    <Heart size={18} className={cn(isLiked && "fill-current", toggleLike.isPending && "opacity-50")}/>
+                    <Heart size={18} className={cn(isLiked && "fill-current", toggleLike.isPending && "opacity-50")} aria-hidden="true"/>
                 </button>
 
                 <AddToPlaylistDropdown track={trackMetadata}>
                     <button
-                        className="p-2 rounded-full text-slate-400 hover:bg-slate-800 hover:text-white transition-colors outline-none focus:bg-slate-800"
-                        title="Add to Playlist">
-                        <PlusCircle size={18}/>
+                        aria-label={t.media.player.addToPlaylist}
+                        title={t.media.player.addToPlaylist}
+                        className="p-2 rounded-full text-slate-400 hover:bg-slate-800 hover:text-white transition-colors outline-none focus:bg-slate-800">
+                        <PlusCircle size={18} aria-hidden="true"/>
                     </button>
                 </AddToPlaylistDropdown>
 
@@ -130,9 +140,10 @@ export const PlayerTrackInfo: React.FC<PlayerTrackInfoProps> = ({isStemsLoading}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <button
-                                className="p-2 rounded-full text-slate-400 hover:bg-slate-800 hover:text-white transition-colors outline-none focus:bg-slate-800"
-                                title="More Options">
-                                <MoreVertical size={18}/>
+                                aria-label={t.media.player.moreOptions}
+                                title={t.media.player.moreOptions}
+                                className="p-2 rounded-full text-slate-400 hover:bg-slate-800 hover:text-white transition-colors outline-none focus:bg-slate-800">
+                                <MoreVertical size={18} aria-hidden="true"/>
                             </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent
@@ -141,8 +152,8 @@ export const PlayerTrackInfo: React.FC<PlayerTrackInfoProps> = ({isStemsLoading}
                                 onClick={handleNotInterested}
                                 className="text-slate-400 hover:text-red-400 hover:bg-red-400/10 focus:text-red-400 focus:bg-red-400/10 transition-colors cursor-pointer font-medium text-xs py-2"
                             >
-                                <XCircle className="mr-2 h-4 w-4 text-slate-500 group-hover:text-red-400"/>
-                                <span>Not Interested</span>
+                                <XCircle className="mr-2 h-4 w-4 text-slate-500 group-hover:text-red-400" aria-hidden="true"/>
+                                <span>{t.media.contextMenu.notInterested}</span>
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>

@@ -2,6 +2,7 @@ import {usePlayerStore} from '@/shared/store/playerStore.ts';
 import {TrackCard} from '../../../ui/TrackCard.tsx';
 import {X, ListMusic, History, GripVertical} from 'lucide-react';
 import {TrackContextMenu} from '../../../ui/TrackContextMenu.tsx';
+import {useTranslation} from '@/shared/lib/i18n/useTranslation';
 import {
     DndContext,
     closestCenter,
@@ -26,6 +27,7 @@ interface SortableTrackItemProps {
 }
 
 const SortableTrackItem = ({track, id}: SortableTrackItemProps) => {
+    const {t} = useTranslation();
     const {
         attributes,
         listeners,
@@ -47,9 +49,10 @@ const SortableTrackItem = ({track, id}: SortableTrackItemProps) => {
             <div
                 {...attributes}
                 {...listeners}
+                aria-label={t.media.queue.drag}
                 className="cursor-grab active:cursor-grabbing text-slate-600 hover:text-slate-400 opacity-0 group-hover/dnd:opacity-100 transition-opacity outline-none"
             >
-                <GripVertical size={16}/>
+                <GripVertical size={16} aria-hidden="true"/>
             </div>
             <div className="flex-1 min-w-0 pointer-events-auto">
                 <TrackContextMenu track={track}>
@@ -62,6 +65,7 @@ const SortableTrackItem = ({track, id}: SortableTrackItemProps) => {
 
 export const QueueSlideover = () => {
     const {isQueueOpen, toggleQueue, currentTrack, queue, history, reorderQueue} = usePlayerStore();
+    const {t} = useTranslation();
 
     const sensors = useSensors(
         useSensor(PointerSensor, {activationConstraint: {distance: 5}}),
@@ -88,17 +92,22 @@ export const QueueSlideover = () => {
 
     return (
         <div
+            role="dialog"
+            aria-label={t.media.queue.title}
+            aria-modal="false"
             className="absolute right-0 top-0 bottom-0 w-96 bg-slate-900 border-l border-slate-800 shadow-2xl z-[40] flex flex-col pt-4 pb-24 animate-in slide-in-from-right duration-200">
             <div className="flex items-center justify-between px-6 pb-4 border-b border-slate-800">
                 <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                    <ListMusic size={20} className="text-violet-400"/>
-                    Play Queue
+                    <ListMusic size={20} className="text-violet-400" aria-hidden="true"/>
+                    {t.media.queue.title}
                 </h2>
                 <button
                     onClick={toggleQueue}
+                    aria-label={t.media.queue.close}
+                    title={t.media.queue.close}
                     className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
                 >
-                    <X size={20}/>
+                    <X size={20} aria-hidden="true"/>
                 </button>
             </div>
 
@@ -107,8 +116,9 @@ export const QueueSlideover = () => {
                 {/* Now Playing */}
                 {currentTrack && (
                     <section>
-                        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 px-2">Now
-                            Playing</h3>
+                        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 px-2">
+                            {t.media.queue.nowPlaying}
+                        </h3>
                         <div className="pl-6">
                             <TrackContextMenu track={currentTrack}>
                                 <TrackCard track={currentTrack} variant="list"/>
@@ -120,7 +130,9 @@ export const QueueSlideover = () => {
                 {/* Next Up */}
                 {queue.length > 0 && (
                     <section>
-                        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 px-2">Next Up</h3>
+                        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 px-2">
+                            {t.media.queue.nextUp}
+                        </h3>
                         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                             <SortableContext items={queueIds} strategy={verticalListSortingStrategy}>
                                 <div className="space-y-1">
@@ -141,7 +153,7 @@ export const QueueSlideover = () => {
                 {history.length > 0 && (
                     <section>
                         <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 px-2 flex items-center gap-2">
-                            <History size={14}/> Recently Played
+                            <History size={14} aria-hidden="true"/> {t.media.queue.recentlyPlayed}
                         </h3>
                         <div className="space-y-1 opacity-60 hover:opacity-100 transition-opacity pl-6">
                             {[...history].reverse().map((track, idx) => (
@@ -155,8 +167,8 @@ export const QueueSlideover = () => {
 
                 {!currentTrack && queue.length === 0 && (
                     <div className="flex flex-col items-center justify-center h-40 text-slate-500 text-sm">
-                        <ListMusic size={32} className="mb-2 opacity-50"/>
-                        Queue is empty
+                        <ListMusic size={32} className="mb-2 opacity-50" aria-hidden="true"/>
+                        {t.media.queue.empty}
                     </div>
                 )}
             </div>

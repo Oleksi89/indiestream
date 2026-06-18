@@ -1,18 +1,20 @@
 import {TrackTable} from '@/features/media/sub-features/studio/ui/TrackTable.tsx';
-import {useAuthStore} from '@/shared/store/authStore';
 import {UploadWizardModal} from '@/features/media/sub-features/upload/ui/UploadWizardModal.tsx';
 import {RefreshCw, BarChart2, Library} from 'lucide-react';
 import {useQueryClient} from '@tanstack/react-query';
 import {trackKeys, useStudioTracks} from '@/features/media/hooks/useTrackQueries';
 import {cn} from '@/shared/lib/utils';
 import {ArtistAnalyticsDashboard} from "@/features/analytics/ui/ArtistAnalyticsDashboard.tsx";
-import {useSearchParams} from "react-router-dom";
+import {useSearchParams} from 'react-router-dom';
+import {useTranslation} from '@/shared/lib/i18n/useTranslation';
 
 export const ArtistDashboardPage = () => {
-    const user = useAuthStore((state) => state.user);
     const queryClient = useQueryClient();
     // Utilize URL Search Params for state persistence
     const [searchParams, setSearchParams] = useSearchParams();
+    const {t} = useTranslation();
+    const da = t.artist.dashboard;
+
     const activeTab = searchParams.get('tab') || 'catalog';
 
     // Subscribe to fetching state to animate the refresh button
@@ -33,16 +35,14 @@ export const ArtistDashboardPage = () => {
             return prev;
         }, {replace: true});
     };
-
     return (
         <div className="container mx-auto px-4 py-8 max-w-6xl pb-24">
             <div
                 className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-800 pb-6">
                 <div>
-                    <h1 className="text-3xl font-bold text-white tracking-tight">Artist Studio</h1>
+                    <h1 className="text-3xl font-bold text-white tracking-tight">{da.title}</h1>
                     <p className="text-slate-400 mt-2">
-                        Welcome back, <span className="text-violet-400 font-medium">{user?.alias || 'Artist'}</span>.
-                        Manage your catalog and monitor your performance.
+                        {da.subtitle}
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -62,7 +62,7 @@ export const ArtistDashboardPage = () => {
                     )}
                 >
                     <Library size={18}/>
-                    My Catalog
+                    {da.tabCatalog}
                 </button>
                 <button
                     onClick={() => handleTabSwitch('analytics')}
@@ -74,7 +74,7 @@ export const ArtistDashboardPage = () => {
                     )}
                 >
                     <BarChart2 size={18}/>
-                    Audience & Analytics
+                    {da.tabAnalytics}
                 </button>
             </div>
 
@@ -83,12 +83,12 @@ export const ArtistDashboardPage = () => {
                 {activeTab === 'catalog' ? (
                     <div className="animate-in fade-in duration-300">
                         <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-xl font-semibold text-slate-200">Track Registry</h2>
+                            <h2 className="text-xl font-semibold text-slate-200">{da.trackRegistry}</h2>
                             <button
                                 onClick={handleRefresh}
                                 disabled={isFetching}
                                 className="p-2.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-300 transition-colors disabled:opacity-50"
-                                title="Refresh Statuses"
+                                title={da.refreshStatuses}
                             >
                                 <RefreshCw size={16}
                                            className={cn("transition-transform", isFetching && "animate-spin")}/>

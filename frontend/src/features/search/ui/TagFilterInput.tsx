@@ -1,5 +1,6 @@
 import React, {useState} from 'react';
 import {Tag, X} from 'lucide-react';
+import {useTranslation} from '@/shared/lib/i18n/useTranslation';
 
 interface TagFilterInputProps {
     activeTags: string[];
@@ -9,6 +10,7 @@ interface TagFilterInputProps {
 
 export const TagFilterInput = ({activeTags, onAddTag, onRemoveTag}: TagFilterInputProps) => {
     const [inputValue, setInputValue] = useState('');
+    const {t} = useTranslation();
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter' || e.key === ',') {
@@ -25,7 +27,7 @@ export const TagFilterInput = ({activeTags, onAddTag, onRemoveTag}: TagFilterInp
         <div className="flex items-center gap-2 flex-wrap">
             <div className="flex items-center gap-1.5 text-slate-500 shrink-0 pr-2 border-r border-slate-800 h-8">
                 <Tag size={14}/>
-                <span className="text-xs font-semibold uppercase tracking-wider">Tags</span>
+                <span className="text-xs font-semibold uppercase tracking-wider">{t.search.tags}</span>
             </div>
             {activeTags.map(tag => (
                 <span key={tag}
@@ -42,7 +44,7 @@ export const TagFilterInput = ({activeTags, onAddTag, onRemoveTag}: TagFilterInp
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Type a tag & press Enter..."
+                placeholder={t.search.tagInputPlaceholder}
                 className="bg-transparent text-sm text-slate-200 placeholder-slate-600 outline-none min-w-[200px]"
             />
         </div>

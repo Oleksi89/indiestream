@@ -10,6 +10,7 @@ import {useAuthStore} from '@/shared/store/authStore';
 import {useSecureUrl} from '@/shared/hooks/useSecureUrl';
 import {usePlaylistColor} from '@/features/playlist/hooks/usePlaylistColor';
 import {useInteractionTracker} from "@/features/telemetry";
+import {useTranslation} from '@/shared/lib/i18n/useTranslation';
 
 import {EditPlaylistModal} from "@/features/playlist/ui/EditPlaylistModal";
 import {CollaboratorsModal} from "@/features/playlist/ui/CollaboratorsModal";
@@ -22,6 +23,7 @@ import type {TrackDto} from "@/features/media/types";
 
 export const PlaylistPage = () => {
     const {id} = useParams<{ id: string }>();
+    const {t} = useTranslation();
     const {playContext} = usePlayerStore();
     const {user: currentUser} = useAuthStore();
     const {data: library} = useLibrary();
@@ -71,8 +73,8 @@ export const PlaylistPage = () => {
     const {isOwner, isCollaborator, canEditMetadata} = usePlaylistPermissions(playlist, currentUser?.id);
     const isFollowed = library?.some(item => item.id === playlist?.id && item.type === 'FOLLOWED_PLAYLIST') || false;
 
-    if (isPlaylistLoading) return <div className="p-8 animate-pulse text-slate-500">Loading playlist...</div>;
-    if (!playlist) return <div className="p-8 text-center text-slate-400">Playlist not found</div>;
+    if (isPlaylistLoading) return <div className="p-8 animate-pulse text-slate-500">{t.playlist.page.loading}</div>;
+    if (!playlist) return <div className="p-8 text-center text-slate-400">{t.playlist.page.notFound}</div>;
 
     const playableTracks = mappedTracks.filter(t => t.artistUsername !== 'unavailable');
 

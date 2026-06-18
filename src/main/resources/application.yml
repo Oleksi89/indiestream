@@ -27,9 +27,9 @@ spring:
   task:
     execution:
       pool:
-        core-size: 2
-        max-size: 4
-        queue-capacity: 50
+        core-size: 4
+        max-size: 8
+        queue-capacity: 1000
       thread-name-prefix: media-worker-
 
   ai:

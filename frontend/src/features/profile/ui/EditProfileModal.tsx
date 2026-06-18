@@ -11,15 +11,7 @@ import {profileApi} from '../api/profile.api';
 import type {UserDto} from '@/features/auth/types';
 import toast from 'react-hot-toast';
 import {useSecureUrl} from '@/shared/hooks/useSecureUrl';
-
-const profileSchema = z.object({
-    alias: z.string().min(1, "Display name is required").max(100, "Maximum 100 characters"),
-    bio: z.string().max(500, "Bio cannot exceed 500 characters").optional().nullable(),
-    isPrivate: z.boolean().default(false),
-    hideSubscriptions: z.boolean().default(false),
-});
-
-type ProfileFormData = z.infer<typeof profileSchema>;
+import {useTranslation} from '@/shared/lib/i18n/useTranslation';
 
 interface EditProfileModalProps {
     isOpen: boolean;
@@ -28,11 +20,21 @@ interface EditProfileModalProps {
 }
 
 export const EditProfileModal = ({isOpen, onOpenChange, user}: EditProfileModalProps) => {
+    const {t} = useTranslation();
     const queryClient = useQueryClient();
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [bannerFile, setBannerFile] = useState<File | null>(null);
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
     const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+
+    const profileSchema = z.object({
+        alias: z.string().min(1, t.profile.editModal.validation.nameRequired).max(100, t.profile.editModal.validation.nameMax),
+        bio: z.string().max(500, t.profile.editModal.validation.bioMax).optional().nullable(),
+        isPrivate: z.boolean().default(false),
+        hideSubscriptions: z.boolean().default(false),
+    });
+
+    type ProfileFormData = z.infer<typeof profileSchema>;
 
     const {url: secureAvatarUrl} = useSecureUrl(
         `avatar-modal-${user.username}`,
@@ -90,10 +92,10 @@ export const EditProfileModal = ({isOpen, onOpenChange, user}: EditProfileModalP
         },
         onSuccess: () => {
             queryClient.invalidateQueries({queryKey: ['profiles', user.username]});
-            toast.success('Profile updated successfully');
+            toast.success(t.profile.editModal.success);
             onOpenChange(false);
         },
-        onError: () => toast.error('Failed to update profile'),
+        onError: () => toast.error(t.profile.editModal.error),
     });
 
     return (
@@ -105,7 +107,8 @@ export const EditProfileModal = ({isOpen, onOpenChange, user}: EditProfileModalP
                     className="fixed left-[50%] top-[50%] z-50 w-full max-w-lg translate-x-[-50%] translate-y-[-50%] rounded-xl border border-white/10 bg-slate-900/90 backdrop-blur-md p-0 shadow-2xl duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 overflow-hidden flex flex-col max-h-[90vh]">
 
                     <div className="flex items-center justify-between border-b border-white/10 p-4 shrink-0">
-                        <Dialog.Title className="text-lg font-semibold text-white">Edit Profile</Dialog.Title>
+                        <Dialog.Title
+                            className="text-lg font-semibold text-white">{t.profile.editModal.title}</Dialog.Title>
                         <Dialog.Close asChild>
                             <button
                                 className="rounded-full p-1.5 text-slate-400 hover:bg-white/10 hover:text-white transition-colors">
@@ -128,7 +131,7 @@ export const EditProfileModal = ({isOpen, onOpenChange, user}: EditProfileModalP
                                     <div
                                         className="absolute inset-0 flex flex-col items-center justify-center text-slate-500">
                                         <Upload size={24} className="mb-2"/>
-                                        <span className="text-xs">Upload Header</span>
+                                        <span className="text-xs">{t.profile.editModal.uploadHeader}</span>
                                     </div>
                                 )}
                                 <input type="file" accept="image/jpeg,image/png,image/webp"
@@ -158,24 +161,27 @@ export const EditProfileModal = ({isOpen, onOpenChange, user}: EditProfileModalP
                             {/* Text Fields */}
                             <div className="space-y-4">
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium text-slate-300">Display Name</label>
+                                    <label
+                                        className="text-sm font-medium text-slate-300">{t.profile.editModal.displayName}</label>
                                     <input
                                         {...register('alias')}
                                         className="w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
                                     />
                                     {errors.alias &&
-                                        <span className="text-xs text-red-400">{errors.alias.message}</span>}
+                                        <span className="text-xs text-red-400">{errors.alias.message as string}</span>}
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium text-slate-300">Bio</label>
+                                    <label
+                                        className="text-sm font-medium text-slate-300">{t.profile.editModal.bio}</label>
                                     <textarea
                                         {...register('bio')}
                                         rows={3}
                                         className="w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500 resize-none"
-                                        placeholder="Tell the community about yourself..."
+                                        placeholder={t.profile.editModal.bioPlaceholder}
                                     />
-                                    {errors.bio && <span className="text-xs text-red-400">{errors.bio.message}</span>}
+                                    {errors.bio &&
+                                        <span className="text-xs text-red-400">{errors.bio.message as string}</span>}
                                 </div>
                             </div>
 
@@ -183,15 +189,17 @@ export const EditProfileModal = ({isOpen, onOpenChange, user}: EditProfileModalP
 
                             {/* Privacy Toggles */}
                             <div className="space-y-4">
-                                <h3 className="text-sm font-semibold text-white">Privacy Settings</h3>
+                                <h3 className="text-sm font-semibold text-white">{t.profile.editModal.privacySettings}</h3>
 
                                 <div
                                     className="flex items-center justify-between p-3 rounded-lg border border-white/5 bg-white/5">
                                     <div className="flex flex-col gap-1 pr-4">
                                         <span className="text-sm font-medium text-slate-200 flex items-center gap-2">
-                                            <Lock size={14} className="text-violet-400"/> Private Account
+                                            <Lock size={14}
+                                                  className="text-violet-400"/> {t.profile.editModal.privateAccount}
                                         </span>
-                                        <span className="text-xs text-slate-500">Only you can see your playlists, tracks, and social connections.</span>
+                                        <span
+                                            className="text-xs text-slate-500">{t.profile.editModal.privateAccountDesc}</span>
                                     </div>
                                     <Controller
                                         name="isPrivate"
@@ -206,9 +214,11 @@ export const EditProfileModal = ({isOpen, onOpenChange, user}: EditProfileModalP
                                     className="flex items-center justify-between p-3 rounded-lg border border-white/5 bg-white/5">
                                     <div className="flex flex-col gap-1 pr-4">
                                         <span className="text-sm font-medium text-slate-200 flex items-center gap-2">
-                                            <EyeOff size={14} className="text-violet-400"/> Hide Subscriptions
+                                            <EyeOff size={14}
+                                                    className="text-violet-400"/> {t.profile.editModal.hideSubscriptions}
                                         </span>
-                                        <span className="text-xs text-slate-500">Hide your followers and following lists from other users.</span>
+                                        <span
+                                            className="text-xs text-slate-500">{t.profile.editModal.hideSubscriptionsDesc}</span>
                                     </div>
                                     <Controller
                                         name="hideSubscriptions"
@@ -224,12 +234,12 @@ export const EditProfileModal = ({isOpen, onOpenChange, user}: EditProfileModalP
 
                     <div className="flex justify-end gap-3 p-4 border-t border-white/10 shrink-0 bg-slate-900">
                         <Dialog.Close asChild>
-                            <Button type="button" variant="ghost">Cancel</Button>
+                            <Button type="button" variant="ghost">{t.profile.editModal.cancel}</Button>
                         </Dialog.Close>
                         <Button type="submit" form="profile-form"
                                 disabled={isSubmitting || updateProfileMutation.isPending}
                                 className="bg-violet-600 hover:bg-violet-500 text-white">
-                            {isSubmitting ? 'Saving...' : 'Save Changes'}
+                            {isSubmitting ? t.profile.editModal.saving : t.profile.editModal.saveChanges}
                         </Button>
                     </div>
 

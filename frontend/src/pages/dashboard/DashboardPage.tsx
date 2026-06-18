@@ -5,13 +5,17 @@ import {TrackCard} from '@/features/media/ui/TrackCard';
 import {CarouselShelf} from '@/features/recommendations/ui/CarouselShelf';
 import {CarouselShelfSkeleton} from '@/features/recommendations/ui/CarouselShelfSkeleton';
 import {useDiscoveryShelves} from '@/features/recommendations/hooks/useRecommendationQueries';
-import {Disc3} from 'lucide-react';
-import {Link, useNavigate} from 'react-router-dom';
+import {useNavigate} from 'react-router-dom';
+import {useTranslation} from '@/shared/lib/i18n/useTranslation';
+import {TrackContextMenu} from "@/features/media/ui/TrackContextMenu.tsx";
+import {LibraryItem} from "@/features/playlist/ui/LibraryItem.tsx";
 
 export const DashboardPage = () => {
     const navigate = useNavigate();
     const user = useAuthStore((state) => state.user);
     const needsCalibration = user?.profile?.needsTasteCalibration === true;
+    const {t} = useTranslation();
+    const db = t.dashboard;
 
     // Don't waste DB calls if they need onboarding.
     const {data: shelves, isLoading} = useDiscoveryShelves(!needsCalibration);
@@ -30,9 +34,9 @@ export const DashboardPage = () => {
         <div className="container mx-auto px-4 py-8 max-w-7xl space-y-12">
             <header className="border-b border-slate-800 pb-6">
                 <h1 className="text-4xl font-bold tracking-tight text-white">
-                    Good evening, <span className="text-violet-400">{user?.alias || 'Listener'}</span>
+                    {db.greeting} <span className="text-violet-400">{user?.alias || 'Listener'}</span>
                 </h1>
-                <p className="text-slate-400 mt-2 text-lg">Discover new independent music tailored for you.</p>
+                <p className="text-slate-400 mt-2 text-lg">{db.subtitle}</p>
             </header>
 
             {/* AI Recommendations Engine Presentation */}
@@ -44,40 +48,28 @@ export const DashboardPage = () => {
             ) : shelves ? (
                 <div className="flex flex-col gap-4">
                     <CarouselShelf
-                        title="Made For You"
+                        title={db.recommendations.madeForYou}
                         items={shelves.madeForYou}
                         keyExtractor={(t) => t.id}
-                        renderItem={(track) => <TrackCard track={track as any} variant="grid"/>}
+                        renderItem={(track) => <TrackContextMenu key={track.id} track={track}> <TrackCard track={track as any} variant="grid"/></TrackContextMenu>}
                     />
 
                     <CarouselShelf
-                        title="Discover Playlists"
+                        title={db.recommendations.discoverPlaylists}
                         items={shelves.discoverPlaylists}
                         keyExtractor={(p) => p.id}
                         renderItem={(playlist) => (
-                            <Link to={`/playlist/${playlist.id}`} className="group flex flex-col gap-3">
-                                <div
-                                    className="aspect-square bg-slate-800 rounded-xl overflow-hidden shadow-lg border border-slate-800 group-hover:border-violet-500/50 transition-colors">
-                                    {playlist.coverMinioPath ? (
-                                        <img src={playlist.coverMinioPath} alt={playlist.name}
-                                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"/>
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-slate-600">
-                                            <Disc3 size={48}/>
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="flex flex-col px-1">
-                                    <span
-                                        className="text-base font-semibold text-white truncate group-hover:text-violet-400 transition-colors">{playlist.name}</span>
-                                    <span className="text-sm text-slate-400 truncate">By {playlist.ownerAlias}</span>
-                                </div>
-                            </Link>
+                            <LibraryItem
+                                key={playlist.id}
+                                playlist={playlist}
+                                viewMode="expanded"
+                                onClick={() => navigate(`/playlist/${playlist.id}`)}
+                            />
                         )}
                     />
 
                     <CarouselShelf
-                        title="Listeners Like You"
+                        title={db.recommendations.listenersLikeYou}
                         items={shelves.listenersLikeYou}
                         keyExtractor={(t) => t.id}
                         renderItem={(track) => <TrackCard track={track} variant="grid"/>}
@@ -87,9 +79,9 @@ export const DashboardPage = () => {
 
             <section>
                 <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold text-white">New Releases</h2>
+                    <h2 className="text-2xl font-bold text-white tracking-tight">{db.newReleases}</h2>
                     <button className="text-sm font-medium text-slate-400 hover:text-white transition-colors">
-                        Show all
+                        {db.showAll}
                     </button>
                 </div>
                 <PublicFeed/>

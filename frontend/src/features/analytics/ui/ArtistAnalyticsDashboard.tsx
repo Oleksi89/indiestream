@@ -5,8 +5,10 @@ import {TimeRangeSelector} from './TimeRangeSelector.tsx';
 import {Button} from '@/shared/ui/button.tsx';
 import {GlobalOverview} from './GlobalOverview.tsx';
 import {TrackDeepDive} from './TrackDeepDive.tsx';
+import {useTranslation} from '@/shared/lib/i18n/useTranslation.ts';
 
 export const ArtistAnalyticsDashboard = () => {
+    const {t} = useTranslation();
     const {preset, setRange, startDate, endDate} = useAnalyticsTimeRange('7D');
     const [searchParams, setSearchParams] = useSearchParams();
     const selectedTrackId = searchParams.get('trackId');
@@ -29,18 +31,19 @@ export const ArtistAnalyticsDashboard = () => {
                         <Button
                             variant="ghost"
                             size="icon"
+                            aria-label={t.analytics.dashboard.back}
                             onClick={() => handleSelectTrack(null)}
                             className="rounded-full bg-slate-800 text-slate-300 hover:text-white transition-colors"
                         >
-                            <ArrowLeft size={18}/>
+                            <ArrowLeft size={18} aria-hidden="true"/>
                         </Button>
                     )}
                     <div>
                         <h2 className="text-xl font-bold text-white tracking-tight">
-                            {selectedTrackId ? 'Track Deep Dive' : 'Global Performance'}
+                            {selectedTrackId ? t.analytics.dashboard.trackDeepDiveTitle : t.analytics.dashboard.globalPerformanceTitle}
                         </h2>
                         <p className="text-xs text-slate-400 mt-0.5">
-                            {selectedTrackId ? 'Granular telemetry and real-time listening data.' : 'Macro perspective of your entire catalog.'}
+                            {selectedTrackId ? t.analytics.dashboard.trackDeepDiveSubtitle : t.analytics.dashboard.globalPerformanceSubtitle}
                         </p>
                     </div>
                 </div>

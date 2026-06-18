@@ -7,10 +7,13 @@ import {StemsStep} from './wizard/StemsStep.tsx';
 import {ProgressStep} from './wizard/ProgressStep.tsx';
 import {X} from 'lucide-react';
 import {cn} from '@/shared/lib/utils.ts';
+import {useTranslation} from '@/shared/lib/i18n/useTranslation';
 
 export const UploadWizardModal = () => {
     const [isOpen, setIsOpen] = useState(false);
     const {currentStep, resetWizard} = useUploadWizardStore();
+    const {t} = useTranslation();
+    const up = t.media.upload;
 
     const handleOpenChange = (open: boolean) => {
         // Prevent accidental closing during network operations
@@ -30,6 +33,7 @@ export const UploadWizardModal = () => {
 
     // Steps visualization logic
     const steps = ['METADATA', 'MEDIA', 'STEMS', 'PROCESSING'];
+    const stepLabels = [up.steps.metadata, up.steps.media, up.steps.stems, up.steps.process];
     const activeIndex = currentStep === 'UPLOADING' ? 3 : steps.indexOf(currentStep);
 
     return (
@@ -37,7 +41,7 @@ export const UploadWizardModal = () => {
             <Dialog.Trigger asChild>
                 <button
                     className="bg-violet-600 hover:bg-violet-500 text-white px-5 py-2.5 rounded-lg font-medium transition-colors shadow-lg shadow-violet-900/20">
-                    Upload New Release
+                    {up.trigger}
                 </button>
             </Dialog.Trigger>
 
@@ -48,25 +52,30 @@ export const UploadWizardModal = () => {
 
                     {/* Header */}
                     <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800">
-                        <Dialog.Title className="text-lg font-semibold text-slate-100">Publish Track</Dialog.Title>
+                        <Dialog.Title className="text-lg font-semibold text-slate-100">{up.title}</Dialog.Title>
                         <Dialog.Close asChild>
-                            <button className="text-slate-400 hover:text-white transition-colors disabled:opacity-50"
-                                    disabled={currentStep === 'UPLOADING' || currentStep === 'PROCESSING'}>
-                                <X size={20}/>
+                            <button
+                                aria-label={up.close}
+                                title={up.close}
+                                className="text-slate-400 hover:text-white transition-colors disabled:opacity-50"
+                                disabled={currentStep === 'UPLOADING' || currentStep === 'PROCESSING'}>
+                                <X size={20} aria-hidden="true"/>
                             </button>
                         </Dialog.Close>
                     </div>
 
                     {/* Stepper Progress */}
-                    <div className="flex items-center justify-between px-8 py-4 bg-slate-950/50">
-                        {['Metadata', 'Media', 'Stems', 'Process'].map((label, idx) => (
+                    <nav aria-label="Upload progress" className="flex items-center justify-between px-8 py-4 bg-slate-950/50">
+                        {stepLabels.map((label, idx) => (
                             <div key={label} className="flex flex-col items-center gap-2">
-                                <div className={cn(
-                                    "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all",
-                                    idx < activeIndex ? "bg-violet-600 text-white" :
-                                        idx === activeIndex ? "bg-violet-500 ring-4 ring-violet-500/20 text-white" :
-                                            "bg-slate-800 text-slate-500"
-                                )}>
+                                <div
+                                    className={cn(
+                                        "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all",
+                                        idx < activeIndex ? "bg-violet-600 text-white" :
+                                            idx === activeIndex ? "bg-violet-500 ring-4 ring-violet-500/20 text-white" :
+                                                "bg-slate-800 text-slate-500"
+                                    )}
+                                    aria-current={idx === activeIndex ? 'step' : undefined}>
                                     {idx + 1}
                                 </div>
                                 <span
@@ -75,7 +84,7 @@ export const UploadWizardModal = () => {
                                 </span>
                             </div>
                         ))}
-                    </div>
+                    </nav>
 
                     {/* Body Content */}
                     <div className="p-6">

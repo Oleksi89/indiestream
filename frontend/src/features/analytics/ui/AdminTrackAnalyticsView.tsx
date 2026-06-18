@@ -8,12 +8,14 @@ import {DemographicsBarChart} from './DemographicsBarChart.tsx';
 import {MetricCardSkeleton, ChartSkeleton} from './AnalyticsSkeletons.tsx';
 import {Activity, TrendingUp} from 'lucide-react';
 import {TrackCover} from "@/shared/ui/TrackCover.tsx";
+import {useTranslation} from '@/shared/lib/i18n/useTranslation.ts';
 
 interface AdminTrackAnalyticsViewProps {
     trackId: string;
 }
 
 export const AdminTrackAnalyticsView = ({trackId}: AdminTrackAnalyticsViewProps) => {
+    const {t} = useTranslation();
     // Isolated URL state for this view
     const {preset, setRange, startDate, endDate} = useAnalyticsTimeRange('7D');
     const {data, isLoading} = useAdminTrackAnalytics(trackId, startDate, endDate);
@@ -25,11 +27,11 @@ export const AdminTrackAnalyticsView = ({trackId}: AdminTrackAnalyticsViewProps)
                 <div className="flex items-center gap-4">
                     <div
                         className="h-12 w-12 rounded-lg bg-violet-500/10 flex items-center justify-center text-violet-400 shrink-0">
-                        <Activity size={24}/>
+                        <Activity size={24} aria-hidden="true"/>
                     </div>
                     <div>
-                        <h3 className="text-lg font-bold text-white leading-tight">System Telemetry</h3>
-                        <p className="text-xs text-slate-400">Unrestricted administrative overview</p>
+                        <h3 className="text-lg font-bold text-white leading-tight">{t.analytics.adminTrack.title}</h3>
+                        <p className="text-xs text-slate-400">{t.analytics.adminTrack.subtitle}</p>
                     </div>
                 </div>
                 <TimeRangeSelector value={preset} onChange={setRange}/>
@@ -58,25 +60,27 @@ export const AdminTrackAnalyticsView = ({trackId}: AdminTrackAnalyticsViewProps)
                                         <span
                                             className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                                     </span>
-                                    {data.currentConcurrentListeners} Live
+                                    {data.currentConcurrentListeners} {t.analytics.metrics.live}
                                 </span>
                                 <span
                                     className="flex items-center gap-1 text-xs font-semibold text-violet-400 bg-violet-400/10 px-2 py-0.5 rounded-full border border-violet-500/20">
-                                    <TrendingUp size={12}/>
-                                    Score: {data.popularityScore.toFixed(1)}
+                                    <TrendingUp size={12} aria-hidden="true"/>
+                                    {t.analytics.metrics.score}: {data.popularityScore.toFixed(1)}
                                 </span>
                             </div>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <SummaryMetricCard title="Total Plays" value={data.summary.totalPlays}
+                        <SummaryMetricCard title={t.analytics.metrics.totalPlays} value={data.summary.totalPlays}
                                            growthPercentage={data.summary.playsGrowthPercentage}/>
-                        <SummaryMetricCard title="Listeners" value={data.summary.uniqueListeners}
+                        <SummaryMetricCard title={t.analytics.metrics.listeners} value={data.summary.uniqueListeners}
                                            growthPercentage={data.summary.listenersGrowthPercentage}/>
-                        <SummaryMetricCard title="Completion Rate" value={data.engagement.completionRatePercentage}
+                        <SummaryMetricCard title={t.analytics.metrics.completionRate}
+                                           value={data.engagement.completionRatePercentage}
                                            format="percent"/>
-                        <SummaryMetricCard title="Skip Rate" value={data.engagement.skipRatePercentage}
+                        <SummaryMetricCard title={t.analytics.metrics.skipRate}
+                                           value={data.engagement.skipRatePercentage}
                                            format="percent"/>
                     </div>
 

@@ -9,6 +9,7 @@ import {useAuthStore} from '@/shared/store/authStore';
 import {useUserLibrary, useTogglePlaylistTrack, playlistKeys} from '../../playlist/hooks/usePlaylists';
 import {useInteractionTracker} from '@/features/telemetry';
 import {useNotInterestedMutation} from '@/features/recommendations/hooks/useRecommendationMutations';
+import {useTranslation} from '@/shared/lib/i18n/useTranslation';
 
 import {
     ContextMenu,
@@ -36,6 +37,7 @@ interface TrackContextMenuProps {
 const AddToPlaylistSubMenu = ({track}: { track: TrackDto }) => {
     const queryClient = useQueryClient();
     const {trackInteraction} = useInteractionTracker();
+    const {t} = useTranslation();
     const {data: library, isLoading} = useUserLibrary(0, 50);
     const togglePlaylistTrack = useTogglePlaylistTrack();
 
@@ -54,17 +56,21 @@ const AddToPlaylistSubMenu = ({track}: { track: TrackDto }) => {
         }
     };
 
+    const subMenuLabel = track.artistUsername === 'unavailable'
+        ? t.media.contextMenu.excludeFromPlaylist
+        : t.media.contextMenu.addToPlaylist;
+
     return (
         <ContextMenuSub>
             <ContextMenuSubTrigger>
-                <Plus className="mr-2 h-4 w-4"/>
-                <span>{track.artistUsername === 'unavailable' ? 'Exclude from Playlist' : 'Add to Playlist'}</span>
+                <Plus className="mr-2 h-4 w-4" aria-hidden="true"/>
+                <span>{subMenuLabel}</span>
             </ContextMenuSubTrigger>
             <ContextMenuSubContent className="w-56 max-h-64 overflow-y-auto">
                 {isLoading ? (
-                    <ContextMenuItem disabled>Loading...</ContextMenuItem>
+                    <ContextMenuItem disabled>{t.media.contextMenu.loading}</ContextMenuItem>
                 ) : editablePlaylists.length === 0 ? (
-                    <ContextMenuItem disabled>No editable playlists</ContextMenuItem>
+                    <ContextMenuItem disabled>{t.media.contextMenu.noEditablePlaylists}</ContextMenuItem>
                 ) : (
                     editablePlaylists.map((playlist) => {
                         const tracks = queryClient.getQueryData<PageResponse<PlaylistTrackDto>>(playlistKeys.tracks(playlist.id));
@@ -81,7 +87,7 @@ const AddToPlaylistSubMenu = ({track}: { track: TrackDto }) => {
                                 className="flex items-center justify-between group"
                             >
                                 <span className="truncate pr-2">{playlist.name}</span>
-                                {isPresent && <Check className="h-4 w-4 text-violet-400 shrink-0"/>}
+                                {isPresent && <Check className="h-4 w-4 text-violet-400 shrink-0" aria-hidden="true"/>}
                             </ContextMenuItem>
                         );
                     })
@@ -98,6 +104,7 @@ export const TrackContextMenu: React.FC<TrackContextMenuProps> = ({children, tra
     const addToQueue = usePlayerStore((state) => state.addToQueue);
     const {trackInteraction} = useInteractionTracker();
     const {mutate: markNotInterested} = useNotInterestedMutation();
+    const {t} = useTranslation();
 
     const isUnavailable = track.artistUsername === 'unavailable';
     const isOwner = currentUser?.id === track.artistId;
@@ -105,7 +112,7 @@ export const TrackContextMenu: React.FC<TrackContextMenuProps> = ({children, tra
     const handleCopyLink = () => {
         const url = `${window.location.origin}/track/${track.id}`;
         navigator.clipboard.writeText(url).then(() => {
-            toast.success('Link copied to clipboard');
+            toast.success(t.media.contextMenu.toastLinkCopied);
             const currentContext = usePlayerStore.getState().playbackContext;
             trackInteraction(track.id, 'SHARE', currentContext?.type || 'PUBLIC_FEED', 'CONTEXT_MENU');
         });
@@ -113,7 +120,7 @@ export const TrackContextMenu: React.FC<TrackContextMenuProps> = ({children, tra
 
     const handleNotInterested = () => {
         markNotInterested(track.id);
-        toast.success("We'll tune your recommendations", {icon: '🤫'});
+        toast.success(t.media.contextMenu.toastNotInterested, {icon: '🤫'});
     };
 
     return (
@@ -125,23 +132,23 @@ export const TrackContextMenu: React.FC<TrackContextMenuProps> = ({children, tra
                 {isUnavailable ? (
                     <>
                         <ContextMenuItem disabled className="text-red-400/70">
-                            <Ban className="mr-2 h-4 w-4"/>
-                            <span>Content Unavailable</span>
+                            <Ban className="mr-2 h-4 w-4" aria-hidden="true"/>
+                            <span>{t.media.contextMenu.contentUnavailable}</span>
                         </ContextMenuItem>
                         <AddToPlaylistSubMenu track={track}/>
                     </>
                 ) : (
                     <>
                         <ContextMenuItem onClick={() => setTrack(track)}>
-                            <Play className="mr-2 h-4 w-4"/>
-                            <span>Play Now</span>
+                            <Play className="mr-2 h-4 w-4" aria-hidden="true"/>
+                            <span>{t.media.contextMenu.playNow}</span>
                         </ContextMenuItem>
                         <ContextMenuItem onClick={() => {
                             addToQueue(track);
-                            toast.success('Added to queue');
+                            toast.success(t.media.contextMenu.toastAddedToQueue);
                         }}>
-                            <ListPlus className="mr-2 h-4 w-4"/>
-                            <span>Add to Queue</span>
+                            <ListPlus className="mr-2 h-4 w-4" aria-hidden="true"/>
+                            <span>{t.media.contextMenu.addToQueue}</span>
                         </ContextMenuItem>
 
                         <ContextMenuSeparator/>
@@ -149,12 +156,12 @@ export const TrackContextMenu: React.FC<TrackContextMenuProps> = ({children, tra
                         <ContextMenuSeparator/>
 
                         <ContextMenuItem onClick={() => navigate(`/user/${track.artistUsername}`)}>
-                            <User className="mr-2 h-4 w-4"/>
-                            <span>Go to Artist</span>
+                            <User className="mr-2 h-4 w-4" aria-hidden="true"/>
+                            <span>{t.media.contextMenu.goToArtist}</span>
                         </ContextMenuItem>
                         <ContextMenuItem onClick={handleCopyLink}>
-                            <LinkIcon className="mr-2 h-4 w-4"/>
-                            <span>Copy Link</span>
+                            <LinkIcon className="mr-2 h-4 w-4" aria-hidden="true"/>
+                            <span>{t.media.contextMenu.copyLink}</span>
                         </ContextMenuItem>
 
                         {/* Recommendation Math Interaction: Hidden from track owners */}
@@ -165,8 +172,8 @@ export const TrackContextMenu: React.FC<TrackContextMenuProps> = ({children, tra
                                     onClick={handleNotInterested}
                                     className="text-slate-400 hover:text-red-400 hover:bg-red-400/10 focus:text-red-400 focus:bg-red-400/10 transition-colors"
                                 >
-                                    <XCircle className="mr-2 h-4 w-4"/>
-                                    <span>Not Interested</span>
+                                    <XCircle className="mr-2 h-4 w-4" aria-hidden="true"/>
+                                    <span>{t.media.contextMenu.notInterested}</span>
                                 </ContextMenuItem>
                             </>
                         )}
