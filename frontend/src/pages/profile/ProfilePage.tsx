@@ -17,12 +17,14 @@ import {useListeningHistory} from '@/features/analytics/hooks/useAnalytics';
 import {PaginationControls} from '@/shared/ui/PaginationControls';
 import type {PlaylistDto} from '@/features/playlist/types';
 import {usePlayerStore} from '@/shared/store/playerStore';
+import {useTranslation} from '@/shared/lib/i18n/useTranslation';
 
 type Tab = 'playlists' | 'tracks' | 'followers' | 'following' | 'history';
 
 export const ProfilePage = () => {
     const {username} = useParams<{ username: string }>();
     const navigate = useNavigate();
+    const {t} = useTranslation();
     const {user: currentUser} = useAuthStore();
     const {playContext} = usePlayerStore();
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -71,7 +73,6 @@ export const ProfilePage = () => {
         enabled: !!profile?.username && activeTab === 'following' && (!profile.profile?.hideSubscriptions || isOwnProfile)
     });
 
-    // Fetch Listening History exclusively for the owner
     const {data: historyData, isLoading: isHistoryLoading} = useListeningHistory(historyPage);
 
     if (isLoading) {
@@ -87,11 +88,11 @@ export const ProfilePage = () => {
             <div
                 className="flex flex-col h-[80vh] w-full items-center justify-center text-slate-400 animate-in fade-in">
                 <UserX size={64} className="mb-4 text-slate-600 opacity-50"/>
-                <h2 className="text-2xl font-bold text-slate-300 mb-2">Profile Unavailable</h2>
-                <p className="text-sm text-slate-500">This account doesn't exist or has been suspended.</p>
+                <h2 className="text-2xl font-bold text-slate-300 mb-2">{t.profile.page.unavailable}</h2>
+                <p className="text-sm text-slate-500">{t.profile.page.suspended}</p>
                 <Button variant="outline" className="mt-6 border-slate-700 text-slate-300 hover:bg-slate-800"
                         onClick={() => navigate('/')}>
-                    Return Home
+                    {t.profile.page.returnHome}
                 </Button>
             </div>
         );
@@ -99,13 +100,20 @@ export const ProfilePage = () => {
 
     const isPrivateAndNotOwner = profile.profile?.isPrivate && !isOwnProfile;
 
-    // Filter tabs dynamically based on privacy settings and ownership
     const tabs = [
-        {id: 'playlists', label: 'Playlists', hidden: false},
-        {id: 'tracks', label: 'Tracks', hidden: profile.role === 'USER'},
-        {id: 'followers', label: 'Followers', hidden: profile.profile?.hideSubscriptions && !isOwnProfile},
-        {id: 'following', label: 'Following', hidden: profile.profile?.hideSubscriptions && !isOwnProfile},
-        {id: 'history', label: 'Listening History', hidden: !isOwnProfile}, // Only owner sees history
+        {id: 'playlists', label: t.profile.page.tabs.playlists, hidden: false},
+        {id: 'tracks', label: t.profile.page.tabs.tracks, hidden: profile.role === 'USER'},
+        {
+            id: 'followers',
+            label: t.profile.page.tabs.followers,
+            hidden: profile.profile?.hideSubscriptions && !isOwnProfile
+        },
+        {
+            id: 'following',
+            label: t.profile.page.tabs.following,
+            hidden: profile.profile?.hideSubscriptions && !isOwnProfile
+        },
+        {id: 'history', label: t.profile.page.tabs.history, hidden: !isOwnProfile},
     ].filter(t => !t.hidden);
 
     const handleFollowToggle = () => {
@@ -119,7 +127,7 @@ export const ProfilePage = () => {
         playContext(tracks, {type: 'PROFILE', id: 'listening-history'}, startIndex);
     };
 
-    const formattedDate = new Date(profile.createdAt).toLocaleDateString('en-US', {month: 'long', year: 'numeric'});
+    const formattedDate = new Date(profile.createdAt).toLocaleDateString(undefined, {month: 'long', year: 'numeric'});
 
     return (
         <div className="relative min-h-full w-full bg-black text-white pb-24 overflow-x-hidden">
@@ -173,12 +181,11 @@ export const ProfilePage = () => {
                         </div>
                     </div>
 
-                    {/* Action Buttons */}
                     <div className="flex items-center gap-3 mb-2">
                         {isOwnProfile ? (
                             <Button variant="outline" onClick={() => setIsEditModalOpen(true)}
                                     className="border-white/20 bg-white/5 backdrop-blur-md hover:bg-white/10 hover:text-white transition-all">
-                                Edit Profile
+                                {t.profile.page.editProfile}
                             </Button>
                         ) : (
                             <Button
@@ -190,16 +197,14 @@ export const ProfilePage = () => {
                                         : "bg-violet-600 hover:bg-violet-500 text-white shadow-[0_0_20px_rgba(139,92,246,0.3)]"
                                 )}
                             >
-                                {profile.isFollowedByMe ? 'Following' : 'Follow'}
+                                {profile.isFollowedByMe ? t.profile.page.followingAction : t.profile.page.followAction}
                             </Button>
                         )}
                     </div>
                 </div>
 
                 <div className="mt-8 flex flex-col gap-8">
-                    {/* Stats & Bio */}
-                    <div
-                        className="flex flex-col gap-6 rounded-xl  backdrop-blur-md p-6 shadow-xl w-full max-w-3xl">
+                    <div className="flex flex-col gap-6 rounded-xl backdrop-blur-md p-6 shadow-xl w-full max-w-3xl">
                         {profile.profile?.bio && (
                             <p className="text-sm text-slate-300 leading-relaxed">
                                 {profile.profile.bio}
@@ -209,16 +214,18 @@ export const ProfilePage = () => {
                         <div className="flex items-center gap-8">
                             <div className="flex flex-col">
                                 <span className="text-xl font-bold text-white">{profile.followersCount || 0}</span>
-                                <span className="text-xs text-slate-400 uppercase tracking-wider">Followers</span>
+                                <span
+                                    className="text-xs text-slate-400 uppercase tracking-wider">{t.profile.page.followers}</span>
                             </div>
                             <div className="flex flex-col">
                                 <span className="text-xl font-bold text-white">{profile.followingCount || 0}</span>
-                                <span className="text-xs text-slate-400 uppercase tracking-wider">Following</span>
+                                <span
+                                    className="text-xs text-slate-400 uppercase tracking-wider">{t.profile.page.following}</span>
                             </div>
                             <div className="w-px h-8 bg-white/10 mx-2"/>
                             <div className="flex items-center gap-2 text-sm text-slate-400">
                                 <CalendarDays size={16}/>
-                                <span>Joined {formattedDate}</span>
+                                <span>{t.profile.page.joined.replace('{date}', formattedDate)}</span>
                             </div>
                         </div>
                     </div>
@@ -227,8 +234,8 @@ export const ProfilePage = () => {
                         <div
                             className="flex flex-col items-center justify-center py-20 border border-white/5 bg-white/5 rounded-2xl">
                             <Lock size={48} className="text-slate-600 mb-4"/>
-                            <h2 className="text-xl font-bold text-white mb-2">This account is private</h2>
-                            <p className="text-slate-400 text-sm">You must be the owner to view this content.</p>
+                            <h2 className="text-xl font-bold text-white mb-2">{t.profile.page.privateTitle}</h2>
+                            <p className="text-slate-400 text-sm">{t.profile.page.privateDesc}</p>
                         </div>
                     ) : (
                         <div className="flex flex-col mt-4">
@@ -269,8 +276,8 @@ export const ProfilePage = () => {
                                                 />
                                             ))
                                         ) : (
-                                            <div className="col-span-full text-center text-slate-500 py-10">No public
-                                                playlists found.</div>
+                                            <div
+                                                className="col-span-full text-center text-slate-500 py-10">{t.profile.page.empty.playlists}</div>
                                         )}
                                     </div>
                                 )}
@@ -286,8 +293,8 @@ export const ProfilePage = () => {
                                                 <TrackCard key={track.id} track={track} variant="grid"/>
                                             ))
                                         ) : (
-                                            <div className="col-span-full text-center text-slate-500 py-10">No tracks
-                                                published yet.</div>
+                                            <div
+                                                className="col-span-full text-center text-slate-500 py-10">{t.profile.page.empty.tracks}</div>
                                         )}
                                     </div>
                                 )}
@@ -321,7 +328,7 @@ export const ProfilePage = () => {
                                             <div
                                                 className="text-center flex flex-col items-center gap-2 text-slate-500 py-20">
                                                 <History size={48} className="opacity-20"/>
-                                                <p>Your listening history is empty.</p>
+                                                <p>{t.profile.page.empty.history}</p>
                                             </div>
                                         )}
                                     </div>
@@ -348,7 +355,8 @@ export const ProfilePage = () => {
                                                 </div>
                                             ))
                                         ) : (
-                                            <div className="text-center text-slate-500 py-10">No followers yet.</div>
+                                            <div
+                                                className="text-center text-slate-500 py-10">{t.profile.page.empty.followers}</div>
                                         )}
                                     </div>
                                 )}
@@ -374,8 +382,8 @@ export const ProfilePage = () => {
                                                 </div>
                                             ))
                                         ) : (
-                                            <div className="text-center text-slate-500 py-10">Not following anyone
-                                                yet.</div>
+                                            <div
+                                                className="text-center text-slate-500 py-10">{t.profile.page.empty.following}</div>
                                         )}
                                     </div>
                                 )}

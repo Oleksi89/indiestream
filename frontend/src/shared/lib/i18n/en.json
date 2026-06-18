@@ -10,6 +10,16 @@
     "by": "By"
   },
   "auth": {
+    "validation": {
+      "invalidEmail": "Invalid email format",
+      "passwordMin": "Password must be at least 6 characters",
+      "usernameMin": "Username must be at least 3 characters",
+      "usernameMax": "Username cannot exceed 20 characters",
+      "usernameRegex": "Username can only contain letters, numbers, and underscores",
+      "aliasRequired": "Display name is required",
+      "aliasMax": "Display name cannot exceed 100 characters",
+      "passwordsMismatch": "Passwords don't match"
+    },
     "login": {
       "emailLabel": "Email",
       "passwordLabel": "Password",
@@ -750,5 +760,67 @@
       "title": "No results found",
       "subtitle": "Try adjusting your keywords, tags, or genres."
     }
+  },
+  "profile": {
+    "editModal": {
+      "title": "Edit Profile",
+      "uploadHeader": "Upload Header",
+      "displayName": "Display Name",
+      "bio": "Bio",
+      "bioPlaceholder": "Tell the community about yourself...",
+      "privacySettings": "Privacy Settings",
+      "privateAccount": "Private Account",
+      "privateAccountDesc": "Only you can see your playlists, tracks, and social connections.",
+      "hideSubscriptions": "Hide Subscriptions",
+      "hideSubscriptionsDesc": "Hide your followers and following lists from other users.",
+      "cancel": "Cancel",
+      "saving": "Saving...",
+      "saveChanges": "Save Changes",
+      "success": "Profile updated successfully",
+      "error": "Failed to update profile",
+      "validation": {
+        "nameRequired": "Display name is required",
+        "nameMax": "Maximum 100 characters",
+        "bioMax": "Bio cannot exceed 500 characters"
+      }
+    },
+    "page": {
+      "unavailable": "Profile Unavailable",
+      "suspended": "This account doesn't exist or has been suspended.",
+      "returnHome": "Return Home",
+      "editProfile": "Edit Profile",
+      "followingAction": "Following",
+      "followAction": "Follow",
+      "followers": "Followers",
+      "following": "Following",
+      "joined": "Joined {date}",
+      "privateTitle": "This account is private",
+      "privateDesc": "You must be the owner to view this content.",
+      "tabs": {
+        "playlists": "Playlists",
+        "tracks": "Tracks",
+        "followers": "Followers",
+        "following": "Following",
+        "history": "Listening History"
+      },
+      "empty": {
+        "playlists": "No public playlists found.",
+        "tracks": "No tracks published yet.",
+        "history": "Your listening history is empty.",
+        "followers": "No followers yet.",
+        "following": "Not following anyone yet."
+      }
+    }
+  },
+  "navbar": {
+    "account": "Account",
+    "loading": "Loading...",
+    "myProfile": "My Profile",
+    "artistHub": "Artist Hub",
+    "adminWorkspace": "Admin Workspace",
+    "globalTelemetry": "Global Telemetry",
+    "settings": "Settings",
+    "subscription": "Subscription",
+    "logout": "Log out"
   }
 }

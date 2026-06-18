@@ -1,7 +1,7 @@
 import {type SubmitHandler, useForm} from 'react-hook-form';
 import {zodResolver} from '@hookform/resolvers/zod';
 import {useNavigate, Link} from 'react-router-dom';
-import {registerSchema, type RegisterRequest} from '../types';
+import { type RegisterRequest, getRegisterSchema} from '../types';
 import {authApi} from '../api/auth.api';
 import {useState} from 'react';
 import {isAxiosError} from "axios";
@@ -17,7 +17,7 @@ export const RegisterForm = () => {
         handleSubmit,
         formState: {errors, isSubmitting},
     } = useForm({
-        resolver: zodResolver(registerSchema),
+        resolver: zodResolver(getRegisterSchema(t)),
         defaultValues: {
             email: '',
             username: '',

@@ -8,11 +8,13 @@ import type {UserDto} from "@/features/auth/types";
 import {useSecureUrl} from "@/shared/hooks/useSecureUrl";
 import {profileApi} from "@/features/profile/api/profile.api";
 import {QuickSearchPopover} from "@/features/search/ui/QuickSearchPopover";
+import {useTranslation} from '@/shared/lib/i18n/useTranslation';
 
 export const Navbar = () => {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
+    const {t} = useTranslation();
 
     const {token, user, setUser, logout: logoutStore} = useAuthStore();
 
@@ -99,9 +101,9 @@ export const Navbar = () => {
                         </div>
 
                         <div className="hidden sm:flex flex-col items-start leading-none">
-                            <span className="text-xs font-medium text-slate-400">Account</span>
+                            <span className="text-xs font-medium text-slate-400">{t.navbar.account}</span>
                             <span className="text-sm font-semibold text-white max-w-[120px] truncate">
-                                {user?.alias || 'Loading...'}
+                                {user?.alias || t.navbar.loading}
                             </span>
                         </div>
                         <ChevronDown size={14} className="text-slate-500 hidden sm:block"/>
@@ -142,13 +144,13 @@ export const Navbar = () => {
                                 <Link to={`/user/${user?.username}`}
                                       onClick={() => setIsDropdownOpen(false)}
                                       className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
-                                    <User size={16}/> My Profile
+                                    <User size={16}/> {t.navbar.myProfile}
                                 </Link>
                                 {user?.role === 'ARTIST' && (
                                     <Link to="/artist/dashboard"
                                           onClick={() => setIsDropdownOpen(false)}
                                           className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-violet-400 hover:bg-violet-500/10 transition-colors">
-                                        <Music size={16}/> Artist Hub
+                                        <Music size={16}/> {t.navbar.artistHub}
                                     </Link>
                                 )}
                                 {user?.role === 'ADMIN' && (
@@ -156,24 +158,24 @@ export const Navbar = () => {
                                         <Link to="/admin/registry"
                                               onClick={() => setIsDropdownOpen(false)}
                                               className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-emerald-400 hover:bg-emerald-500/10 transition-colors">
-                                            <Shield size={16}/> Admin Workspace
+                                            <Shield size={16}/> {t.navbar.adminWorkspace}
                                         </Link>
                                         <Link to="/admin/telemetry"
                                               onClick={() => setIsDropdownOpen(false)}
                                               className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-emerald-400 hover:bg-emerald-500/10 transition-colors">
-                                            <ChartBarIcon size={16}/> Global Telemetry
+                                            <ChartBarIcon size={16}/> {t.navbar.globalTelemetry}
                                         </Link>
                                     </>
                                 )}
                                 <Link to="/settings"
                                       onClick={() => setIsDropdownOpen(false)}
                                       className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 transition-colors">
-                                    <Settings size={16}/> Settings
+                                    <Settings size={16}/> {t.navbar.settings}
                                 </Link>
                                 <Link to="/subscription"
                                       onClick={() => setIsDropdownOpen(false)}
-                                      className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
-                                    <CreditCard size={16}/> Subscription
+                                      className="hidden flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
+                                    <CreditCard size={16}/> {t.navbar.subscription}
                                 </Link>
                             </div>
 
@@ -183,7 +185,7 @@ export const Navbar = () => {
                                 onClick={handleLogout}
                                 className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-red-400 hover:bg-red-500/10 transition-colors"
                             >
-                                <LogOut size={16}/> Log out
+                                <LogOut size={16}/> {t.navbar.logout}
                             </button>
                         </div>
                     )}

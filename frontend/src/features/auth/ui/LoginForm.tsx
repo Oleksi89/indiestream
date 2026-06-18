@@ -1,7 +1,7 @@
 import { type SubmitHandler, useForm} from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate, Link } from 'react-router-dom';
-import { loginSchema, type LoginRequest } from '../types';
+import { type LoginRequest, getLoginSchema} from '../types';
 import { authApi } from '../api/auth.api';
 import { useAuthStore } from '@/shared/store/authStore';
 import { useState } from 'react';
@@ -19,7 +19,7 @@ export const LoginForm = () => {
         handleSubmit,
         formState: { errors, isSubmitting },
     } = useForm({
-        resolver: zodResolver(loginSchema),
+        resolver: zodResolver(getLoginSchema(t)),
     });
 
     const onSubmit: SubmitHandler<LoginRequest> = async (data) => {
