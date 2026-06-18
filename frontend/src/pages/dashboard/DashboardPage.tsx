@@ -1,5 +1,6 @@
 import {useEffect} from 'react';
 import {useAuthStore} from '@/shared/store/authStore';
+import {usePlayerStore} from '@/shared/store/playerStore';
 import {PublicFeed} from '@/features/media/ui/PublicFeed';
 import {TrackCard} from '@/features/media/ui/TrackCard';
 import {CarouselShelf} from '@/features/recommendations/ui/CarouselShelf';
@@ -9,10 +10,12 @@ import {useNavigate} from 'react-router-dom';
 import {useTranslation} from '@/shared/lib/i18n/useTranslation';
 import {TrackContextMenu} from "@/features/media/ui/TrackContextMenu.tsx";
 import {LibraryItem} from "@/features/playlist/ui/LibraryItem.tsx";
+import type {TrackDto} from "@/features/media/types";
 
 export const DashboardPage = () => {
     const navigate = useNavigate();
     const user = useAuthStore((state) => state.user);
+    const {playContext} = usePlayerStore();
     const needsCalibration = user?.profile?.needsTasteCalibration === true;
     const {t} = useTranslation();
     const db = t.dashboard;
@@ -26,6 +29,12 @@ export const DashboardPage = () => {
             navigate('/onboarding', {replace: true});
         }
     }, [needsCalibration, navigate]);
+
+    // Handler to inject the entire shelf into the queue starting from the clicked track
+    const handlePlayShelf = (tracks: TrackDto[], index: number) => {
+        // We cast 'RECOMMENDATIONS' to any in case it's not yet in TelemetrySourceType union
+        playContext(tracks, {type: 'SYSTEM_RECOMMENDATION'}, index);
+    };
 
     // Render nothing while redirecting to prevent flash
     if (needsCalibration) return null;
@@ -51,7 +60,15 @@ export const DashboardPage = () => {
                         title={db.recommendations.madeForYou}
                         items={shelves.madeForYou}
                         keyExtractor={(t) => t.id}
-                        renderItem={(track) => <TrackContextMenu key={track.id} track={track}> <TrackCard track={track as any} variant="grid"/></TrackContextMenu>}
+                        renderItem={(track, index) => (
+                            <TrackContextMenu key={track.id} track={track}>
+                                <TrackCard
+                                    track={track as any}
+                                    variant="grid"
+                                    onPlayOverride={() => handlePlayShelf(shelves.madeForYou, index)}
+                                />
+                            </TrackContextMenu>
+                        )}
                     />
 
                     <CarouselShelf
@@ -72,7 +89,15 @@ export const DashboardPage = () => {
                         title={db.recommendations.listenersLikeYou}
                         items={shelves.listenersLikeYou}
                         keyExtractor={(t) => t.id}
-                        renderItem={(track) => <TrackCard track={track} variant="grid"/>}
+                        renderItem={(track, index) => (
+                            <TrackContextMenu key={track.id} track={track}>
+                                <TrackCard
+                                    track={track}
+                                    variant="grid"
+                                    onPlayOverride={() => handlePlayShelf(shelves.listenersLikeYou, index)}
+                                />
+                            </TrackContextMenu>
+                        )}
                     />
                 </div>
             ) : null}
