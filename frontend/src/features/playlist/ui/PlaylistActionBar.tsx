@@ -2,6 +2,7 @@ import {Play, Check, Users, BarChart2, MoreHorizontal} from 'lucide-react';
 import {Button} from '@/shared/ui/button';
 import {cn} from '@/shared/lib/utils';
 import {PlaylistDropdownMenu} from "@/features/playlist/ui/PlaylistDropdownMenu";
+import {useTranslation} from '@/shared/lib/i18n/useTranslation';
 import type {PlaylistDto} from '../types';
 
 interface PlaylistActionBarProps {
@@ -26,42 +27,51 @@ export const PlaylistActionBar = (
         onOpenCollab,
         onOpenAnalytics
     }: PlaylistActionBarProps) => {
+    const {t} = useTranslation();
+
     return (
         <section className="px-8 py-6 flex items-center gap-6 backdrop-blur-3xl border-b border-white/5">
             <Button onClick={onPlayPlaylist} size="icon"
+                    aria-label={t.playlist.actions.play} title={t.playlist.actions.play}
                     className="w-14 h-14 rounded-full bg-violet-600 hover:bg-violet-500 shadow-xl hover:scale-105 transition-transform">
-                <Play size={24} fill="currentColor" className="ml-1"/>
+                <Play size={24} fill="currentColor" className="ml-1" aria-hidden="true"/>
             </Button>
 
             {!isOwner && !playlist.isSystem && (
                 <Button
                     onClick={onToggleFollow}
                     variant={isFollowed ? "outline" : "default"}
+                    aria-pressed={isFollowed}
+                    aria-label={isFollowed ? t.playlist.actions.unsaveAria : t.playlist.actions.saveAria}
+                    title={isFollowed ? t.playlist.actions.unsaveAria : t.playlist.actions.saveAria}
                     className={cn("rounded-full px-6 font-bold tracking-wide transition-all border-2",
                         isFollowed ? "border-white/30 text-white hover:border-white/60 bg-transparent" : "bg-white text-black hover:bg-slate-200 border-transparent")}
                 >
-                    {isFollowed ? <><Check className="w-5 h-5 mr-2"/> Saved</> : 'Save'}
+                    {isFollowed ? <><Check className="w-5 h-5 mr-2" aria-hidden="true"/> {t.playlist.actions.saved}</> : t.playlist.actions.save}
                 </Button>
             )}
 
             {playlist.isCollaborative && (isOwner || isCollaborator) && (
                 <Button variant="ghost" className="rounded-full text-slate-300 hover:text-white hover:bg-white/10"
+                        aria-label={t.playlist.actions.openParticipants} title={t.playlist.actions.openParticipants}
                         onClick={onOpenCollab}>
-                    <Users className="w-5 h-5 mr-2"/> Participants
+                    <Users className="w-5 h-5 mr-2" aria-hidden="true"/> {t.playlist.actions.participants}
                 </Button>
             )}
 
             {isOwner && !playlist.isSystem && (
                 <Button variant="ghost"
                         className="rounded-full text-violet-300 hover:text-white hover:bg-violet-500/20 bg-violet-500/10 border border-violet-500/30"
+                        aria-label={t.playlist.actions.openStats} title={t.playlist.actions.openStats}
                         onClick={onOpenAnalytics}>
-                    <BarChart2 className="w-5 h-5 mr-2"/> Stats
+                    <BarChart2 className="w-5 h-5 mr-2" aria-hidden="true"/> {t.playlist.actions.stats}
                 </Button>
             )}
 
             <PlaylistDropdownMenu playlist={playlist}>
-                <button className="text-white/60 hover:text-white transition-colors focus:outline-none">
-                    <MoreHorizontal size={32}/>
+                <button className="text-white/60 hover:text-white transition-colors focus:outline-none"
+                        aria-label={t.playlist.actions.moreOptions} title={t.playlist.actions.moreOptions}>
+                    <MoreHorizontal size={32} aria-hidden="true"/>
                 </button>
             </PlaylistDropdownMenu>
         </section>

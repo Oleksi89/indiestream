@@ -2,6 +2,7 @@ import * as AlertDialog from '@radix-ui/react-alert-dialog';
 import {Globe, Loader2} from 'lucide-react';
 import type {TrackDto} from "@/features/media/types";
 import {usePublishTrack} from "@/features/media/hooks/useTrackMutations.ts";
+import {useTranslation} from '@/shared/lib/i18n/useTranslation';
 
 
 interface PublishTrackDialogProps {
@@ -12,6 +13,8 @@ interface PublishTrackDialogProps {
 
 export const PublishTrackDialog = ({track, isOpen, onClose}: PublishTrackDialogProps) => {
     const {mutate: publishTrack, isPending} = usePublishTrack();
+    const {t} = useTranslation();
+    const pb = t.media.studio.publish;
 
     const handlePublish = (e: React.MouseEvent) => {
         e.preventDefault(); // Prevent immediate closing to wait for mutation
@@ -31,20 +34,17 @@ export const PublishTrackDialog = ({track, isOpen, onClose}: PublishTrackDialogP
 
                     <div className="flex flex-col items-center text-center space-y-4">
                         <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-full">
-                            <Globe size={24}/>
+                            <Globe size={24} aria-hidden="true"/>
                         </div>
 
                         <div>
                             <AlertDialog.Title className="text-xl font-bold text-slate-100">
-                                Publish Track
+                                {pb.title}
                             </AlertDialog.Title>
                             <AlertDialog.Description className="mt-2 text-sm text-slate-400 leading-relaxed">
-                                Are you ready to release <span
-                                className="text-slate-200 font-semibold">"{track.title}"</span>?
-                                Once published, the track will be visible in the global feed and your public profile.
-                                <br/><br/>
-                                <span className="text-amber-400/90 text-xs font-medium">
-                                    Note: Future metadata changes will require a brief re-moderation period.
+                                {pb.description.replace('{title}', track.title)}
+                                <span className="block mt-2 text-amber-400/90 text-xs font-medium">
+                                    {pb.note}
                                 </span>
                             </AlertDialog.Description>
                         </div>
@@ -56,7 +56,7 @@ export const PublishTrackDialog = ({track, isOpen, onClose}: PublishTrackDialogP
                                 disabled={isPending}
                                 className="flex-1 px-4 py-2.5 text-sm font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors disabled:opacity-50"
                             >
-                                Cancel
+                                {pb.cancel}
                             </button>
                         </AlertDialog.Cancel>
                         <AlertDialog.Action asChild>
@@ -65,8 +65,9 @@ export const PublishTrackDialog = ({track, isOpen, onClose}: PublishTrackDialogP
                                 disabled={isPending}
                                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 shadow-lg shadow-emerald-900/20"
                             >
-                                {isPending ? <Loader2 size={16} className="animate-spin"/> : <Globe size={16}/>}
-                                {isPending ? 'Publishing...' : 'Publish Now'}
+                                {isPending
+                                    ? <><Loader2 size={16} className="animate-spin" aria-hidden="true"/> {pb.confirming}</>
+                                    : <><Globe size={16} aria-hidden="true"/> {pb.confirm}</>}
                             </button>
                         </AlertDialog.Action>
                     </div>

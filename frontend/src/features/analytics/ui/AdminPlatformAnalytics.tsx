@@ -4,8 +4,10 @@ import {useAnalyticsTimeRange} from '../hooks/useAnalyticsTimeRange.ts';
 import {SummaryMetricCard} from './SummaryMetricCard.tsx';
 import {TimeRangeSelector} from './TimeRangeSelector.tsx';
 import {MetricCardSkeleton} from './AnalyticsSkeletons.tsx';
+import {useTranslation} from '@/shared/lib/i18n/useTranslation.ts';
 
 export const AdminPlatformAnalytics = () => {
+    const {t} = useTranslation();
     const {preset, setRange, startDate, endDate} = useAnalyticsTimeRange('7D');
     const {data, isLoading} = usePlatformAnalytics(startDate, endDate);
 
@@ -15,11 +17,11 @@ export const AdminPlatformAnalytics = () => {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                     <div className="p-2 bg-violet-500/10 rounded-lg text-violet-400">
-                        <Activity size={24}/>
+                        <Activity size={24} aria-hidden="true"/>
                     </div>
                     <div>
-                        <h2 className="text-xl font-bold text-white tracking-tight">Platform Telemetry</h2>
-                        <p className="text-xs text-slate-400">Global performance and engagement aggregates.</p>
+                        <h2 className="text-xl font-bold text-white tracking-tight">{t.analytics.platform.title}</h2>
+                        <p className="text-xs text-slate-400">{t.analytics.platform.subtitle}</p>
                     </div>
                 </div>
                 {/* Properly bound to setRange */}
@@ -36,13 +38,14 @@ export const AdminPlatformAnalytics = () => {
                     </>
                 ) : (
                     <>
-                        <SummaryMetricCard title="Total System Plays" value={data.summary.totalPlays}
+                        <SummaryMetricCard title={t.analytics.metrics.totalSystemPlays} value={data.summary.totalPlays}
                                            growthPercentage={data.summary.playsGrowthPercentage}/>
-                        <SummaryMetricCard title="Unique Listeners" value={data.summary.uniqueListeners}
+                        <SummaryMetricCard title={t.analytics.metrics.uniqueListeners}
+                                           value={data.summary.uniqueListeners}
                                            growthPercentage={data.summary.listenersGrowthPercentage}/>
-                        <SummaryMetricCard title="Global Completion Rate"
+                        <SummaryMetricCard title={t.analytics.metrics.globalCompletionRate}
                                            value={data.engagement.completionRatePercentage} format="percent"/>
-                        <SummaryMetricCard title="Global Likes" value={data.summary.totalLikes}
+                        <SummaryMetricCard title={t.analytics.metrics.globalLikes} value={data.summary.totalLikes}
                                            growthPercentage={data.summary.likesGrowthPercentage}/>
                     </>
                 )}

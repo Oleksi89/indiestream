@@ -2,6 +2,7 @@ import {useRef} from 'react';
 import {SlidersHorizontal, ChevronLeft, ChevronRight} from 'lucide-react';
 import {AVAILABLE_GENRES} from '@/features/media/types';
 import {cn} from '@/shared/lib/utils';
+import {useTranslation} from '@/shared/lib/i18n/useTranslation';
 
 interface GenreCarouselProps {
     activeGenre: string;
@@ -10,6 +11,7 @@ interface GenreCarouselProps {
 
 export const GenreCarousel = ({activeGenre, onToggle}: GenreCarouselProps) => {
     const scrollRef = useRef<HTMLDivElement>(null);
+    const {t} = useTranslation();
 
     const scroll = (direction: 'left' | 'right') => {
         if (scrollRef.current) {
@@ -24,7 +26,7 @@ export const GenreCarousel = ({activeGenre, onToggle}: GenreCarouselProps) => {
             <div
                 className="flex items-center gap-1.5 text-slate-500 shrink-0 pr-4 mr-2 border-r border-slate-800 h-full z-10 bg-slate-950/90 backdrop-blur">
                 <SlidersHorizontal size={14}/>
-                <span className="text-xs font-semibold uppercase tracking-wider">Genres</span>
+                <span className="text-xs font-semibold uppercase tracking-wider">{t.search.genres}</span>
             </div>
 
             {/* Scrollable Container */}

@@ -8,6 +8,7 @@ import {usePlaylistPermissions} from '../hooks/usePlaylistPermissions';
 import {useDebounce} from '@/shared/hooks/useDebounce';
 import {UserAvatar} from '@/shared/components/UserAvatar';
 import {Button} from '@/shared/ui/button';
+import {useTranslation} from '@/shared/lib/i18n/useTranslation';
 import type {PlaylistDto} from '../types';
 import type {UserPublicProfileDto} from '@/features/auth/types';
 
@@ -19,6 +20,7 @@ interface CollaboratorsModalProps {
 }
 
 export const CollaboratorsModal = ({playlist, currentUserId, isOpen, onClose}: CollaboratorsModalProps) => {
+    const {t} = useTranslation();
     const {isOwner, canManageCollaborators} = usePlaylistPermissions(playlist, currentUserId);
     const [searchQuery, setSearchQuery] = useState('');
     const debouncedQuery = useDebounce(searchQuery, 300);
@@ -67,10 +69,11 @@ export const CollaboratorsModal = ({playlist, currentUserId, isOpen, onClose}: C
 
                     <div className="flex items-center justify-between p-6 border-b border-slate-800">
                         <Dialog.Title className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-                            Manage Collaborators
+                            {t.playlist.collaborators.title}
                         </Dialog.Title>
-                        <Dialog.Close className="text-slate-400 hover:text-white transition-colors">
-                            <X size={20}/>
+                        <Dialog.Close aria-label={t.common.close} title={t.common.close}
+                                      className="text-slate-400 hover:text-white transition-colors">
+                            <X size={20} aria-hidden="true"/>
                         </Dialog.Close>
                     </div>
 
@@ -80,25 +83,25 @@ export const CollaboratorsModal = ({playlist, currentUserId, isOpen, onClose}: C
                             <div className="space-y-3">
                                 <div className="relative">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                                            size={18}/>
+                                            size={18} aria-hidden="true"/>
                                     <input
                                         type="text"
-                                        placeholder="Search users by name or @username..."
+                                        aria-label={t.playlist.collaborators.searchLabel}
+                                        placeholder={t.playlist.collaborators.searchPlaceholder}
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                         className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all"
                                     />
                                     {isFetching && <Loader2
                                         className="absolute right-3 top-1/2 -translate-y-1/2 text-violet-500 animate-spin"
-                                        size={16}/>}
+                                        size={16} aria-hidden="true"/>}
                                 </div>
 
                                 {/* Autocomplete Results */}
                                 {searchQuery.length >= 2 && (
                                     <div className="bg-slate-950 rounded-xl border border-slate-800 overflow-hidden">
                                         {filteredResults.length === 0 && !isFetching ? (
-                                            <div className="p-4 text-center text-sm text-slate-500">No new users
-                                                found.</div>
+                                            <div className="p-4 text-center text-sm text-slate-500">{t.playlist.collaborators.noUsersFound}</div>
                                         ) : (
                                             filteredResults.map(user => (
                                                 <div key={user.id}
@@ -114,9 +117,11 @@ export const CollaboratorsModal = ({playlist, currentUserId, isOpen, onClose}: C
                                                         </div>
                                                     </div>
                                                     <Button size="icon" variant="ghost"
+                                                            aria-label={t.playlist.collaborators.addCollaborator}
+                                                            title={t.playlist.collaborators.addCollaborator}
                                                             className="text-violet-400 hover:text-violet-300 hover:bg-violet-500/10"
                                                             onClick={() => handleAdd(user)}>
-                                                        <UserPlus size={18}/>
+                                                        <UserPlus size={18} aria-hidden="true"/>
                                                     </Button>
                                                 </div>
                                             ))
@@ -128,7 +133,7 @@ export const CollaboratorsModal = ({playlist, currentUserId, isOpen, onClose}: C
 
                         {/* 2. Active Participants List */}
                         <div className="space-y-4">
-                            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">Participants</h3>
+                            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">{t.playlist.collaborators.participants}</h3>
                             <div className="space-y-2">
                                 {/* Owner */}
                                 <div
@@ -142,13 +147,13 @@ export const CollaboratorsModal = ({playlist, currentUserId, isOpen, onClose}: C
                                             />
                                             <ShieldCheck
                                                 className="absolute -bottom-1 -right-1 text-emerald-400 bg-slate-900 rounded-full"
-                                                size={16}/>
+                                                size={16} role="img" aria-label={t.playlist.collaborators.owner}/>
                                         </div>
                                         <div className="flex flex-col">
                                             <span className="text-sm font-bold text-white flex items-center gap-2">
                                                 {playlist.ownerAlias}
                                                 <span
-                                                    className="text-[10px] bg-violet-500/20 text-violet-300 px-2 py-0.5 rounded-full border border-violet-500/30">Owner</span>
+                                                    className="text-[10px] bg-violet-500/20 text-violet-300 px-2 py-0.5 rounded-full border border-violet-500/30">{t.playlist.collaborators.owner}</span>
                                             </span>
                                             <span className="text-xs text-slate-400">@{playlist.ownerUsername}</span>
                                         </div>
@@ -168,7 +173,7 @@ export const CollaboratorsModal = ({playlist, currentUserId, isOpen, onClose}: C
                                                             className="w-10 h-10"/>
                                                 <div className="flex flex-col min-w-0">
                                                     <span
-                                                        className="text-sm font-bold text-white truncate">{collab.alias} {isSelf && "(You)"}</span>
+                                                        className="text-sm font-bold text-white truncate">{collab.alias} {isSelf && t.playlist.collaborators.you}</span>
                                                     <span
                                                         className="text-xs text-slate-400 truncate">@{collab.username}</span>
                                                 </div>
@@ -178,11 +183,13 @@ export const CollaboratorsModal = ({playlist, currentUserId, isOpen, onClose}: C
                                                 <Button
                                                     size="icon"
                                                     variant="ghost"
+                                                    aria-label={isSelf ? t.playlist.collaborators.leave : t.playlist.collaborators.remove}
+                                                    title={isSelf ? t.playlist.collaborators.leave : t.playlist.collaborators.remove}
                                                     className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-red-400 hover:bg-red-400/10"
                                                     onClick={() => handleRemove(collab.id)}
                                                     disabled={removeMutation.isPending}
                                                 >
-                                                    {isSelf ? <LogOut size={18}/> : <Trash2 size={18}/>}
+                                                    {isSelf ? <LogOut size={18} aria-hidden="true"/> : <Trash2 size={18} aria-hidden="true"/>}
                                                 </Button>
                                             )}
                                         </div>

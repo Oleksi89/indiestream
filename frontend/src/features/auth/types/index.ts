@@ -1,30 +1,30 @@
 import {z} from 'zod';
 
-export const loginSchema = z.object({
-    email: z.email("Invalid email format"),
-    password: z.string().min(6, "Password must be at least 6 characters"),
+export const getLoginSchema = (t: any) => z.object({
+    email: z.email(t.auth.validation.invalidEmail),
+    password: z.string().min(6, t.auth.validation.passwordMin),
 });
 
-export type LoginRequest = z.infer<typeof loginSchema>;
+export type LoginRequest = z.infer<ReturnType<typeof getLoginSchema>>;
 
 // Strict Zod schema acting as a unified guard matching backend jakarta.validation
-export const registerSchema = z.object({
-    email: z.email("Invalid email format"),
+export const getRegisterSchema = (t: any) => z.object({
+    email: z.email(t.auth.validation.invalidEmail),
     username: z.string()
-        .min(3, "Username must be at least 3 characters")
-        .max(20, "Username cannot exceed 20 characters")
-        .regex(/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers, and underscores"),
+        .min(3, t.auth.validation.usernameMin)
+        .max(20, t.auth.validation.usernameMax)
+        .regex(/^[a-zA-Z0-9_]+$/, t.auth.validation.usernameRegex),
     alias: z.string()
-        .min(1, "Display name is required")
-        .max(100, "Display name cannot exceed 100 characters"),
-    password: z.string().min(6, "Password must be at least 6 characters"),
-    confirmPassword: z.string().min(6, "Password must be at least 6 characters"),
+        .min(1, t.auth.validation.aliasRequired)
+        .max(100, t.auth.validation.aliasMax),
+    password: z.string().min(6, t.auth.validation.passwordMin),
+    confirmPassword: z.string().min(6, t.auth.validation.passwordMin),
 }).refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match",
+    message: t.auth.validation.passwordsMismatch,
     path: ["confirmPassword"],
 });
 
-export type RegisterRequest = z.infer<typeof registerSchema>;
+export type RegisterRequest = z.infer<ReturnType<typeof getRegisterSchema>>;
 
 export interface AuthResponse {
     token: string;

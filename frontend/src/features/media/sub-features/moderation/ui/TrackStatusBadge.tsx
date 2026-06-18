@@ -11,6 +11,7 @@ import {
     EyeClosedIcon,
     TrashIcon
 } from 'lucide-react';
+import {useTranslation} from '@/shared/lib/i18n/useTranslation';
 
 interface TrackStatusBadgeProps {
     status: TrackStatus;
@@ -18,77 +19,80 @@ interface TrackStatusBadgeProps {
 }
 
 export const TrackStatusBadge = ({status, className}: TrackStatusBadgeProps) => {
+    const {t} = useTranslation();
+    const sb = t.media.statusBadge;
+
     const config: Record<TrackStatus, { label: string; color: string; icon: React.ReactNode }> = {
         APPROVED: {
-            label: 'Approved',
+            label: sb.approved,
             color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-            icon: <CheckCircle2 size={14}/> as React.ReactNode
+            icon: <CheckCircle2 size={14} aria-hidden="true"/> as React.ReactNode
         },
         READY: {
-            label: 'Live',
+            label: sb.live,
             color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-            icon: <CheckCircle2 size={14}/> as React.ReactNode
+            icon: <CheckCircle2 size={14} aria-hidden="true"/> as React.ReactNode
         },
         PUBLISHED: {
-            label: 'Published',
+            label: sb.published,
             color: 'bg-violet-500/10 text-violet-400 border-violet-500/20',
-            icon: <CheckCircle2 size={14}/> as React.ReactNode
+            icon: <CheckCircle2 size={14} aria-hidden="true"/> as React.ReactNode
         },
 
         NEEDS_REVISION: {
-            label: 'Needs Revision',
+            label: sb.needsRevision,
             color: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-            icon: <AlertTriangle size={14}/> as React.ReactNode
+            icon: <AlertTriangle size={14} aria-hidden="true"/> as React.ReactNode
         },
         IN_REVIEW: {
-            label: 'In Review',
+            label: sb.inReview,
             color: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-            icon: <Clock size={14}/> as React.ReactNode
+            icon: <Clock size={14} aria-hidden="true"/> as React.ReactNode
         },
 
         PROCESSING: {
-            label: 'Processing',
+            label: sb.processing,
             color: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-            icon: <Loader2 size={14} className="animate-spin"/> as React.ReactNode
+            icon: <Loader2 size={14} className="animate-spin" aria-hidden="true"/> as React.ReactNode
         },
         AI_ANALYSIS: {
-            label: 'AI Analysis',
+            label: sb.aiAnalysis,
             color: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
-            icon: <Loader2 size={14} className="animate-spin"/> as React.ReactNode
+            icon: <Loader2 size={14} className="animate-spin" aria-hidden="true"/> as React.ReactNode
         },
 
         BANNED: {
-            label: 'Banned',
+            label: sb.banned,
             color: 'bg-red-500/10 text-red-400 border-red-500/20',
-            icon: <Ban size={14}/> as React.ReactNode
+            icon: <Ban size={14} aria-hidden="true"/> as React.ReactNode
         },
         REJECTED: {
-            label: 'Rejected',
+            label: sb.rejected,
             color: 'bg-red-500/10 text-red-400 border-red-500/20',
-            icon: <XCircle size={14}/> as React.ReactNode
+            icon: <XCircle size={14} aria-hidden="true"/> as React.ReactNode
         },
         FAILED: {
-            label: 'Failed',
+            label: sb.failed,
             color: 'bg-red-500/10 text-red-400 border-red-500/20',
-            icon: <XCircle size={14}/> as React.ReactNode
+            icon: <XCircle size={14} aria-hidden="true"/> as React.ReactNode
         },
 
         HIDDEN: {
-            label: 'Hidden',
+            label: sb.hidden,
             color: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
-            icon: <EyeClosedIcon size={14}/> as React.ReactNode
+            icon: <EyeClosedIcon size={14} aria-hidden="true"/> as React.ReactNode
         },
 
         ARCHIVED: {
-            label: 'Deleted',
+            label: sb.archived,
             color: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
-            icon: <TrashIcon size={14}/> as React.ReactNode
+            icon: <TrashIcon size={14} aria-hidden="true"/> as React.ReactNode
         },
 
         DRAFT: {
-            label: 'Draft',
+            label: sb.draft,
             color: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
-            icon: <FileEdit size={14}/> as React.ReactNode
+            icon: <FileEdit size={14} aria-hidden="true"/> as React.ReactNode
         }
     };
 

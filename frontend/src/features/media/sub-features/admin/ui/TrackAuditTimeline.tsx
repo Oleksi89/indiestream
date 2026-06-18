@@ -11,6 +11,7 @@ import {
     ChevronUp
 } from 'lucide-react';
 import type {TrackAuditLogDto, TrackStatus} from '../../../types';
+import {useTranslation} from '@/shared/lib/i18n/useTranslation';
 
 interface TrackAuditTimelineProps {
     history: TrackAuditLogDto[];
@@ -19,28 +20,32 @@ interface TrackAuditTimelineProps {
 const getStatusIcon = (status: TrackStatus) => {
     switch (status) {
         case 'APPROVED':
-            return <CheckCircle2 size={16} className="text-emerald-400"/>;
+            return <CheckCircle2 size={16} className="text-emerald-400" aria-hidden="true"/>;
         case 'BANNED':
         case 'REJECTED':
-            return <XCircle size={16} className="text-red-400"/>;
+            return <XCircle size={16} className="text-red-400" aria-hidden="true"/>;
         case 'NEEDS_REVISION':
-            return <AlertTriangle size={16} className="text-amber-400"/>;
+            return <AlertTriangle size={16} className="text-amber-400" aria-hidden="true"/>;
         case 'AI_ANALYSIS':
-            return <Bot size={16} className="text-indigo-400"/>;
+            return <Bot size={16} className="text-indigo-400" aria-hidden="true"/>;
         case 'IN_REVIEW':
-            return <ShieldAlert size={16} className="text-violet-400"/>;
+            return <ShieldAlert size={16} className="text-violet-400" aria-hidden="true"/>;
         default:
-            return <Activity size={16} className="text-slate-400"/>;
+            return <Activity size={16} className="text-slate-400" aria-hidden="true"/>;
     }
 };
 
-const getActorContext = (log: TrackAuditLogDto) => {
-    if (!log.actorId) return {label: 'System / AI', icon: <Bot size={12}/>};
-    // In a real app, we might cross-reference actorId to see if it's the Artist or Admin
-    return {label: 'User / Admin', icon: <User size={12}/>};
-};
-
 export const TrackAuditTimeline = ({history}: TrackAuditTimelineProps) => {
+    const {t} = useTranslation();
+    const tl = t.media.admin.timeline;
+
+    const getActorContext = (log: TrackAuditLogDto) => {
+        if (!log.actorId) return {label: tl.systemActor, icon: <Bot size={12} aria-hidden="true"/>};
+        // In a real app, we might cross-reference actorId to see if it's the Artist or Admin
+        return {label: tl.userActor, icon: <User size={12} aria-hidden="true"/>};
+    };
+
+
     // Keep track of expanded JSON payloads
     const [expandedLogs, setExpandedLogs] = useState<Record<string, boolean>>({});
 
@@ -49,7 +54,7 @@ export const TrackAuditTimeline = ({history}: TrackAuditTimelineProps) => {
     };
 
     if (!history.length) {
-        return <div className="text-sm text-slate-500 italic p-4">No audit history available.</div>;
+        return <div className="text-sm text-slate-500 italic p-4">{tl.noHistory}</div>;
     }
 
     return (
@@ -77,13 +82,13 @@ export const TrackAuditTimeline = ({history}: TrackAuditTimelineProps) => {
                                     {log.previousStatus || 'UPLOAD'} <ChevronRight className="inline text-slate-600"
                                                                                    size={10}/> {log.newStatus}
                                 </span>
-                                <time className="text-[10px] text-slate-500 font-mono">
+                                <time className="text-[10px] text-slate-500 font-mono" dateTime={log.createdAt}>
                                     {new Date(log.createdAt).toLocaleString()}
                                 </time>
                             </div>
 
                             <div className="text-sm text-slate-300 mb-3 leading-relaxed">
-                                {log.reason || 'State transition executed without specific reasoning.'}
+                                {log.reason || tl.defaultReason}
                             </div>
 
                             <div
@@ -95,10 +100,14 @@ export const TrackAuditTimeline = ({history}: TrackAuditTimelineProps) => {
                                 {log.aiPayload && (
                                     <button
                                         onClick={() => toggleLog(log.id)}
+                                        aria-expanded={isExpanded}
+                                        aria-controls={`payload-${log.id}`}
                                         className="text-[11px] flex items-center gap-1 text-violet-400 hover:text-violet-300 transition-colors"
                                     >
-                                        {isExpanded ? 'Hide Payload' : 'View AI Payload'}
-                                        {isExpanded ? <ChevronUp size={12}/> : <ChevronDown size={12}/>}
+                                        {isExpanded ? tl.hidePayload : tl.viewPayload}
+                                        {isExpanded
+                                            ? <ChevronUp size={12} aria-hidden="true"/>
+                                            : <ChevronDown size={12} aria-hidden="true"/>}
                                     </button>
                                 )}
                             </div>
@@ -106,6 +115,7 @@ export const TrackAuditTimeline = ({history}: TrackAuditTimelineProps) => {
                             {/* Graceful Degradation for AI Payload */}
                             {log.aiPayload && isExpanded && (
                                 <div
+                                    id={`payload-${log.id}`}
                                     className="mt-3 p-3 rounded-lg bg-slate-950 border border-slate-800 overflow-x-auto custom-scrollbar">
                                     <pre className="text-[10px] text-indigo-300 font-mono">
                                         {JSON.stringify(log.aiPayload, null, 2)}
@@ -123,7 +133,7 @@ export const TrackAuditTimeline = ({history}: TrackAuditTimelineProps) => {
 // Simple inline Chevron to avoid extra imports
 const ChevronRight = ({size, className}: { size: number, className?: string }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-         strokeLinecap="round" strokeLinejoin="round" className={className}>
+         strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
         <path d="m9 18 6-6-6-6"/>
     </svg>
 );

@@ -6,8 +6,9 @@ import {useOnboardingTracks} from '@/features/recommendations/hooks/useRecommend
 import {AVAILABLE_GENRES, type TrackDto} from '@/features/media/types';
 import {TrackContextMenu} from '@/features/media/ui/TrackContextMenu';
 import {TrackCard} from '@/features/media/ui/TrackCard';
-import {Disc3, Loader2, CheckCircle2, ArrowRight, Heart, Sparkles} from 'lucide-react';
+import {Loader2, CheckCircle2, ArrowRight, Heart, Sparkles} from 'lucide-react';
 import toast from 'react-hot-toast';
+import {useTranslation} from '@/shared/lib/i18n/useTranslation';
 
 export const OnboardingPage: React.FC = () => {
     const navigate = useNavigate();
@@ -18,6 +19,8 @@ export const OnboardingPage: React.FC = () => {
     const [step, setStep] = useState<1 | 2>(1);
     const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
     const [previewTracks, setPreviewTracks] = useState<TrackDto[]>([]);
+    const {t} = useTranslation();
+    const ob = t.onboarding;
 
     const {mutate: fetchTracks, isPending} = useOnboardingTracks();
 
@@ -43,24 +46,27 @@ export const OnboardingPage: React.FC = () => {
 
     const handleGenerateFeed = () => {
         if (selectedGenres.length < 3) {
-            toast.error('Please select at least 3 genres.');
+            toast.error(ob.toasts.minGenres);
             return;
         }
 
         fetchTracks(selectedGenres, {
             onSuccess: (tracks) => {
                 if (tracks.length === 0) {
-                    toast.error('Could not find tracks for those genres. Please try others.');
+                    toast.error(ob.toasts.noTracks);
                     return;
                 }
                 setPreviewTracks(tracks as TrackDto[]);
 
                 // Immediately start playing the curated list to engage the user
-                playContext(tracks as TrackDto[], {type: 'PUBLIC_FEED'});
+                setTimeout(() => {
+                    playContext(tracks as TrackDto[], {type: 'PUBLIC_FEED'});
+                }, 500);
+
                 setStep(2);
-                toast.success('Curated radio started! Like tracks to build your profile.');
+                toast.success(ob.toasts.started);
             },
-            onError: () => toast.error('Failed to generate feed.')
+            onError: () => toast.error(ob.toasts.failed)
         });
     };
 
@@ -78,29 +84,29 @@ export const OnboardingPage: React.FC = () => {
                 }
             } as any);
         }
-        toast.success("Algorithm initialized. Welcome to your Discovery Feed!");
+        toast.success(ob.toasts.complete);
     };
 
     return (
-        <div className="container mx-auto px-4 py-12 max-w-6xl">
+        <div
+            className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-violet-950/50 flex flex-col items-center justify-center p-6 animate-in fade-in duration-700">
+            {/* Stage: Genre Selection */}
             {step === 1 ? (
-                <div
-                    className="flex flex-col items-center justify-center space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                    <div
-                        className="w-20 h-20 bg-violet-500/20 rounded-full flex items-center justify-center text-violet-400 mb-2 shadow-[0_0_30px_rgba(139,92,246,0.3)]">
-                        <Disc3 size={40} className="animate-[spin_4s_linear_infinite]"/>
+                <div className="w-full max-w-3xl space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+                    <div className="text-center">
+                        <div className="flex justify-center mb-6">
+                            <div className="relative p-4 bg-violet-500/20 rounded-2xl">
+                                <Sparkles size={40} className="text-violet-400" aria-hidden="true"/>
+                                <div
+                                    className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-400 rounded-full border-2 border-slate-950"
+                                    aria-hidden="true"/>
+                            </div>
+                        </div>
+                        <h1 className="text-4xl font-bold text-white mb-3">{ob.genreTitle}</h1>
+                        <p className="text-slate-400 max-w-md mx-auto">{ob.genreSubtitle}</p>
                     </div>
 
-                    <div className="text-center space-y-3">
-                        <h1 className="text-4xl font-extrabold tracking-tight text-white">Let's build your
-                            algorithm</h1>
-                        <p className="text-slate-400 text-lg max-w-2xl mx-auto">
-                            Select <strong className="text-white">at least 3 genres</strong> you enjoy. We'll generate a
-                            custom radio station to kickstart your personalized AI Taste Profile.
-                        </p>
-                    </div>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 w-full py-6">
+                    <div className="flex flex-wrap justify-center gap-3" role="group" aria-label={ob.genreGroupLabel}>
                         {AVAILABLE_GENRES.map((genre) => {
                             const isSelected = selectedGenres.includes(genre);
                             return (
@@ -122,7 +128,7 @@ export const OnboardingPage: React.FC = () => {
                         disabled={selectedGenres.length < 3 || isPending}
                         className={`flex items-center gap-2 px-8 py-4 rounded-full font-bold text-lg transition-all duration-300 ${selectedGenres.length >= 3 ? 'bg-violet-600 hover:bg-violet-500 text-white shadow-xl hover:shadow-violet-500/25 hover:-translate-y-1' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}
                     >
-                        {isPending ? <Loader2 size={24} className="animate-spin"/> : 'Generate Custom Radio'}
+                        {isPending ? <Loader2 size={24} className="animate-spin"/> : ob.step1.generateButton}
                         {!isPending && <ArrowRight size={20}/>}
                     </button>
                 </div>
@@ -132,19 +138,18 @@ export const OnboardingPage: React.FC = () => {
                         className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-800 pb-6">
                         <div className="max-w-2xl">
                             <h1 className="text-3xl font-bold tracking-tight text-white mb-2 flex items-center gap-3">
-                                <Sparkles className="text-violet-400" size={28}/> Train Your Algorithm
+                                <Sparkles className="text-violet-400" size={28}/> {ob.step2.title}
                             </h1>
                             <p className="text-slate-400 flex items-start sm:items-center gap-2 text-sm sm:text-base leading-relaxed">
                                 <Heart size={18} className="text-violet-400 shrink-0 mt-0.5 sm:mt-0"/>
-                                We are playing your curated tracks. Use the player bar to Like the ones
-                                you enjoy. This instantly shapes your mathematical taste profile.
+                                {ob.step2.description}
                             </p>
                         </div>
                         <button
                             onClick={handleCompleteCalibration}
                             className="shrink-0 px-8 py-3 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-full transition-all flex items-center gap-2 shadow-lg shadow-violet-500/20"
                         >
-                            Finish Calibration <ArrowRight size={18}/>
+                            {ob.step2.finish} <ArrowRight size={20} aria-hidden="true"/>
                         </button>
                     </header>
 

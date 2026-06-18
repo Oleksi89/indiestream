@@ -10,12 +10,14 @@ import type {LibraryItemDto} from '@/features/library/types';
 import type {TrackDto} from '@/features/media/types';
 import {TrackContextMenu} from "@/features/media/ui/TrackContextMenu.tsx";
 import {PlaylistContextMenu} from "@/features/playlist/ui/PlaylistContextMenu.tsx";
+import {useTranslation} from '@/shared/lib/i18n/useTranslation';
 
 export const QuickSearchPopover = () => {
     const [open, setOpen] = useState(false);
     const [inputValue, setInputValue] = useState('');
     const inputRef = useRef<HTMLInputElement>(null);
     const navigate = useNavigate();
+    const {t} = useTranslation();
 
     const {data, isLoading, isFetching} = useQuickSearch(inputValue);
 
@@ -104,7 +106,7 @@ export const QuickSearchPopover = () => {
                         if (hasQuery) setOpen(true);
                     }}
                     onFocus={() => hasQuery && setOpen(true)}
-                    placeholder="What do you want to listen to?"
+                    placeholder={t.search.quickSearchPlaceholder}
                     className="w-full bg-slate-900 border border-slate-800 rounded-full py-2 pl-10 pr-10 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all"
                 />
                 {isFetching && (
@@ -121,13 +123,13 @@ export const QuickSearchPopover = () => {
                     renderSkeletons()
                 ) : !hasResults ? (
                     <div className="p-8 text-center text-sm text-slate-500">
-                        No results found for "{inputValue}"
+                        {t.search.noResultsFor} "{inputValue}"
                     </div>
                 ) : (
                     <div className="space-y-4 pb-2">
                         {data.tracks.length > 0 && (
                             <div className="space-y-1">
-                                <h3 className="px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-500">Songs</h3>
+                                <h3 className="px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-500">{t.search.tabs.tracks}</h3>
                                 {data.tracks.map((track) => {
                                     const trackDto = mapTrackToDto(track);
                                     return (
@@ -144,7 +146,7 @@ export const QuickSearchPopover = () => {
 
                         {data.profiles.length > 0 && (
                             <div className="space-y-1">
-                                <h3 className="px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-500">Artists</h3>
+                                <h3 className="px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-500">{t.search.tabs.artists}</h3>
                                 {data.profiles.map((profile) => (
                                     <LibraryItem
                                         key={profile.id}
@@ -158,7 +160,7 @@ export const QuickSearchPopover = () => {
 
                         {data.playlists.length > 0 && (
                             <div className="space-y-1">
-                                <h3 className="px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-500">Playlists</h3>
+                                <h3 className="px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-500">{t.search.tabs.playlists}</h3>
                                 {data.playlists.map((playlist) => (
                                     <PlaylistContextMenu key={playlist.id} playlist={playlist}>
                                         <LibraryItem
@@ -179,7 +181,7 @@ export const QuickSearchPopover = () => {
                                 }}
                                 className="w-full flex items-center justify-between px-3 py-2 text-sm text-slate-300 hover:text-violet-400 hover:bg-slate-800/50 rounded-lg transition-colors"
                             >
-                                <span>See all results for "{inputValue}"</span>
+                                <span>{t.search.seeAllResults} "{inputValue}"</span>
                                 <ArrowRight size={16}/>
                             </button>
                         </div>

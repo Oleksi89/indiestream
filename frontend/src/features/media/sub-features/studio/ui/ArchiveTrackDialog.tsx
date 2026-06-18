@@ -2,6 +2,7 @@ import * as AlertDialog from '@radix-ui/react-alert-dialog';
 import {AlertTriangle, Archive, Loader2} from 'lucide-react';
 import type {TrackDto} from "@/features/media/types";
 import {useArchiveTrack} from "@/features/media/hooks/useTrackMutations.ts";
+import {useTranslation} from '@/shared/lib/i18n/useTranslation';
 
 interface ArchiveTrackDialogProps {
     track: TrackDto;
@@ -11,6 +12,8 @@ interface ArchiveTrackDialogProps {
 
 export const ArchiveTrackDialog = ({track, isOpen, onClose}: ArchiveTrackDialogProps) => {
     const {mutate: archiveTrack, isPending} = useArchiveTrack();
+    const {t} = useTranslation();
+    const ar = t.media.studio.archive;
 
     const handleArchive = (e: React.MouseEvent) => {
         e.preventDefault(); // Prevent immediate closing to wait for mutation
@@ -30,21 +33,17 @@ export const ArchiveTrackDialog = ({track, isOpen, onClose}: ArchiveTrackDialogP
 
                     <div className="flex flex-col items-center text-center space-y-4">
                         <div className="p-3 bg-red-500/10 text-red-400 rounded-full">
-                            <AlertTriangle size={24}/>
+                            <AlertTriangle size={24} aria-hidden="true"/>
                         </div>
 
                         <div>
                             <AlertDialog.Title className="text-xl font-bold text-slate-100">
-                                Archive Track
+                                {ar.title}
                             </AlertDialog.Title>
                             <AlertDialog.Description className="mt-2 text-sm text-slate-400 leading-relaxed">
-                                Are you sure you want to archive <span
-                                className="text-slate-200 font-semibold">"{track.title}"</span>?
-                                <br/><br/>
-                                Archiving will immediately remove this track from your studio dashboard, public profile,
-                                and global search.
+                                {ar.description.replace('{title}', track.title)}
                                 <span className="block mt-2 font-medium text-red-400/90 text-xs">
-                                    This action cannot be fully undone from the dashboard.
+                                    {ar.warning}
                                 </span>
                             </AlertDialog.Description>
                         </div>
@@ -56,7 +55,7 @@ export const ArchiveTrackDialog = ({track, isOpen, onClose}: ArchiveTrackDialogP
                                 disabled={isPending}
                                 className="flex-1 px-4 py-2.5 text-sm font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors disabled:opacity-50"
                             >
-                                Keep Track
+                                {ar.cancel}
                             </button>
                         </AlertDialog.Cancel>
                         <AlertDialog.Action asChild>
@@ -65,8 +64,9 @@ export const ArchiveTrackDialog = ({track, isOpen, onClose}: ArchiveTrackDialogP
                                 disabled={isPending}
                                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 shadow-lg shadow-red-900/20"
                             >
-                                {isPending ? <Loader2 size={16} className="animate-spin"/> : <Archive size={16}/>}
-                                {isPending ? 'Archiving...' : 'Yes, Archive'}
+                                {isPending
+                                    ? <><Loader2 size={16} className="animate-spin" aria-hidden="true"/> {ar.confirming}</>
+                                    : <><Archive size={16} aria-hidden="true"/> {ar.confirm}</>}
                             </button>
                         </AlertDialog.Action>
                     </div>

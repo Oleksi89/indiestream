@@ -15,6 +15,7 @@ import type {TrackDto} from "@/features/media/types";
 import {AVAILABLE_GENRES} from "@/features/media/types";
 import type {TrackMetadataFormValues} from "@/features/media/types/track.schema.ts";
 import {MEDIA_LIMITS, trackMetadataSchema} from "@/features/media/types/track.schema.ts";
+import {useTranslation} from '@/shared/lib/i18n/useTranslation';
 
 
 interface EditTrackModalProps {
@@ -28,6 +29,8 @@ export const EditTrackModal = ({track, isOpen, onClose}: EditTrackModalProps) =>
     const [coverState, setCoverState] = useState<File | null | undefined>(undefined);
     const [isDragging, setIsDragging] = useState(false);
     const [tagInput, setTagInput] = useState('');
+    const {t} = useTranslation();
+    const ed = t.media.studio.edit;
 
     const {mutate: updateTrack, isPending} = useUpdateTrackDetails();
 
@@ -91,7 +94,7 @@ export const EditTrackModal = ({track, isOpen, onClose}: EditTrackModalProps) =>
     };
 
     const removeTag = (tagToRemove: string) => {
-        setValue('customTags', customTags.filter(t => t !== tagToRemove), {shouldValidate: true});
+        setValue('customTags', customTags.filter(tt => tt !== tagToRemove), {shouldValidate: true});
     };
 
     const validateImage = (file: File) => {
@@ -140,12 +143,15 @@ export const EditTrackModal = ({track, isOpen, onClose}: EditTrackModalProps) =>
                     <div
                         className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/50">
                         <div>
-                            <Dialog.Title className="text-lg font-semibold text-slate-100">Edit Track</Dialog.Title>
-                            <Dialog.Description className="text-sm text-slate-400">Update metadata and cover
-                                art</Dialog.Description>
+                            <Dialog.Title className="text-lg font-semibold text-slate-100">{ed.title}</Dialog.Title>
+                            <Dialog.Description className="text-sm text-slate-400">{ed.subtitle}</Dialog.Description>
                         </div>
                         <Dialog.Close asChild>
-                            <button className="text-slate-400 hover:text-white transition-colors"><X size={20}/>
+                            <button
+                                aria-label={ed.close}
+                                title={ed.close}
+                                className="text-slate-400 hover:text-white transition-colors">
+                                <X size={20} aria-hidden="true"/>
                             </button>
                         </Dialog.Close>
                     </div>
@@ -156,23 +162,28 @@ export const EditTrackModal = ({track, isOpen, onClose}: EditTrackModalProps) =>
                             {/* Title & Genre */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-300 mb-1.5">Track Title <span
-                                        className="text-red-400">*</span></label>
+                                    <label htmlFor="edit-title" className="block text-sm font-medium text-slate-300 mb-1.5">
+                                        {ed.titleLabel} <span className="text-red-400">*</span>
+                                    </label>
                                     <input
+                                        id="edit-title"
                                         {...register('title')}
                                         type="text"
                                         className="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all"
                                     />
                                     {errors.title &&
-                                        <p className="text-red-400 text-xs mt-1.5">{errors.title.message}</p>}
+                                        <p className="text-red-400 text-xs mt-1.5" role="alert">{errors.title.message}</p>}
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-300 mb-1.5">Genre</label>
+                                    <label htmlFor="edit-genre" className="block text-sm font-medium text-slate-300 mb-1.5">
+                                        {ed.genreLabel}
+                                    </label>
                                     <select
+                                        id="edit-genre"
                                         {...register('genre')}
                                         className="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-2.5 text-slate-100 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all appearance-none"
                                     >
-                                        <option value="">Select a genre...</option>
+                                        <option value="">{ed.genrePlaceholder}</option>
                                         {AVAILABLE_GENRES.map(g => <option key={g} value={g}>{g}</option>)}
                                     </select>
                                 </div>
@@ -180,7 +191,7 @@ export const EditTrackModal = ({track, isOpen, onClose}: EditTrackModalProps) =>
 
                             {/* Cover Dropzone */}
                             <div>
-                                <label className="block text-sm font-medium text-slate-300 mb-1.5">Cover Art</label>
+                                <label className="block text-sm font-medium text-slate-300 mb-1.5">{ed.coverLabel}</label>
                                 <div
                                     onDragOver={(e) => {
                                         e.preventDefault();
@@ -188,6 +199,8 @@ export const EditTrackModal = ({track, isOpen, onClose}: EditTrackModalProps) =>
                                     }}
                                     onDragLeave={() => setIsDragging(false)}
                                     onDrop={handleDrop}
+                                    role="region"
+                                    aria-label={ed.coverLabel}
                                     className={cn(
                                         "relative flex flex-col items-center justify-center w-full h-48 px-4 transition-all border-2 border-dashed rounded-xl appearance-none overflow-hidden",
                                         isDragging ? "border-violet-500 bg-violet-500/10" : "border-slate-700 bg-slate-950 hover:bg-slate-800/50 hover:border-slate-600"
@@ -197,14 +210,14 @@ export const EditTrackModal = ({track, isOpen, onClose}: EditTrackModalProps) =>
                                         <>
                                             <img
                                                 src={showNewCoverPreview ? URL.createObjectURL(coverState as File) : existingCoverUrl!}
-                                                alt="Cover"
+                                                alt={ed.coverLabel}
                                                 className="absolute inset-0 w-full h-full object-cover opacity-50 blur-[2px]"
                                             />
                                             <div
                                                 className="relative z-10 flex flex-col items-center text-center space-y-2">
-                                                <ImageIcon className="text-white drop-shadow-md" size={32}/>
+                                                <ImageIcon className="text-white drop-shadow-md" size={32} aria-hidden="true"/>
                                                 <span className="font-medium text-white text-sm drop-shadow-md">
-                                                    {showNewCoverPreview ? (coverState as File).name : 'Current Cover'}
+                                                    {showNewCoverPreview ? (coverState as File).name : ed.currentCover}
                                                 </span>
                                             </div>
                                             <button
@@ -213,21 +226,24 @@ export const EditTrackModal = ({track, isOpen, onClose}: EditTrackModalProps) =>
                                                     e.preventDefault();
                                                     setCoverState(null);
                                                 }}
+                                                aria-label={ed.removeCover}
+                                                title={ed.removeCover}
                                                 className="absolute z-20 top-3 right-3 p-2 bg-slate-900/80 backdrop-blur rounded-md text-slate-300 hover:text-red-400 hover:bg-red-500/20 transition-colors shadow-lg"
                                             >
-                                                <X size={16}/>
+                                                <X size={16} aria-hidden="true"/>
                                             </button>
                                         </>
                                     ) : (
                                         <>
-                                            <UploadCloud className="text-slate-400 mb-2" size={32}/>
-                                            <p className="text-sm font-medium text-slate-300">Drag & drop new cover</p>
-                                            <p className="text-xs text-slate-500 mt-1">JPEG, PNG, WEBP up to 5MB</p>
+                                            <UploadCloud className="text-slate-400 mb-2" size={32} aria-hidden="true"/>
+                                            <p className="text-sm font-medium text-slate-300">{ed.coverDragHint}</p>
+                                            <p className="text-xs text-slate-500 mt-1">{ed.coverFormats}</p>
                                         </>
                                     )}
                                     <input
                                         type="file"
                                         accept=".jpg,.jpeg,.png,.webp"
+                                        aria-label={ed.coverLabel}
                                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-0"
                                         onChange={(e) => {
                                             const file = e.target.files?.[0];
@@ -241,16 +257,21 @@ export const EditTrackModal = ({track, isOpen, onClose}: EditTrackModalProps) =>
                             {/* Tags & Explicit */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-1.5">
-                                    <label className="block text-sm font-medium text-slate-300">Custom Tags</label>
+                                    <label className="block text-sm font-medium text-slate-300">{ed.customTagsLabel}</label>
                                     <div
                                         className="w-full rounded-lg border border-slate-700 bg-slate-950 p-2 focus-within:border-violet-500 focus-within:ring-1 focus-within:ring-violet-500 flex flex-wrap gap-2">
                                         {customTags.map(tag => (
                                             <span key={tag}
                                                   className="flex items-center gap-1 bg-slate-800 text-slate-200 text-xs px-2 py-1 rounded-md">
                                                 {tag}
-                                                <button type="button" onClick={() => removeTag(tag)}
-                                                        className="ml-1 text-slate-500 hover:text-red-400"><X
-                                                    size={12}/></button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeTag(tag)}
+                                                    aria-label={ed.removeTag.replace('{tag}', tag)}
+                                                    title={ed.removeTag.replace('{tag}', tag)}
+                                                    className="ml-1 text-slate-500 hover:text-red-400">
+                                                    <X size={12} aria-hidden="true"/>
+                                                </button>
                                             </span>
                                         ))}
                                         <input
@@ -258,7 +279,8 @@ export const EditTrackModal = ({track, isOpen, onClose}: EditTrackModalProps) =>
                                             value={tagInput}
                                             onChange={(e) => setTagInput(e.target.value)}
                                             onKeyDown={handleTagKeyDown}
-                                            placeholder="Add tag..."
+                                            placeholder={ed.addTagPlaceholder}
+                                            aria-label={ed.customTagsLabel}
                                             className="flex-1 min-w-[100px] bg-transparent text-sm text-slate-100 placeholder-slate-500 outline-none px-2 py-1"
                                         />
                                     </div>
@@ -270,23 +292,26 @@ export const EditTrackModal = ({track, isOpen, onClose}: EditTrackModalProps) =>
                                 )}>
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <p className="text-sm font-medium text-slate-200">Explicit Content</p>
-                                            <p className="text-xs text-slate-500">Contains profanity/mature themes</p>
+                                            <p className="text-sm font-medium text-slate-200">{ed.explicitLabel}</p>
+                                            <p className="text-xs text-slate-500">{ed.explicitDescription}</p>
                                         </div>
                                         <Controller
                                             name="isExplicit"
                                             control={control}
                                             render={({field}) => (
-                                                <Switch checked={field.value ?? false} onCheckedChange={field.onChange}
-                                                        disabled={isAiVerified}/>
+                                                <Switch
+                                                    checked={field.value ?? false}
+                                                    onCheckedChange={field.onChange}
+                                                    disabled={isAiVerified}
+                                                    aria-label={ed.explicitLabel}
+                                                />
                                             )}
                                         />
                                     </div>
                                     {isAiVerified && (
                                         <div className="mt-3 flex items-start gap-1.5 text-[11px] text-amber-500/80">
-                                            <AlertCircle size={12} className="shrink-0 mt-0.5"/>
-                                            <p>This setting is locked because the track has already been verified by the
-                                                AI Moderation engine.</p>
+                                            <AlertCircle size={12} className="shrink-0 mt-0.5" aria-hidden="true"/>
+                                            <p>{ed.aiLockedNote}</p>
                                         </div>
                                     )}
                                 </div>
@@ -297,7 +322,7 @@ export const EditTrackModal = ({track, isOpen, onClose}: EditTrackModalProps) =>
                     <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-800 bg-slate-950/50">
                         <button type="button" onClick={onClose}
                                 className="px-4 py-2 text-sm font-medium text-slate-300 hover:text-white transition-colors">
-                            Cancel
+                            {ed.cancel}
                         </button>
                         <button
                             type="submit"
@@ -305,7 +330,7 @@ export const EditTrackModal = ({track, isOpen, onClose}: EditTrackModalProps) =>
                             disabled={isPending}
                             className="flex items-center gap-2 px-6 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
                         >
-                            <Save size={16}/> {isPending ? 'Saving...' : 'Save Changes'}
+                            <Save size={16} aria-hidden="true"/> {isPending ? ed.saving : ed.save}
                         </button>
                     </div>
                 </Dialog.Content>

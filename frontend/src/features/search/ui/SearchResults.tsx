@@ -8,6 +8,7 @@ import {TrackCard} from '@/features/media/ui/TrackCard';
 import {LibraryItem} from '@/features/playlist/ui/LibraryItem';
 import {usePlayerStore} from '@/shared/store/playerStore';
 import {TrackContextMenu} from "@/features/media/ui/TrackContextMenu.tsx";
+import {useTranslation} from '@/shared/lib/i18n/useTranslation';
 
 interface SearchResultsProps {
     data?: GlobalSearchResponseDto;
@@ -18,6 +19,7 @@ interface SearchResultsProps {
 export const SearchResults = ({data, isLoading, hasSearched}: SearchResultsProps) => {
     const navigate = useNavigate();
     const {playContext} = usePlayerStore();
+    const {t} = useTranslation();
 
     // --- Mappers ---
     const mapTrackToDto = (t: SearchTrackDto): TrackDto => ({
@@ -92,8 +94,8 @@ export const SearchResults = ({data, isLoading, hasSearched}: SearchResultsProps
         return (
             <div className="flex flex-col items-center justify-center h-64 text-slate-500">
                 <SearchX size={48} className="mb-4 opacity-50"/>
-                <h3 className="text-lg font-medium text-slate-300">Discover Music</h3>
-                <p className="text-sm mt-1">Search for your favorite tracks, artists, or playlists.</p>
+                <h3 className="text-lg font-medium text-slate-300">{t.search.emptyState.title}</h3>
+                <p className="text-sm mt-1">{t.search.emptyState.subtitle}</p>
             </div>
         );
     }
@@ -104,8 +106,8 @@ export const SearchResults = ({data, isLoading, hasSearched}: SearchResultsProps
         return (
             <div className="flex flex-col items-center justify-center h-64 text-slate-500">
                 <SearchX size={48} className="mb-4 opacity-50 text-violet-500/50"/>
-                <h3 className="text-lg font-medium text-slate-300">No results found</h3>
-                <p className="text-sm mt-1">Try adjusting your keywords, tags, or genres.</p>
+                <h3 className="text-lg font-medium text-slate-300">{t.search.noResults.title}</h3>
+                <p className="text-sm mt-1">{t.search.noResults.subtitle}</p>
             </div>
         );
     }
@@ -117,11 +119,11 @@ export const SearchResults = ({data, isLoading, hasSearched}: SearchResultsProps
                     {isLoading ? (
                         <div className="space-y-12">
                             <div>
-                                <h2 className="text-xl font-bold text-white mb-6">Top Tracks</h2>
+                                <h2 className="text-xl font-bold text-white mb-6">{t.search.topTracks}</h2>
                                 {renderTrackSkeletons()}
                             </div>
                             <div>
-                                <h2 className="text-xl font-bold text-white mb-6">Artists</h2>
+                                <h2 className="text-xl font-bold text-white mb-6">{t.search.tabs.artists}</h2>
                                 {renderGridSkeletons(true)}
                             </div>
                         </div>
@@ -131,7 +133,7 @@ export const SearchResults = ({data, isLoading, hasSearched}: SearchResultsProps
                                 <div>
                                     <div className="flex items-center gap-2 mb-6 text-slate-300">
                                         <Disc3 className="text-violet-400" size={24}/>
-                                        <h2 className="text-xl font-bold text-white">Songs</h2>
+                                        <h2 className="text-xl font-bold text-white">{t.search.tabs.tracks}</h2>
                                     </div>
                                     <div className="space-y-1">
                                         {data.tracks.slice(0, 5).map((track, i) => {
@@ -155,7 +157,7 @@ export const SearchResults = ({data, isLoading, hasSearched}: SearchResultsProps
                                 <div>
                                     <div className="flex items-center gap-2 mb-6 text-slate-300">
                                         <Users className="text-emerald-400" size={24}/>
-                                        <h2 className="text-xl font-bold text-white">Artists</h2>
+                                        <h2 className="text-xl font-bold text-white">{t.search.tabs.artists}</h2>
                                     </div>
                                     <div
                                         className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
@@ -175,7 +177,7 @@ export const SearchResults = ({data, isLoading, hasSearched}: SearchResultsProps
                                 <div>
                                     <div className="flex items-center gap-2 mb-6 text-slate-300">
                                         <ListMusic className="text-indigo-400" size={24}/>
-                                        <h2 className="text-xl font-bold text-white">Playlists</h2>
+                                        <h2 className="text-xl font-bold text-white">{t.search.tabs.playlists}</h2>
                                     </div>
                                     <div
                                         className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
