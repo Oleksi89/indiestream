@@ -54,42 +54,48 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        userEmail = jwtService.extractUsername(jwt);
-        final String userIdStr = jwtService.extractUserId(jwt);
+        try {
+            userEmail = jwtService.extractUsername(jwt);
+            final String userIdStr = jwtService.extractUserId(jwt);
 
-        if (userIdStr != null) {
-            try {
-                UUID userId = UUID.fromString(userIdStr);
-                if (tokenBlacklistService.isUserBannedInRedis(userId)) {
+            if (userIdStr != null) {
+                try {
+                    UUID userId = UUID.fromString(userIdStr);
+                    if (tokenBlacklistService.isUserBannedInRedis(userId)) {
+                        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                        return;
+                    }
+                } catch (IllegalArgumentException e) {
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     return;
                 }
-            } catch (IllegalArgumentException e) {
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                return;
             }
-        }
 
-        if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
+            if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
 
-            if (jwtService.isTokenValid(jwt, userDetails.getUsername())) {
+                if (jwtService.isTokenValid(jwt, userDetails.getUsername())) {
 
-                // Set the UUID string as the Principal.
-                // This allows cross-module controllers to extract it via principal.getName()
-                // without relying on the Auth module's specific User entity.
-                Object principal = (userIdStr != null) ? userIdStr : userDetails.getUsername();
+                    // Set the UUID string as the Principal.
+                    // This allows cross-module controllers to extract it via principal.getName()
+                    // without relying on the Auth module's specific User entity.
+                    Object principal = (userIdStr != null) ? userIdStr : userDetails.getUsername();
 
-                log.info(" ID: {}", userIdStr);
-                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        principal,
-                        null,
-                        userDetails.getAuthorities()
-                );
+                    log.debug(" ID: {}", userIdStr);
+                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                            principal,
+                            null,
+                            userDetails.getAuthorities()
+                    );
 
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                }
             }
+        } catch (io.jsonwebtoken.JwtException e) {
+            log.debug("JWT validation failed: {}", e.getMessage());
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return;
         }
         filterChain.doFilter(request, response);
     }

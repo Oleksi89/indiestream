@@ -95,7 +95,7 @@ public class Track {
     @Column(name = "artist_proposed_tags", columnDefinition = "jsonb")
     private TrackTags artistProposedTags;
 
-    // --- Dynamic Aggregations (Epic 5) ---
+    // --- Dynamic Aggregations ---
 
     @Column(name = "play_count", nullable = false)
     @Builder.Default
