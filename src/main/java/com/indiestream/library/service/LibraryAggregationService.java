@@ -60,7 +60,7 @@ public class LibraryAggregationService {
         // A. Owned
         ownedPlaylists.forEach(p -> libraryMap.put(p.id(), new LibraryItemDto(
                 p.id(), LibraryItemType.OWNED_PLAYLIST, p.name(), p.coverMinioPath(),
-                "Playlist • " + ownerAliases.getOrDefault(p.ownerId(), "Unknown"),
+                ownerAliases.getOrDefault(p.ownerId(), "Unknown"),
                 p.addedAt(), p.ownerId().toString(), p.isCollaborative(), false
         )));
 
@@ -70,14 +70,14 @@ public class LibraryAggregationService {
                 LibraryItemType.FOLLOWED_PLAYLIST,
                 p.name(),
                 p.coverMinioPath(),
-                "Playlist • " + ownerAliases.getOrDefault(p.ownerId(), "Unknown"),
+                ownerAliases.getOrDefault(p.ownerId(), "Unknown"),
                 p.addedAt(), p.ownerId().toString(), p.isCollaborative(), false
         )));
 
         // C. Collaborated (Highest priority for Followed overrides. Promotes to 'isCollaborator = true')
         collaboratedPlaylists.forEach(p -> {
             LibraryItemDto existing = libraryMap.get(p.id());
-            String subtitle = "Playlist • " + ownerAliases.getOrDefault(p.ownerId(), "Unknown");
+            String subtitle = ownerAliases.getOrDefault(p.ownerId(), "Unknown");
             if (existing != null) {
                 // Elevate existing record with collaborator privileges
                 libraryMap.put(p.id(), new LibraryItemDto(
@@ -98,7 +98,7 @@ public class LibraryAggregationService {
         // D. Profiles
         followedProfiles.forEach(p -> libraryMap.put(p.id(), new LibraryItemDto(
                 p.id(), LibraryItemType.FOLLOWED_PROFILE, p.alias(), p.avatarPath(),
-                "Profile • @" + p.username(), p.followedAt(), null, false, false
+                "@" + p.username(), p.followedAt(), null, false, false
         )));
 
         // 4. Sort and return

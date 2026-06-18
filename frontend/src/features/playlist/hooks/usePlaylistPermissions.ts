@@ -23,8 +23,8 @@ export const usePlaylistPermissions = (playlist?: PlaylistDto | null, currentUse
         return {
             isOwner,
             isCollaborator,
-            // Modulith enforces that Collaborators can modify metadata/covers and add/remove tracks
-            canEditMetadata: isOwner || isCollaborator,
+            // enforces that Collaborators can only add/remove tracks
+            canEditMetadata: isOwner,
             canAddTracks: isOwner || isCollaborator,
             // Only the absolute Owner can assign or remove arbitrary users.
             // A collaborator executing a DELETE /collaborators/{self} is handled by an isolated 'leave' flow.

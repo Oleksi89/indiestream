@@ -43,7 +43,8 @@ export const CreatePlaylistModal = ({isOpen, onClose}: CreatePlaylistModalProps)
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex items-center justify-between p-4 border-b border-slate-800">
-                    <h2 id="create-playlist-title" className="text-lg font-bold">{t.playlist.create.title}</h2>
+                    <h2 id="create-playlist-title"
+                        className="text-lg font-bold text-white">{t.playlist.create.title}</h2>
                     <button onClick={onClose} aria-label={t.common.close} title={t.common.close}
                             className="text-slate-400 hover:text-white transition-colors">
                         <X className="w-5 h-5" aria-hidden="true"/>
@@ -62,7 +63,7 @@ export const CreatePlaylistModal = ({isOpen, onClose}: CreatePlaylistModalProps)
                             placeholder={t.playlist.create.namePlaceholder}
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            className="w-full bg-slate-950 border border-slate-800 rounded-md py-2 px-3 text-sm focus:ring-1 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
+                            className="w-full bg-slate-950 text-white border border-slate-800 rounded-md py-2 px-3 text-sm focus:ring-1 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
                         />
                     </div>
 
@@ -75,7 +76,7 @@ export const CreatePlaylistModal = ({isOpen, onClose}: CreatePlaylistModalProps)
                             placeholder={t.playlist.create.descriptionPlaceholder}
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
-                            className="w-full bg-slate-950 border border-slate-800 rounded-md py-2 px-3 text-sm focus:ring-1 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all resize-none"
+                            className="w-full bg-slate-950 text-white border border-slate-800 rounded-md py-2 px-3 text-sm focus:ring-1 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all resize-none"
                         />
                     </div>
 
@@ -111,7 +112,8 @@ export const CreatePlaylistModal = ({isOpen, onClose}: CreatePlaylistModalProps)
                     </div>
 
                     <div className="pt-4 flex justify-end gap-3 border-t border-slate-800">
-                        <Button type="button" variant="ghost" onClick={onClose}>{t.common.cancel}</Button>
+                        <Button type="button" variant="ghost" onClick={onClose}
+                                className="text-slate-300 hover:text-white hover:bg-white/10">{t.common.cancel}</Button>
                         <Button type="submit" disabled={!name.trim() || createPlaylist.isPending}
                                 className="bg-violet-600 hover:bg-violet-500">
                             {createPlaylist.isPending ? t.playlist.create.submitting : t.playlist.create.submit}

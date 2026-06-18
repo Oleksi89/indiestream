@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useMemo, useEffect} from 'react';
 import {useNavigate} from 'react-router-dom';
 import {Play, ListPlus, User, Link as LinkIcon, Plus, Check, Ban, XCircle} from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -6,7 +6,8 @@ import {useQueryClient} from '@tanstack/react-query';
 
 import {usePlayerStore} from '@/shared/store/playerStore';
 import {useAuthStore} from '@/shared/store/authStore';
-import {useUserLibrary, useTogglePlaylistTrack, playlistKeys} from '../../playlist/hooks/usePlaylists';
+import {useUserLibrary, useTogglePlaylistTrack, playlistKeys, useToggleLike} from '../../playlist/hooks/usePlaylists';
+import {playlistApi} from '@/features/playlist/api/playlist.api';
 import {useInteractionTracker} from '@/features/telemetry';
 import {useNotInterestedMutation} from '@/features/recommendations/hooks/useRecommendationMutations';
 import {useTranslation} from '@/shared/lib/i18n/useTranslation';
@@ -38,21 +39,57 @@ const AddToPlaylistSubMenu = ({track}: { track: TrackDto }) => {
     const queryClient = useQueryClient();
     const {trackInteraction} = useInteractionTracker();
     const {t} = useTranslation();
+    const currentUser = useAuthStore((s) => s.user);
     const {data: library, isLoading} = useUserLibrary(0, 50);
     const togglePlaylistTrack = useTogglePlaylistTrack();
+    const toggleLike = useToggleLike();
 
-    const editablePlaylists: PlaylistDto[] = library?.content || [];
+    // Only show playlists the user actually has permission to modify
+    const editablePlaylists: PlaylistDto[] = useMemo(() => {
+        if (!library?.content) return [];
+        return library.content.filter(p =>
+            p.ownerId === currentUser?.id ||
+            (p.isCollaborative && p.collaborators?.some(c => c.id === currentUser?.id))
+        );
+    }, [library?.content, currentUser?.id]);
 
-    const handleToggle = (playlistId: string, isPresent: boolean) => {
-        togglePlaylistTrack.mutate({
-            playlistId,
-            track: {...track, coverMinioPath: track.coverMinioPath ?? null} as any,
-            isPresent
+    /**
+     * PREFETCHING:
+     * Hydrates the React Query cache in the background for editable playlists.
+     * Guarantees the `isPresent` checkmark is accurate instantly without requiring the user to visit the playlist page.
+     */
+    useEffect(() => {
+        if (!editablePlaylists.length) return;
+        editablePlaylists.forEach(p => {
+            queryClient.prefetchQuery({
+                queryKey: playlistKeys.tracks(p.id),
+                queryFn: () => playlistApi.getPlaylistTracks(p.id, 0, 50),
+                staleTime: 1000 * 60 * 5,
+            });
         });
+    }, [editablePlaylists, queryClient]);
+
+    const handleToggle = (playlist: PlaylistDto, isPresent: boolean) => {
+        const isSystemLiked = playlist.isSystem && playlist.name === 'Liked Tracks';
+
+        if (isSystemLiked) {
+            toggleLike.mutate({
+                track: {...track, coverMinioPath: track.coverMinioPath ?? null} as any,
+                isLiked: isPresent
+            });
+        } else {
+            togglePlaylistTrack.mutate({
+                playlistId: playlist.id,
+                track: {...track, coverMinioPath: track.coverMinioPath ?? null} as any,
+                isPresent,
+                playlistName: playlist.name
+            });
+        }
 
         if (!isPresent) {
             const currentContext = usePlayerStore.getState().playbackContext;
-            trackInteraction(track.id, 'ADD_TO_PLAYLIST', currentContext?.type || 'PUBLIC_FEED', 'CONTEXT_MENU');
+            const interactionType = isSystemLiked ? 'LIKE' : 'ADD_TO_PLAYLIST';
+            trackInteraction(track.id, interactionType, currentContext?.type || 'PUBLIC_FEED', 'CONTEXT_MENU');
         }
     };
 
@@ -83,7 +120,7 @@ const AddToPlaylistSubMenu = ({track}: { track: TrackDto }) => {
                             <ContextMenuItem
                                 key={playlist.id}
                                 onSelect={(e) => e.preventDefault()}
-                                onClick={() => handleToggle(playlist.id, isPresent)}
+                                onClick={() => handleToggle(playlist, isPresent)}
                                 className="flex items-center justify-between group"
                             >
                                 <span className="truncate pr-2">{playlist.name}</span>
