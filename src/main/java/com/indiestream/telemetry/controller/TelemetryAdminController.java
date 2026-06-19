@@ -35,7 +35,6 @@ public class TelemetryAdminController {
     /**
      * Executes aggregation for a specific timeframe.
      * If bounds are omitted, defaults to processing the last 24 hours.
-     * Note: Executing this over a 30-day window after running the Seeder will fully hydrate AI vectors.
      */
     @PostMapping("/rollup/hourly/force")
     @CacheEvict(value = "analytics:historical", allEntries = true)

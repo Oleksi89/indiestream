@@ -312,6 +312,7 @@ public class PlaylistService implements PlaylistModuleApi {
     /**
      * Replaces the playlist cover image in MinIO, aggressively preventing orphan blobs.
      */
+    @Override
     @Transactional
     public PlaylistDto updatePlaylistCover(UUID playlistId, UUID userId, MultipartFile file) {
         Playlist playlist = playlistRepository.findById(playlistId)
