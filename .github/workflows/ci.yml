@@ -133,7 +133,9 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Image Name
-        run: echo "IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/indiestream-backend" | tr '[:upper:]' '[:lower:]' >> $GITHUB_ENV
+        run: |
+          REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "IMAGE_NAME=ghcr.io/$REPO_OWNER/indiestream-backend" >> $GITHUB_ENV
 
       - name: Build and Push Backend Docker Image
         uses: docker/build-push-action@v5
