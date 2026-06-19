@@ -3,6 +3,10 @@ FROM eclipse-temurin:21-jdk-alpine AS builder
 WORKDIR /app
 COPY gradle gradle
 COPY gradlew build.gradle.kts settings.gradle.kts ./
+
+# Grant execution rights to the script inside the container before running it
+RUN chmod +x ./gradlew
+
 # Dependency caching (build time optimization)
 RUN ./gradlew dependencies --no-daemon
 
