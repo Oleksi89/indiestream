@@ -4,6 +4,7 @@ import com.indiestream.playlist.PlaylistDto;
 import com.indiestream.playlist.PlaylistLibraryProjection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -36,4 +37,6 @@ public interface PlaylistModuleApi {
     PlaylistDto createCustomPlaylist(UUID ownerId, String name, String description, boolean isPublic, boolean isCollaborative);
 
     void addTrackToPlaylist(UUID playlistId, UUID trackId, UUID userId);
+
+    PlaylistDto updatePlaylistCover(UUID playlistId, UUID userId, MultipartFile file);
 }
