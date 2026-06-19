@@ -83,7 +83,7 @@ public class SeederCleanupService {
             // Playbacks & Interactions
             jdbcTemplate.update("DELETE FROM raw_playback_logs WHERE track_id IN (:trackIds) OR user_id IN (:userIds)",
                     new MapSqlParameterSource("trackIds", seedTrackIds).addValue("userIds", seedUserIds));
-            jdbcTemplate.update("DELETE FROM raw_interaction_logs WHERE  user_id IN (:userIds) OR  target_id IN (:trackIds)",
+            jdbcTemplate.update("DELETE FROM raw_interaction_logs WHERE user_id IN (:userIds) OR target_id IN (:trackIds)",
                     new MapSqlParameterSource("trackIds", seedTrackIds).addValue("userIds", seedUserIds));
 
             // Aggregates
@@ -105,8 +105,22 @@ public class SeederCleanupService {
         );
 
         if (!seedPlaylistIds.isEmpty()) {
-            log.info("Purging social playlist data...");
+            log.info("Purging social playlist data and covers...");
             MapSqlParameterSource playlistParams = new MapSqlParameterSource("playlistIds", seedPlaylistIds);
+
+            // Delete Playlist Covers from MinIO
+            List<String> playlistCovers = jdbcTemplate.queryForList(
+                    "SELECT cover_minio_path FROM playlists WHERE id IN (:playlistIds) AND cover_minio_path IS NOT NULL",
+                    playlistParams, String.class
+            );
+
+            for (String coverPath : playlistCovers) {
+                try {
+                    minioStorageService.deleteFile(coverPath);
+                } catch (Exception e) {
+                    log.error("Failed to delete playlist cover from MinIO: {}", e.getMessage());
+                }
+            }
 
             jdbcTemplate.update("DELETE FROM raw_interaction_logs WHERE target_id IN (:playlistIds)", playlistParams);
             jdbcTemplate.update("DELETE FROM playlist_hourly_stats WHERE playlist_id IN (:playlistIds)", playlistParams);
@@ -115,6 +129,7 @@ public class SeederCleanupService {
                 jdbcTemplate.update("DELETE FROM playlist_daily_stats WHERE playlist_id IN (:playlistIds)", playlistParams);
             } catch (Exception ignored) {
             }
+
             jdbcTemplate.update("DELETE FROM playlist_tracks WHERE playlist_id IN (:playlistIds)", playlistParams);
             jdbcTemplate.update("DELETE FROM playlist_followers WHERE playlist_id IN (:playlistIds)", playlistParams);
             jdbcTemplate.update("DELETE FROM playlist_collaborators WHERE playlist_id IN (:playlistIds)", playlistParams);

@@ -33,19 +33,23 @@ public class UserSeederService {
     private final List<UUID> seededListenerIds = new ArrayList<>();
 
     /**
-     * Idempotently seeds 8 Artists and 22 Listeners.
+     * Idempotently seeds a specified number of Artists and Listeners.
      */
-    public void seedUsers() {
-        log.info("--- PHASE 1: SEEDING SOCIAL GRAPH ---");
+    public void seedUsers(int artistCount, int listenerCount) {
+        log.info("--- PHASE 1a: SEEDING SOCIAL GRAPH ---");
 
-        for (int i = 1; i <= 8; i++) {
+        for (int i = 1; i <= artistCount; i++) {
             UUID id = createSeedUser("artist_" + i, "Seed Artist " + i, true);
-            if (id != null) seededArtistIds.add(id);
+            if (id != null && !seededArtistIds.contains(id)) {
+                seededArtistIds.add(id);
+            }
         }
 
-        for (int i = 1; i <= 22; i++) {
+        for (int i = 1; i <= listenerCount; i++) {
             UUID id = createSeedUser("listener_" + i, "Seed Listener " + i, false);
-            if (id != null) seededListenerIds.add(id);
+            if (id != null && !seededListenerIds.contains(id)) {
+                seededListenerIds.add(id);
+            }
         }
 
         log.info("Social Graph Seeded. Active Seed Artists: {}, Active Seed Listeners: {}",

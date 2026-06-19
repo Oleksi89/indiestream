@@ -21,12 +21,10 @@ public class TelemetrySeederService {
     private final NamedParameterJdbcTemplate jdbcTemplate;
     private final Random random = new Random();
 
-    private static final int PLAYBACK_COUNT = 3500;
-    private static final int INTERACTION_COUNT = 1500;
     private static final String SEED_USER_AGENT = "IndieStream-Seed-TimeMachine";
     private static final String[] COUNTRIES = {"US", "UA", "PL", "GB", "CA", "DE"};
 
-    public void seedHistoricalTelemetry(List<UUID> seedUserIds) {
+    public void seedHistoricalTelemetry(List<UUID> seedUserIds, int playbackCount, int interactionCount) {
         log.info("--- PHASE 4: TIME MACHINE TELEMETRY SEEDING ---");
 
         if (seedUserIds.isEmpty()) {
@@ -45,20 +43,31 @@ public class TelemetrySeederService {
             return;
         }
 
-        seedPlaybacks(seedUserIds, seedTrackIds);
-        seedInteractions(seedUserIds, seedTrackIds);
+        List<UUID> seedPlaylistIds = jdbcTemplate.queryForList(
+                "SELECT id FROM playlists WHERE owner_id IN (:userIds)",
+                new MapSqlParameterSource("userIds", seedUserIds),
+                UUID.class
+        );
+
+        seedPlaybacks(seedUserIds, seedTrackIds, seedPlaylistIds, playbackCount);
+        seedInteractions(seedUserIds, seedTrackIds, seedPlaylistIds, interactionCount);
 
         log.info("Historical Telemetry Seeding Complete.");
     }
 
-    private void seedPlaybacks(List<UUID> userIds, List<UUID> trackIds) {
-        log.info("Generating {} historical playbacks over the last 30 days...", PLAYBACK_COUNT);
+    private void seedPlaybacks(List<UUID> userIds, List<UUID> trackIds, List<UUID> playlistIds, int playbackCount) {
+        log.info("Generating {} historical playbacks over the last 30 days...", playbackCount);
         List<MapSqlParameterSource> batchArgs = new ArrayList<>();
 
-        for (int i = 0; i < PLAYBACK_COUNT; i++) {
+        for (int i = 0; i < playbackCount; i++) {
             UUID trackId = trackIds.get(random.nextInt(trackIds.size()));
             UUID userId = userIds.get(random.nextInt(userIds.size()));
             Instant createdAt = generateRandomTimeInPast30Days();
+
+            // Source generation
+            boolean isPlaylistSource = random.nextBoolean() && !playlistIds.isEmpty();
+            String sourceType = isPlaylistSource ? "PLAYLIST" : "PUBLIC_FEED";
+            UUID sourceId = isPlaylistSource ? playlistIds.get(random.nextInt(playlistIds.size())) : null;
 
             // 80% chance of FULL play (3 mins), 20% skip (20 secs)
             boolean isSkip = random.nextDouble() < 0.2;
@@ -78,8 +87,8 @@ public class TelemetrySeederService {
                     .addValue("userAgent", SEED_USER_AGENT)
                     .addValue("isSuspectedBot", false)
                     .addValue("playbackStatus", status)
-                    .addValue("sourceType", "PUBLIC_FEED")
-                    .addValue("sourceId", null) // Optional
+                    .addValue("sourceType", sourceType)
+                    .addValue("sourceId", sourceId)
                     .addValue("clientCountry", COUNTRIES[random.nextInt(COUNTRIES.length)])
                     .addValue("createdAt", createdAt.atOffset(ZoneOffset.UTC));
 
@@ -97,19 +106,41 @@ public class TelemetrySeederService {
                 """, batchArgs.toArray(new MapSqlParameterSource[0]));
     }
 
-    private void seedInteractions(List<UUID> userIds, List<UUID> trackIds) {
-        log.info("Generating {} historical interactions (Likes)...", INTERACTION_COUNT);
+    private void seedInteractions(List<UUID> userIds, List<UUID> trackIds, List<UUID> playlistIds, int interactionCount) {
+        log.info("Generating {} historical interactions...", interactionCount);
         List<MapSqlParameterSource> batchArgs = new ArrayList<>();
 
-        for (int i = 0; i < INTERACTION_COUNT; i++) {
+        for (int i = 0; i < interactionCount; i++) {
+            UUID userId = userIds.get(random.nextInt(userIds.size()));
+            Instant createdAt = generateRandomTimeInPast30Days();
+
+            UUID targetId;
+            String interactionType;
+            String sourceType;
+            String uiSurface;
+
+            if (random.nextDouble() < 0.75 || playlistIds.isEmpty()) {
+                // 75% Track Likes
+                targetId = trackIds.get(random.nextInt(trackIds.size()));
+                interactionType = "LIKE";
+                uiSurface = "PLAYER_BAR";
+                sourceType = (random.nextBoolean() && !playlistIds.isEmpty()) ? "PLAYLIST" : "PUBLIC_FEED";
+            } else {
+                // 25% Playlist Follows
+                targetId = playlistIds.get(random.nextInt(playlistIds.size()));
+                interactionType = "FOLLOW_PLAYLIST";
+                uiSurface = "CONTEXT_MENU";
+                sourceType = "PUBLIC_FEED"; // Generic entry point for playlist follows
+            }
+
             MapSqlParameterSource params = new MapSqlParameterSource()
                     .addValue("eventId", UUID.randomUUID())
-                    .addValue("userId", userIds.get(random.nextInt(userIds.size())))
-                    .addValue("targetId", trackIds.get(random.nextInt(trackIds.size())))
-                    .addValue("interactionType", "LIKE")
-                    .addValue("sourceType", "PUBLIC_FEED")
-                    .addValue("uiSurface", "PLAYER_BAR")
-                    .addValue("createdAt", generateRandomTimeInPast30Days().atOffset(ZoneOffset.UTC));
+                    .addValue("userId", userId)
+                    .addValue("targetId", targetId)
+                    .addValue("interactionType", interactionType)
+                    .addValue("sourceType", sourceType)
+                    .addValue("uiSurface", uiSurface)
+                    .addValue("createdAt", createdAt.atOffset(ZoneOffset.UTC));
 
             batchArgs.add(params);
         }
