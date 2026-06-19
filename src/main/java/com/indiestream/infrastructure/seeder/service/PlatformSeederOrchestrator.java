@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -28,18 +29,27 @@ public class PlatformSeederOrchestrator {
 
     public static final String SEED_NAMESPACE = "%@seed.indiestream.local";
 
-    public void executeIngestionPhase() {
-        log.info("--- STARTING SEEDER PHASE 1: INGESTION ---");
+    public void executeUserSeeding(int artistCount, int listenerCount) {
+        log.info("--- STARTING SEEDER PHASE 1a: USERS ---");
+        userSeederService.seedUsers(artistCount, listenerCount);
+        log.info("PHASE 1a COMPLETE.");
+    }
 
-        userSeederService.seedUsers();
+    public void executeMediaSeeding(int trackLimit) {
+        log.info("--- STARTING SEEDER PHASE 1b: MEDIA INGESTION ---");
 
         List<UUID> artistIds = jdbcTemplate.queryForList(
                 "SELECT id FROM users WHERE email LIKE :ns AND role = 'ARTIST'",
                 new MapSqlParameterSource("ns", SEED_NAMESPACE), UUID.class);
 
-        mediaSeederService.seedMedia(artistIds);
+        if (artistIds.isEmpty()) {
+            log.warn("No seed artists found. Run Phase 1a first.");
+            return;
+        }
 
-        log.info("PHASE 1 COMPLETE. Please wait for the background AI pipeline to analyze the audio before running Phase 2.");
+        mediaSeederService.seedMedia(artistIds, trackLimit);
+
+        log.info("PHASE 1b COMPLETE. Please wait for the background AI pipeline to analyze the audio before running Phase 2.");
     }
 
     public int executePublishPhase() {
@@ -75,15 +85,11 @@ public class PlatformSeederOrchestrator {
         return publishedCount;
     }
 
-    public void executeSimulationPhase() {
-        log.info("--- STARTING SEEDER PHASE 3: PLAYLISTS & TELEMETRY ---");
+    public void executePlaylistSeeding(int userLimit) {
+        log.info("--- STARTING SEEDER PHASE 3a: PLAYLISTS ---");
 
         List<UUID> listenerIds = jdbcTemplate.queryForList(
                 "SELECT id FROM users WHERE email LIKE :ns AND role = 'USER'",
-                new MapSqlParameterSource("ns", SEED_NAMESPACE), UUID.class);
-
-        List<UUID> allUsers = jdbcTemplate.queryForList(
-                "SELECT id FROM users WHERE email LIKE :ns",
                 new MapSqlParameterSource("ns", SEED_NAMESPACE), UUID.class);
 
         List<UUID> artistIds = jdbcTemplate.queryForList(
@@ -105,9 +111,26 @@ public class PlatformSeederOrchestrator {
             return;
         }
 
-        playlistSeederService.seedPlaylists(listenerIds, publishedTracks);
-        telemetrySeederService.seedHistoricalTelemetry(allUsers);
+        List<UUID> limitedListeners = listenerIds.stream().limit(userLimit).collect(Collectors.toList());
+        playlistSeederService.seedPlaylists(limitedListeners, publishedTracks);
 
-        log.info("PHASE 3 COMPLETE. Platform is fully hydrated!");
+        log.info("PHASE 3a COMPLETE.");
+    }
+
+    public void executeTelemetrySeeding(int playbackCount, int interactionCount) {
+        log.info("--- STARTING SEEDER PHASE 3b: TELEMETRY ---");
+
+        List<UUID> allUsers = jdbcTemplate.queryForList(
+                "SELECT id FROM users WHERE email LIKE :ns",
+                new MapSqlParameterSource("ns", SEED_NAMESPACE), UUID.class);
+
+        if (allUsers.isEmpty()) {
+            log.warn("Missing seed users. Run Phase 1 first.");
+            return;
+        }
+
+        telemetrySeederService.seedHistoricalTelemetry(allUsers, playbackCount, interactionCount);
+
+        log.info("PHASE 3b COMPLETE.");
     }
 }

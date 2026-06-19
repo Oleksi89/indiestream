@@ -13,6 +13,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -30,8 +31,8 @@ public class MediaSeederService {
     private static final String SEED_DATA_DIR = "./seed-data/";
     private static final String COVERS_DIR_NAME = "covers";
 
-    public void seedMedia(List<UUID> artistIds) {
-        log.info("--- PHASE 2: SEEDING MEDIA CATALOG ---");
+    public void seedMedia(List<UUID> artistIds, int trackLimit) {
+        log.info("--- PHASE 1b: SEEDING MEDIA CATALOG (Limit: {}) ---", trackLimit);
 
         if (artistIds.isEmpty()) {
             log.warn("No seed artists available. Aborting Media Seeding.");
@@ -51,15 +52,16 @@ public class MediaSeederService {
 
         // Pre-load available covers into memory to avoid redundant disk I/O
         List<Path> availableCovers = loadCoverImages(seedDir);
+        AtomicInteger ingestedCount = new AtomicInteger(0);
 
         try (Stream<Path> genres = Files.list(seedDir).filter(Files::isDirectory)) {
             genres.filter(dir -> !dir.getFileName().toString().equalsIgnoreCase(COVERS_DIR_NAME))
-                    .forEach(genreDir -> processGenreDirectory(genreDir, artistIds, availableCovers));
+                    .forEach(genreDir -> processGenreDirectory(genreDir, artistIds, availableCovers, ingestedCount, trackLimit));
         } catch (IOException e) {
             log.error("Failed to read seed data directory", e);
         }
 
-        log.info("Media Catalog Seeding Complete.");
+        log.info("Media Catalog Seeding Complete. Ingested {} tracks.", ingestedCount.get());
     }
 
     /**
@@ -83,7 +85,11 @@ public class MediaSeederService {
         }
     }
 
-    private void processGenreDirectory(Path genreDir, List<UUID> artistIds, List<Path> availableCovers) {
+    private void processGenreDirectory(Path genreDir, List<UUID> artistIds, List<Path> availableCovers, AtomicInteger ingestedCount, int trackLimit) {
+        if (ingestedCount.get() >= trackLimit) {
+            return; // Fast exit if limit is already reached
+        }
+
         String genre = genreDir.getFileName().toString();
 
         // Capitalize first letter to align with ALLOWED_GENRES
@@ -92,7 +98,12 @@ public class MediaSeederService {
         final String formattedGenre = mediaModuleApi.getAllowedGenres().contains(rawFormatted) ? rawFormatted : "Other";
 
         try (Stream<Path> tracks = Files.list(genreDir).filter(p -> p.toString().endsWith(".mp3") || p.toString().endsWith(".wav"))) {
-            tracks.forEach(trackPath -> uploadThrottledTrack(trackPath, formattedGenre, artistIds, availableCovers));
+            tracks.forEach(trackPath -> {
+                if (ingestedCount.get() < trackLimit) {
+                    uploadThrottledTrack(trackPath, formattedGenre, artistIds, availableCovers);
+                    ingestedCount.incrementAndGet();
+                }
+            });
         } catch (IOException e) {
             log.error("Failed to read tracks in genre directory: {}", genre, e);
         }
