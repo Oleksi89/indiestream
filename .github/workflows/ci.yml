@@ -173,7 +173,7 @@ jobs:
       - name: Push to GitLab Repository
         run: |
           git remote add gitlab https://oauth2:${{ secrets.GITLAB_TOKEN }}@git.ztu.edu.ua/ipz/2022-2026/ipz-22-3/vasyanovych-oleksandr/diploma-project.git
-          git push gitlab HEAD:${{ github.ref_name }}
+          git push gitlab HEAD:${{ github.ref_name }} --force
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
