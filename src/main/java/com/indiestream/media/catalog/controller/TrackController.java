@@ -69,7 +69,7 @@ public class TrackController {
      * Enforces strict regex and size boundaries on custom tags to prevent injection and bloat.
      */
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('ARTIST')")
     public ResponseEntity<TrackDto> uploadTrack(
             Principal principal,
             @RequestParam("title") String title,
@@ -93,7 +93,7 @@ public class TrackController {
     // --- Advanced Artist Workflows (Lifecycle Management) ---
 
     @PostMapping("/{trackId}/publish")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('ARTIST')")
     public ResponseEntity<Void> publishTrack(@PathVariable UUID trackId, Principal principal) {
         UUID artistId = UUID.fromString(principal.getName());
         trackManagementService.publishTrack(trackId, artistId);
@@ -101,7 +101,7 @@ public class TrackController {
     }
 
     @PatchMapping("/{trackId}/visibility")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('ARTIST')")
     public ResponseEntity<Void> toggleVisibility(@PathVariable UUID trackId, Principal principal) {
         UUID artistId = UUID.fromString(principal.getName());
         trackManagementService.toggleTrackVisibility(trackId, artistId);
@@ -113,7 +113,7 @@ public class TrackController {
      * Preserves audit trails and media blobs for compliance and moderation history.
      */
     @DeleteMapping("/{trackId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('ARTIST')")
     public ResponseEntity<Void> archiveTrack(@PathVariable UUID trackId, Principal principal) {
         UUID artistId = UUID.fromString(principal.getName());
         trackManagementService.archiveTrack(trackId, artistId);

@@ -12,7 +12,15 @@ export const StemsStep = () => {
     const {t} = useTranslation();
     const st = t.media.upload.stems;
 
-    const addStem = () => setLocalStems([...localStems, {name: '', file: null as unknown as File}]);
+    const MAX_STEMS = 8;
+
+    const addStem = () => {
+        if (localStems.length >= MAX_STEMS) {
+            toast.error(st.maxLimit);
+            return;
+        }
+        setLocalStems([...localStems, {name: '', file: null as unknown as File}]);
+    };
     const removeStem = (index: number) => setLocalStems(localStems.filter((_, i) => i !== index));
 
     const handleStemChange = (index: number, field: keyof StemUploadPayload, value: string | File) => {
@@ -33,7 +41,14 @@ export const StemsStep = () => {
             return {name: nameWithoutExt, file};
         });
 
-        setLocalStems(prev => [...prev, ...newStems]);
+        setLocalStems(prev => {
+            if (prev.length + newStems.length > MAX_STEMS) {
+                toast.error(st.bulkLimitWarning);
+                const allowedStems = newStems.slice(0, MAX_STEMS - prev.length);
+                return [...prev, ...allowedStems];
+            }
+            return [...prev, ...newStems];
+        });
         e.target.value = '';
     };
 
