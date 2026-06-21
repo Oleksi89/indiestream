@@ -8,8 +8,10 @@ import com.indiestream.auth.domain.User;
 import com.indiestream.auth.domain.UserProfile;
 import com.indiestream.auth.domain.UserModerationLog;
 import com.indiestream.auth.dto.*;
+import com.indiestream.auth.event.UserBannedEvent;
 import com.indiestream.auth.event.UserRegisteredEvent;
 import com.indiestream.auth.event.UserUnbannedEvent;
+import com.indiestream.auth.exception.InvalidCurrentPasswordException;
 import com.indiestream.auth.repository.UserFollowerRepository;
 import com.indiestream.auth.repository.UserModerationLogRepository;
 import com.indiestream.auth.repository.UserRepository;
@@ -99,7 +101,9 @@ public class UserService implements AuthModuleApi {
         user.setUsername(request.username());
         user.setAlias(request.alias());
         user.setPasswordHash(passwordEncoder.encode(request.password()));
-        user.setRole(Role.USER);
+
+        Role assignedRole = "ARTIST".equals(request.role()) ? Role.ARTIST : Role.USER;
+        user.setRole(assignedRole);
 
         UserProfile profile = new UserProfile();
         user.setProfile(profile);
@@ -113,6 +117,27 @@ public class UserService implements AuthModuleApi {
         ));
 
         return mapToProfileResponse(savedUser, savedUser.getId());
+    }
+
+    /**
+     * Updates the user's password and resets all active sessions for security reasons.
+     */
+    @Transactional
+    public void changePassword(UUID userId, ChangePasswordRequestDto request) {
+        if (request.currentPassword().equals(request.newPassword())) {
+            throw new IllegalArgumentException("New password cannot be the same as the current password.");
+        }
+
+        User user = userRepository.findById(userId)
+                .filter(u -> !u.getIsBanned())
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
+            throw new InvalidCurrentPasswordException("Current password is incorrect.");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
     }
 
     /**
@@ -264,10 +289,38 @@ public class UserService implements AuthModuleApi {
         return new PageImpl<>(profiles, effectivePageable, profiles.size());
     }
 
+    /**
+     * Resolves a paginated list of users for administrative dashboards.
+     * * @param query    Optional search term matching ID, username, alias, or email.
+     *
+     * @param isBanned Optional filter for ban status. Null evaluates to all users.
+     * @param pageable Pagination and sorting configuration.
+     * @return Paginated result of flattened user profiles.
+     */
+    @Transactional(readOnly = true)
+    public Page<AdminUserViewDto> getAdminUsers(String query, Boolean isBanned, Pageable pageable) {
+        Page<User> usersPage = userRepository.searchForAdmin(query, isBanned, pageable);
+
+        return usersPage.map(user -> new AdminUserViewDto(
+                user.getId(),
+                user.getEmail(),
+                user.getUsername(),
+                user.getAlias(),
+                user.getRole(),
+                user.getIsBanned(),
+                user.getProfile() != null ? user.getProfile().getAvatarPath() : null,
+                user.getCreatedAt()
+        ));
+    }
+
     @Transactional
     public void banUser(UUID userId, UUID adminId, String reason) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (user.getRole() == Role.ADMIN) {
+            throw new IllegalArgumentException("Administrative accounts cannot be suspended.");
+        }
 
         if (user.getIsBanned()) return;
 
@@ -283,6 +336,8 @@ public class UserService implements AuthModuleApi {
         moderationLogRepository.save(logEntry);
 
         tokenBlacklistService.revokeUserSessions(userId);
+
+        events.publishEvent(new UserBannedEvent(userId, user.getRole().name(), adminId, reason, Instant.now()));
     }
 
     @Transactional

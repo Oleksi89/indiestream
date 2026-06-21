@@ -1,7 +1,7 @@
 import {type SubmitHandler, useForm} from 'react-hook-form';
 import {zodResolver} from '@hookform/resolvers/zod';
 import {useNavigate, Link} from 'react-router-dom';
-import { type RegisterRequest, getRegisterSchema} from '../types';
+import {type RegisterRequest, getRegisterSchema} from '../types';
 import {authApi} from '../api/auth.api';
 import {useState} from 'react';
 import {isAxiosError} from "axios";
@@ -15,8 +15,10 @@ export const RegisterForm = () => {
     const {
         register,
         handleSubmit,
+        watch,
+        setValue,
         formState: {errors, isSubmitting},
-    } = useForm({
+    } = useForm<RegisterRequest>({
         resolver: zodResolver(getRegisterSchema(t)),
         defaultValues: {
             email: '',
@@ -24,8 +26,12 @@ export const RegisterForm = () => {
             alias: '',
             password: '',
             confirmPassword: '',
+            role: 'USER',
+            agreedToRules: false as unknown as true,
         }
     });
+
+    const selectedRole = watch('role');
 
     const onSubmit: SubmitHandler<RegisterRequest> = async (data) => {
         try {
@@ -52,6 +58,32 @@ export const RegisterForm = () => {
                         {serverError}
                     </div>
                 )}
+
+                {/* Role Switcher */}
+                <div className="flex p-1 bg-slate-900/50 rounded-lg mb-6 border border-slate-700/50">
+                    <button
+                        type="button"
+                        onClick={() => setValue('role', 'USER')}
+                        className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
+                            selectedRole === 'USER'
+                                ? 'bg-violet-600 text-white shadow-sm'
+                                : 'text-slate-400 hover:text-slate-200'
+                        }`}
+                    >
+                        {t.auth.register.roles.user}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setValue('role', 'ARTIST')}
+                        className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
+                            selectedRole === 'ARTIST'
+                                ? 'bg-violet-600 text-white shadow-sm'
+                                : 'text-slate-400 hover:text-slate-200'
+                        }`}
+                    >
+                        {t.auth.register.roles.artist}
+                    </button>
+                </div>
 
                 <div>
                     <label htmlFor="register-email" className="block text-sm font-medium text-slate-300">
@@ -154,6 +186,34 @@ export const RegisterForm = () => {
                     )}
                 </div>
 
+                {/* Rules Agreement Checkbox */}
+                <div className="flex items-start gap-3 mt-4">
+                    <div className="flex items-center h-5">
+                        <input
+                            {...register('agreedToRules')}
+                            id="rules-agreement"
+                            type="checkbox"
+                            aria-invalid={errors.agreedToRules ? 'true' : 'false'}
+                            className="w-4 h-4 rounded border-slate-700 bg-slate-900/50 text-violet-600 focus:ring-violet-500 focus:ring-offset-slate-900 transition-colors cursor-pointer"
+                        />
+                    </div>
+                    <div className="flex flex-col">
+                        <label htmlFor="rules-agreement" className="text-sm text-slate-300 select-none cursor-pointer">
+                            {t.auth.register.rules.prefix}{' '}
+                            <Link to="/rules" target="_blank" rel="noopener noreferrer"
+                                  className="text-violet-400 hover:text-violet-300 hover:underline underline-offset-2 transition-colors">
+                                {t.auth.register.rules.link}
+                            </Link>{' '}
+                            {t.auth.register.rules.suffix} <span className="text-red-400">*</span>
+                        </label>
+                        {errors.agreedToRules && (
+                            <p role="alert" className="text-red-500 text-xs mt-1">
+                                {errors.agreedToRules.message}
+                            </p>
+                        )}
+                    </div>
+                </div>
+
                 <button
                     type="submit"
                     disabled={isSubmitting}
@@ -162,7 +222,10 @@ export const RegisterForm = () => {
                     title={t.auth.register.submit}
                     className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-500 focus:ring-offset-slate-900 disabled:opacity-50 transition-colors"
                 >
-                    {isSubmitting ? t.auth.register.submitting : t.auth.register.submit}
+                    {isSubmitting
+                        ? t.auth.register.submitting
+                        : (selectedRole === 'ARTIST' ? t.auth.register.submitArtist : t.auth.register.submitUser)
+                    }
                 </button>
             </form>
 

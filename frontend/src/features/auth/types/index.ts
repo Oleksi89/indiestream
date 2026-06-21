@@ -19,6 +19,10 @@ export const getRegisterSchema = (t: any) => z.object({
         .max(100, t.auth.validation.aliasMax),
     password: z.string().min(6, t.auth.validation.passwordMin),
     confirmPassword: z.string().min(6, t.auth.validation.passwordMin),
+    role: z.enum(['USER', 'ARTIST']),
+    agreedToRules: z.literal(true, {
+        message: t.auth.register.rules.error
+    }),
 }).refine((data) => data.password === data.confirmPassword, {
     message: t.auth.validation.passwordsMismatch,
     path: ["confirmPassword"],
@@ -28,6 +32,22 @@ export type RegisterRequest = z.infer<ReturnType<typeof getRegisterSchema>>;
 
 export interface AuthResponse {
     token: string;
+}
+
+export const getChangePasswordSchema = (t: any) => z.object({
+    currentPassword: z.string().min(1, t.auth?.validation?.required || 'Required'),
+    newPassword: z.string().min(6, t.auth?.validation?.passwordMin || 'Minimum 6 characters'),
+    confirmPassword: z.string().min(6, t.auth?.validation?.passwordMin || 'Minimum 6 characters'),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+    message: t.auth?.validation?.passwordsMismatch || 'Passwords do not match',
+    path: ["confirmPassword"],
+});
+
+export type ChangePasswordFormValues = z.infer<ReturnType<typeof getChangePasswordSchema>>;
+
+export interface ChangePasswordRequest {
+    currentPassword: string;
+    newPassword: string;
 }
 
 export interface UserProfileDto {
@@ -84,4 +104,24 @@ export interface PageResponse<T> {
     totalElements: number;
     totalPages: number;
     isLast: boolean;
+}
+
+
+export interface AdminUserViewDto {
+    id: string;
+    email: string;
+    username: string;
+    alias: string | null;
+    role: 'USER' | 'ARTIST' | 'ADMIN';
+    isBanned: boolean;
+    avatarPath: string | null;
+    createdAt: string;
+}
+
+export interface AdminUserFilters {
+    q?: string;
+    isBanned?: boolean | null; // null = всі
+    page: number;
+    size: number;
+    sort?: string;
 }

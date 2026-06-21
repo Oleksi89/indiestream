@@ -1,5 +1,12 @@
 import {apiClient} from '@/shared/api/apiClient';
-import type {AuthResponse, LoginRequest, RegisterRequest, UserDto, UserPublicProfileDto} from "@/features/auth/types";
+import type {
+    AuthResponse,
+    ChangePasswordRequest,
+    LoginRequest,
+    RegisterRequest,
+    UserDto,
+    UserPublicProfileDto
+} from "@/features/auth/types";
 import type {AxiosResponse} from "axios";
 
 export const authApi = {
@@ -21,6 +28,10 @@ export const authApi = {
 
     logout: async (): Promise<void> => {
         await apiClient.post('/auth/logout');
+    },
+
+    changePassword: async (data: ChangePasswordRequest): Promise<void> => {
+        await apiClient.put('/users/me/password', data);
     },
 
     /**
