@@ -263,7 +263,7 @@ export const PlayerBar = () => {
 
                 {/* Progress Slider */}
                 <div className="w-full flex items-center gap-3 max-w-md">
-                    <span className="text-[10px] text-slate-500 font-mono w-10 text-right" aria-hidden="true">{formatTime(progress)}</span>
+                    <span className="text-[13px] text-slate-500 font-mono w-10 text-right" aria-hidden="true">{formatTime(progress)}</span>
                     <div className="relative flex-1 h-1 bg-slate-800 rounded-full group flex items-center">
                         <div className="absolute left-0 h-full bg-violet-500 rounded-full group-hover:bg-violet-400"
                              style={{width: `${duration > 0 ? (progress / duration) * 100 : 0}%`}}/>
@@ -283,7 +283,7 @@ export const PlayerBar = () => {
                         />
                     </div>
 
-                    <span className="text-[10px] text-slate-500 font-mono w-10" aria-hidden="true">{formatTime(duration)}</span>
+                    <span className="text-[13px] text-slate-500 font-mono w-10" aria-hidden="true">{formatTime(duration)}</span>
                 </div>
             </div>
 
