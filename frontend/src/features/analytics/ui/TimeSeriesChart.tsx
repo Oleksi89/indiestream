@@ -16,20 +16,23 @@ interface TimeSeriesChartProps {
 export const TimeSeriesChart = ({data, height = 350}: TimeSeriesChartProps) => {
     const {t} = useTranslation();
 
+    // Hours for <= 48h, Days for more
+    const isHourly = useMemo(() => {
+        if (!data || data.length === 0) return true;
+        const firstDate = parseISO(data[0].timestamp);
+        const lastDate = parseISO(data[data.length - 1].timestamp);
+        return differenceInHours(lastDate, firstDate) <= 48;
+    }, [data]);
+
     const formattedData = useMemo(() => {
         if (!data || data.length === 0) return [];
 
-        const firstDate = parseISO(data[0].timestamp);
-        const lastDate = parseISO(data[data.length - 1].timestamp);
-        const isHourly = differenceInHours(lastDate, firstDate) <= 48;
-
         return data.map(point => ({
             ...point,
-            // Hours for <= 48h, Days for more
-            displayDate: format(parseISO(point.timestamp), isHourly ? 'HH:mm' : 'MMM dd'),
-            fullDate: format(parseISO(point.timestamp), 'PPpp')
+            // Full date + time for hourly, just date for daily
+            fullDate: format(parseISO(point.timestamp), isHourly ? 'PPpp' : 'PPP')
         }));
-    }, [data]);
+    }, [data, isHourly]);
 
     if (!formattedData.length) {
         return <AnalyticsEmptyState title={t.analytics.emptyState.noTimelineData} minHeight={`min-h-[${height}px]`}/>;
@@ -52,8 +55,9 @@ export const TimeSeriesChart = ({data, height = 350}: TimeSeriesChartProps) => {
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} opacity={0.5}/>
                     <XAxis
-                        dataKey="displayDate" stroke="#64748b" fontSize={11}
+                        dataKey="timestamp" stroke="#64748b" fontSize={11}
                         tickLine={false} axisLine={false} dy={10}
+                        tickFormatter={(value) => format(parseISO(value), isHourly ? 'HH:mm' : 'MMM dd')}
                     />
                     <YAxis
                         stroke="#64748b" fontSize={11} tickLine={false} axisLine={false}

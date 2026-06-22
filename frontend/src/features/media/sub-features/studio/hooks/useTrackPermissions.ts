@@ -2,7 +2,7 @@ import type {TrackStatus} from '../../../types';
 
 export interface TrackPermissions {
     canPublish: boolean;
-    canEditMetadata: boolean;
+    // canEditMetadata: boolean;
     canHide: boolean;
     canUnhide: boolean;
     canArchive: boolean;
@@ -26,7 +26,7 @@ export const useTrackPermissions = (status: TrackStatus): TrackPermissions => {
         canPublish: ['APPROVED', 'READY'].includes(status),
 
         // Can edit if it's a draft, needs artist revision, or already approved (but not yet published)
-        canEditMetadata: ['DRAFT', 'APPROVED', 'READY', 'NEEDS_REVISION'].includes(status),
+        // canEditMetadata: ['DRAFT', 'APPROVED', 'READY', 'NEEDS_REVISION'].includes(status),
 
         // Visibility toggles
         canHide: status === 'PUBLISHED',
