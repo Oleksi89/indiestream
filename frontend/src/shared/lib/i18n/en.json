@@ -7,7 +7,18 @@
     "back": "Back",
     "loading": "Loading...",
     "error": "Something went wrong.",
-    "by": "By"
+    "by": "By",
+    "report": {
+      "trigger": "Report",
+      "title": "Submit a Report",
+      "instruction": "To submit a report or complaint, please send an email to our support address:",
+      "email": "complaints.admin@indiestream.online",
+      "formatHeader": "Include the following information for quick processing:",
+      "reqSubject": "Subject: Type of complaint (e.g., Copyright Infringement, Spam)",
+      "reqTarget": "Target: Offending username or track name",
+      "reqDescription": "Description: Details of the complaint and evidence",
+      "close": "Got it"
+    }
   },
   "auth": {
     "validation": {
@@ -51,6 +62,55 @@
       "errors": {
         "failed": "Registration failed. Please try again.",
         "unexpected": "An unexpected error occurred."
+      },
+      "roles": {
+        "user": "Listener",
+        "artist": "Artist"
+      },
+      "rules": {
+        "prefix": "I have read and agree to the",
+        "link": "Platform Rules",
+        "suffix": "and take responsibility for complying with them",
+        "error": "You must agree to the platform rules"
+      },
+      "submitUser": "Sign Up",
+      "submitArtist": "Create Artist Profile"
+    },
+    "admin": {
+      "page": {
+        "title": "User Management",
+        "subtitle": "Global account registry, search and access administration",
+        "searchPlaceholder": "Search by ID, email or alias...",
+        "filterAll": "All statuses",
+        "filterActive": "Active only",
+        "filterBanned": "Banned",
+        "noResults": "No users found"
+      },
+      "table": {
+        "noUsers": "No users found matching criteria",
+        "colUser": "User",
+        "colRole": "Role",
+        "colStatus": "Status",
+        "colDate": "Joined",
+        "colAction": "Actions",
+        "actionBan": "Suspend Account",
+        "actionUnban": "Restore Account"
+      },
+      "banModal": {
+        "title": "Suspend Account",
+        "description": "You are about to globally ban @{username}. All associated media content will be automatically suspended.",
+        "reasonLabel": "Reason for suspension (Audit log)",
+        "cancel": "Cancel",
+        "confirm": "Suspend",
+        "confirming": "Executing..."
+      },
+      "unbanModal": {
+        "title": "Restore Account",
+        "description": "You are about to restore platform access for @{username}.",
+        "reasonLabel": "Reason for restoration",
+        "cancel": "Cancel",
+        "confirm": "Restore",
+        "confirming": "Executing..."
       }
     }
   },
@@ -64,11 +124,12 @@
     },
     "security": {
       "heading": "Security",
-      "currentPassword": "Current Password",
-      "newPassword": "New Password",
-      "confirmPassword": "Confirm New Password",
-      "updatePassword": "Update Password",
-      "passwordPlaceholder": "••••••••"
+      "currentPassword": "Current password",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm password",
+      "passwordPlaceholder": "Enter password",
+      "updatePassword": "Update password",
+      "success": "Password updated successfully!"
     },
     "preferences": {
       "heading": "Preferences",
@@ -163,6 +224,22 @@
       "applyRange": "Apply Range",
       "openCustomRange": "Open custom date range picker",
       "closeCustomRange": "Close custom date range picker"
+    },
+    "adminControls": {
+      "title": "Telemetry Management",
+      "subtitle": "Manual execution of data rollups and state reconciliation for the selected timeframe.",
+      "hourlyTitle": "Hourly Rollup",
+      "hourlyDesc": "Forces the aggregation of raw playback logs into hourly buckets for the selected timeframe. Reduces DB strain.",
+      "hourlyBtn": "Execute Hourly",
+      "dailyTitle": "Daily Compression",
+      "dailyDesc": "Compresses hourly aggregations into final daily warehouse records. Best used at the end of cycles.",
+      "dailyBtn": "Execute Daily",
+      "syncTitle": "Synchronize Counters",
+      "syncDesc": "Globally reconciles the public playback counters on all tracks to match the exact sums in the telemetry warehouse.",
+      "syncBtn": "Sync Global Totals",
+      "semanticTitle": "Semantic Re-indexing",
+      "semanticDesc": "Triggers a background job to recalculate tracks vector embeddings for the AI recommendation engine.",
+      "semanticBtn": "Update Tracks Vectors"
     }
   },
   "library": {
@@ -556,8 +633,13 @@
         "coverDragHint": "Drag & drop cover art",
         "coverFormats": "JPEG, PNG, WEBP up to 5MB",
         "removeCover": "Remove cover art",
+        "rulesAgreementPrefix": "I agree to",
+        "rulesLink": "platform rules",
+        "rulesAgreementSuffix": "and confirm that I have all necessary copyrights for this content.",
         "back": "Back",
-        "continueToStems": "Continue to Stems"
+        "continueToStems": "Continue to Stems",
+        "masterAudioReq": "A master audio file is required to proceed.",
+        "rulesAgreementReq": "You must agree to the platform rules to proceed."
       },
       "stems": {
         "title": "Interactive Stems",
@@ -573,7 +655,9 @@
         "back": "Back",
         "skip": "Skip Stems",
         "uploadWithStems": "Upload with Stems",
-        "processTrack": "Process Track"
+        "processTrack": "Process Track",
+        "maxLimit": "Maximum number of stems is 8.",
+        "bulkLimitWarning": "Maximum number of stems is 8. Excess files were ignored."
       },
       "progress": {
         "uploading": "Uploading Media Assets...",
@@ -827,6 +911,7 @@
       "joined": "Joined {date}",
       "privateTitle": "This account is private",
       "privateDesc": "You must be the owner to view this content.",
+      "reportUser": "Report user",
       "tabs": {
         "playlists": "Playlists",
         "tracks": "Tracks",
@@ -848,7 +933,8 @@
     "loading": "Loading...",
     "myProfile": "My Profile",
     "artistHub": "Artist Hub",
-    "adminWorkspace": "Admin Workspace",
+    "adminWorkspace": "Track Registry",
+    "userRegistry": "User Registry",
     "globalTelemetry": "Global Telemetry",
     "settings": "Settings",
     "subscription": "Subscription",
