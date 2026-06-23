@@ -2,7 +2,7 @@ import {useState, useRef, useEffect, useCallback} from 'react';
 import {useNavigate, Link} from 'react-router-dom';
 import {useAuthStore} from '@/shared/store/authStore';
 import {authApi} from '@/features/auth/api/auth.api';
-import {User, Settings, LogOut, CreditCard, ChevronDown, Music, Shield, ChartBarIcon} from 'lucide-react';
+import {User, Settings, LogOut, CreditCard, ChevronDown, Music, Shield, ChartBarIcon, User2} from 'lucide-react';
 import {apiClient} from "@/shared/api/apiClient";
 import type {UserDto} from "@/features/auth/types";
 import {useSecureUrl} from "@/shared/hooks/useSecureUrl";
@@ -70,12 +70,11 @@ export const Navbar = () => {
                 {/* Logo Area */}
                 <div className="flex items-center flex-shrink-0">
                     <Link to="/" className="flex items-center gap-2">
-                        <div className="h-8 w-8 rounded-lg bg-slate-900/50 shadow-lg shadow-violet-500/20"/>
                         <span className="text-xl font-bold tracking-tight text-white">IndieStream</span>
                     </Link>
                 </div>
 
-                {/* Search Area - takes up available middle space */}
+                {/* Search Area*/}
                 <div className="flex-1 max-w-xl flex justify-center lg:justify-start">
                     <QuickSearchPopover/>
                 </div>
@@ -160,6 +159,12 @@ export const Navbar = () => {
                                               className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-emerald-400 hover:bg-emerald-500/10 transition-colors">
                                             <Shield size={16}/> {t.navbar.adminWorkspace}
                                         </Link>
+                                        <Link to="/admin/users/registry"
+                                              onClick={() => setIsDropdownOpen(false)}
+                                              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-emerald-400 hover:bg-emerald-500/10 transition-colors">
+                                            <User2 size={16}/> {t.navbar.userRegistry}
+                                        </Link>
+
                                         <Link to="/admin/telemetry"
                                               onClick={() => setIsDropdownOpen(false)}
                                               className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-emerald-400 hover:bg-emerald-500/10 transition-colors">
