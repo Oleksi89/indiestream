@@ -26,7 +26,6 @@ interface TelemetryState {
     handleResume: (progressSeconds: number, volume: number) => void;
     handleVolumeChange: (progressSeconds: number, volume: number) => void;
     flushTelemetry: (keepSession?: boolean) => void;
-    flushTelemetryOnPause: () => void;
 }
 
 
