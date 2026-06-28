@@ -76,6 +76,24 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     List<User> searchAllProfilesByUsernameOrAlias(@Param("query") String query, Pageable pageable);
 
     /**
+     * Administrative search query supporting dynamic filtering by ban status and multi-field text search.
+     * Uses CAST for UUID to allow partial matching on IDs.
+     */
+    @EntityGraph(attributePaths = {"profile"})
+    @Query("SELECT u FROM User u WHERE " +
+            "(:isBanned IS NULL OR u.isBanned = :isBanned) AND " +
+            "(:query IS NULL OR :query = '' OR " +
+            "LOWER(u.username) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+            "LOWER(u.alias) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+            "LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+            "CAST(u.id AS string) LIKE LOWER(CONCAT('%', :query, '%')))")
+    Page<User> searchForAdmin(
+            @Param("query") String query,
+            @Param("isBanned") Boolean isBanned,
+            Pageable pageable
+    );
+
+    /**
      * Bulk fetch complete user entities with profile data to prevent N+1 during mapping.
      */
     @EntityGraph(attributePaths = {"profile"})

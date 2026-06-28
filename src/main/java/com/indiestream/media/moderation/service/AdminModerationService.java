@@ -3,6 +3,7 @@ package com.indiestream.media.moderation.service;
 import com.indiestream.auth.AuthModuleApi;
 import com.indiestream.auth.UserPublicProfile;
 import com.indiestream.auth.event.UserBannedEvent;
+import com.indiestream.auth.event.UserUnbanRequestedEvent;
 import com.indiestream.media.catalog.domain.Track;
 import com.indiestream.media.catalog.domain.TrackStatus;
 import com.indiestream.media.catalog.repository.TrackSpecification;
@@ -18,14 +19,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -176,18 +175,17 @@ public class AdminModerationService {
     }
 
     /**
-     * Executes a cross-module artist ban.
-     * Fires an event to the Auth module and aggressively sweeps and bans all active media content.
+     * Cross-Module Event Listener: Aggressively sweeps and bans all active media content
+     * when a user is banned in the Auth module.
+     * Uses @ApplicationModuleListener for asynchronous, transaction-bound execution.
      */
-    @Transactional
-    public void banArtist(UUID artistId, String reason, UUID adminId) {
-        log.warn("Initiating global ban for Artist ID: {} by Admin ID: {}", artistId, adminId);
+    @ApplicationModuleListener
+    public void onUserBanned(UserBannedEvent event) {
+        if (!Objects.equals(event.userRole(), "ARTIST")) return;
 
-        // Emit Domain Event (Auth module handles login block & token invalidation asynchronously)
-        eventPublisher.publishEvent(new UserBannedEvent(artistId, adminId, reason, Instant.now()));
+        log.warn("Received UserBannedEvent for Artist ID: {}. Cascading bans to media...", event.userId());
 
-        // Transition all active tracks to BANNED
-        List<Track> artistTracks = trackRepository.findAllByArtistId(artistId);
+        List<Track> artistTracks = trackRepository.findAllByArtistId(event.userId());
         int bannedCount = 0;
 
         for (Track track : artistTracks) {
@@ -196,22 +194,14 @@ public class AdminModerationService {
                 transitionEngine.transitionTrack(
                         track.getId(),
                         TrackStatus.BANNED,
-                        "Automatic suspension due to Artist Account Ban. Reason: " + reason,
+                        "Automatic suspension due to Artist Account Ban. Reason: " + event.reason(),
                         null
                 );
                 bannedCount++;
             }
         }
 
-        log.info("Artist {} ban complete. Automatically suspended {} tracks.", artistId, bannedCount);
-    }
-
-    @Transactional
-    public void unbanArtist(UUID artistId, String reason, UUID adminId) {
-        log.info("Initiating global UNBAN for Artist ID: {} by Admin ID: {}", artistId, adminId);
-
-        // Send a request to the Auth module to restore access
-        eventPublisher.publishEvent(new com.indiestream.auth.event.UserUnbanRequestedEvent(artistId, adminId, reason, Instant.now()));
+        log.info("Artist {} ban cascade complete. Suspended {} tracks.", event.userId(), bannedCount);
     }
 
     private AdminTrackSummaryDto mapToSummaryDto(Track track) {

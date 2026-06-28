@@ -1,11 +1,11 @@
 package com.indiestream.auth.controller;
 
 import com.indiestream.auth.dto.*;
-import com.indiestream.auth.repository.UserRepository;
 import com.indiestream.auth.security.JwtService;
 import com.indiestream.auth.service.TokenBlacklistService;
 import com.indiestream.auth.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -41,7 +41,7 @@ public class AuthController {
      * @return Created UserDto without sensitive data.
      */
     @PostMapping("/register")
-    public ResponseEntity<UserProfileResponse> register(@RequestBody RegisterRequestDto request) {
+    public ResponseEntity<UserProfileResponse> register(@Valid @RequestBody RegisterRequestDto request) {
         UserProfileResponse createdUser = userService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
     }
@@ -70,7 +70,8 @@ public class AuthController {
     /**
      * Invalidates the current user session by blacklisting the active JWT.
      * Requires an authenticated context.
-     * * @param request The HTTP request containing the Bearer token.
+     *
+     * @param request The HTTP request containing the Bearer token.
      */
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(HttpServletRequest request) {

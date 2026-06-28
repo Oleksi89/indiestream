@@ -10,6 +10,7 @@ import java.util.UUID;
  */
 public record UserBannedEvent(
         UUID userId,
+        String userRole,
         UUID adminId,
         String reason,
         Instant timestamp

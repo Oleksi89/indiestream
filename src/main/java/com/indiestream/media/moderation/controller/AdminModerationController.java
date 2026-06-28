@@ -36,7 +36,7 @@ public class AdminModerationController {
      * Dynamic search endpoint for the Global Track Registry.
      */
     @GetMapping("/registry")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Page<AdminTrackSummaryDto>> getGlobalRegistry(
             @RequestParam(required = false) String query,
             @RequestParam(required = false) List<TrackStatus> statuses,
@@ -54,7 +54,7 @@ public class AdminModerationController {
      * Uses lightweight projections to prevent memory exhaustion.
      */
     @GetMapping("/queue")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Page<ModerationQueueProjection>> getModerationQueue(
             @PageableDefault(size = 20) Pageable pageable) {
         return ResponseEntity.ok(adminModerationService.getModerationQueue(pageable));
@@ -65,7 +65,7 @@ public class AdminModerationController {
      * Includes current public tags, artist's proposed override, and raw AI reasoning.
      */
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<AdminTrackDetailsDto> getTrackModerationDetails(@PathVariable("id") UUID trackId) {
         return ResponseEntity.ok(adminModerationService.getTrackModerationDetails(trackId));
     }
@@ -75,7 +75,7 @@ public class AdminModerationController {
      * Clears buffer data and commits final tags upon approval.
      */
     @PostMapping("/{id}/verdict")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> executeVerdict(
             @PathVariable("id") UUID trackId,
             @Valid @RequestBody ModerationVerdictRequest request,
@@ -83,37 +83,6 @@ public class AdminModerationController {
 
         UUID adminId = UUID.fromString(authentication.getName());
         adminModerationService.executeVerdict(trackId, request, adminId);
-        return ResponseEntity.noContent().build();
-    }
-
-    /**
-     * Cross-Module Action: Bans the artist and aggressively suspends all their media content.
-     */
-    @PostMapping("/artists/{artistId}/ban")
-    @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<Void> banArtist(
-            @PathVariable("artistId") UUID artistId,
-            @RequestParam String reason,
-            Authentication authentication) {
-
-        UUID adminId = UUID.fromString(authentication.getName());
-        adminModerationService.banArtist(artistId, reason, adminId);
-        return ResponseEntity.noContent().build();
-    }
-
-
-    /**
-     * Cross-Module Action: UnBans the artist.
-     */
-    @PostMapping("/artists/{artistId}/unban")
-    @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<Void> unbanArtist(
-            @PathVariable("artistId") UUID artistId,
-            @RequestParam String reason,
-            Authentication authentication) {
-
-        UUID adminId = UUID.fromString(authentication.getName());
-        adminModerationService.unbanArtist(artistId, reason, adminId);
         return ResponseEntity.noContent().build();
     }
 }

@@ -20,6 +20,9 @@ public record RegisterRequestDto(
 
         @NotBlank(message = "Password is required")
         @Size(min = 6, message = "Password must be at least 6 characters long")
-        String password
+        String password,
+
+        @Pattern(regexp = "^(USER|ARTIST)$", message = "Role must be strictly USER or ARTIST")
+        String role
 ) {
 }

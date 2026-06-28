@@ -1,6 +1,7 @@
 package com.indiestream.telemetry.controller;
 
 import com.indiestream.media.api.MediaModuleApi;
+import com.indiestream.telemetry.config.TelemetryCacheTemplate;
 import com.indiestream.telemetry.dto.SimulationReportDto;
 import com.indiestream.telemetry.service.TelemetrySimulatorService;
 import com.indiestream.telemetry.worker.TimeWindowRollupWorker;
@@ -31,16 +32,18 @@ public class TelemetryAdminController {
     private final TimeWindowRollupWorker rollupWorker;
     private final TelemetrySimulatorService simulatorService;
     private final MediaModuleApi mediaModuleApi;
+    private final TelemetryCacheTemplate cacheTemplate;
 
     /**
      * Executes aggregation for a specific timeframe.
      * If bounds are omitted, defaults to processing the last 24 hours.
      */
     @PostMapping("/rollup/hourly/force")
-    @CacheEvict(value = "analytics:historical", allEntries = true)
     public ResponseEntity<Map<String, Integer>> forceHourlyRollup(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime start,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime end) {
+
+        cacheTemplate.evictByPrefix("analytics:historical:");
 
         OffsetDateTime effectiveEnd = end != null ? end : OffsetDateTime.now(ZoneOffset.UTC).plusHours(1).truncatedTo(ChronoUnit.HOURS);
         OffsetDateTime effectiveStart = start != null ? start : effectiveEnd.minusHours(24).truncatedTo(ChronoUnit.HOURS);
@@ -54,10 +57,11 @@ public class TelemetryAdminController {
      * Defaults to the last 48 hours.
      */
     @PostMapping("/rollup/daily/force")
-    @CacheEvict(value = "analytics:historical", allEntries = true)
     public ResponseEntity<String> forceDailyRollup(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime start,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime end) {
+
+        cacheTemplate.evictByPrefix("analytics:historical:");
 
         OffsetDateTime effectiveEnd = end != null ? end : OffsetDateTime.now(ZoneOffset.UTC);
         OffsetDateTime effectiveStart = start != null ? start : effectiveEnd.minusDays(2).truncatedTo(ChronoUnit.DAYS);
@@ -72,8 +76,9 @@ public class TelemetryAdminController {
      * Run this AFTER forcing a Daily Rollup or purging shadow traffic.
      */
     @PostMapping("/sync-totals")
-    @CacheEvict(value = "analytics:historical", allEntries = true)
     public ResponseEntity<String> synchronizePublicCounters() {
+        cacheTemplate.evictByPrefix("analytics:historical:");
+
         int updatedTracks = mediaModuleApi.synchronizeTrackCountersWithTelemetry();
         return ResponseEntity.ok("Successfully synchronized counters for " + updatedTracks + " tracks from historical telemetry.");
     }

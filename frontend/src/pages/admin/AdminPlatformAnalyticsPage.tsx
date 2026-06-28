@@ -1,6 +1,7 @@
 import {LayoutDashboard} from 'lucide-react';
 import {AdminPlatformAnalytics} from "@/features/analytics/ui/AdminPlatformAnalytics.tsx";
 import {useTranslation} from '@/shared/lib/i18n/useTranslation';
+import {AdminTelemetryControls} from "@/features/analytics/ui/AdminTelemetryControls.tsx";
 
 export const AdminPlatformAnalyticsPage = () => {
     const {t} = useTranslation();
@@ -24,7 +25,8 @@ export const AdminPlatformAnalyticsPage = () => {
                 <AdminPlatformAnalytics/>
             </div>
 
-            {/* Future expansion point for User Growth Charts, Revenue, etc. */}
+            {/* Telemetry Control Panel */}
+            <AdminTelemetryControls/>
         </div>
     );
 };

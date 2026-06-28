@@ -17,7 +17,7 @@ export const SUPPORTED_LOCALES = [
 
 export type Locale = (typeof SUPPORTED_LOCALES)[number]['code'];
 
-export const DEFAULT_LOCALE: Locale = 'en';
+export const DEFAULT_LOCALE: Locale = 'uk';
 
 /**
  * Registry of loaded dictionaries. Only English is fully translated for now;

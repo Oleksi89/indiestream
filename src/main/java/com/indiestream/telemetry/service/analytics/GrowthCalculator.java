@@ -34,8 +34,14 @@ public class GrowthCalculator {
             return new EngagementMetricsDto(0.0, 0.0, 0.0);
         }
 
-        double skipRate = (current.totalSkips() / (double) current.totalPlays()) * 100.0;
-        double completionRate = ((current.totalPlays() - current.totalSkips()) / (double) current.totalPlays()) * 100.0;
+        long totalAttempts = current.totalPlays() + current.totalSkips();
+
+        if (totalAttempts == 0) {
+            return new EngagementMetricsDto(0.0, 0.0, 0.0);
+        }
+
+        double skipRate = (current.totalSkips() / (double) totalAttempts) * 100.0;
+        double completionRate = (current.totalPlays() / (double) totalAttempts) * 100.0;
         double saveRate = (current.totalLikes() / (double) current.totalPlays()) * 100.0;
 
         return new EngagementMetricsDto(skipRate, completionRate, saveRate);

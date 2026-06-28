@@ -54,3 +54,32 @@ export const analyticsApi = {
         return data;
     }
 };
+
+
+export const telemetryAdminApi = {
+    forceHourlyRollup: async (start?: string, end?: string): Promise<unknown> => {
+        const params = new URLSearchParams();
+        if (start) params.append('start', start);
+        if (end) params.append('end', end);
+        const {data} = await apiClient.post(`/admin/telemetry/rollup/hourly/force?${params.toString()}`);
+        return data;
+    },
+
+    forceDailyRollup: async (start?: string, end?: string): Promise<string> => {
+        const params = new URLSearchParams();
+        if (start) params.append('start', start);
+        if (end) params.append('end', end);
+        const {data} = await apiClient.post(`/admin/telemetry/rollup/daily/force?${params.toString()}`);
+        return data;
+    },
+
+    syncTotals: async (): Promise<string> => {
+        const {data} = await apiClient.post('/admin/telemetry/sync-totals');
+        return data;
+    },
+
+    triggerSemanticReindex: async (): Promise<{ status: string; message: string }> => {
+        const {data} = await apiClient.post('/admin/recommendations/reindex', {all: true});
+        return data;
+    }
+};

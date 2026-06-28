@@ -1,16 +1,18 @@
 package com.indiestream.auth.controller;
 
 import com.indiestream.auth.UserPublicProfile;
-import com.indiestream.auth.dto.UpdateUserProfileRequestDto;
-import com.indiestream.auth.dto.UserDto;
-import com.indiestream.auth.dto.UserProfileResponse;
+import com.indiestream.auth.dto.*;
 import com.indiestream.auth.service.ProfileStorageService;
 import com.indiestream.auth.service.UserService;
 import io.minio.StatObjectResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.InputStreamResource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -60,6 +62,12 @@ public class UserController {
             return ResponseEntity.ok(List.of());
         }
         return ResponseEntity.ok(userService.searchUsersAutocomplete(query));
+    }
+
+    @PutMapping("/me/password")
+    public ResponseEntity<Void> changePassword(@Valid @RequestBody ChangePasswordRequestDto request, Principal principal) {
+        userService.changePassword(extractId(principal), request);
+        return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/me/profile")
@@ -123,6 +131,54 @@ public class UserController {
                 .contentLength(metadata.size())
                 .body(resource);
     }
+
+    /**
+     * Administrative endpoint to list and filter users.
+     *
+     * @param q        Optional search query (matches id, username, email, alias).
+     * @param isBanned Optional status filter (true = banned, false = active, null = all).
+     * @param pageable Standard Spring Data pagination and sorting.
+     */
+    @GetMapping("/admin/search")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Page<AdminUserViewDto>> getAdminUsers(
+            @RequestParam(value = "q", required = false) String q,
+            @RequestParam(value = "isBanned", required = false) Boolean isBanned,
+            Pageable pageable) {
+        return ResponseEntity.ok(userService.getAdminUsers(q, isBanned, pageable));
+    }
+
+    /**
+     * Administrative Action: Bans a user globally across the system.
+     */
+    @PostMapping("/admin/{userId}/ban")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> banUser(
+            @PathVariable("userId") UUID userId,
+            @RequestParam String reason,
+            Principal principal) {
+
+        UUID adminId = extractId(principal);
+        userService.banUser(userId, adminId, reason);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Administrative Action: Unbans a user.
+     */
+    @PostMapping("/admin/{userId}/unban")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> unbanUser(
+            @PathVariable("userId") UUID userId,
+            @RequestParam String reason,
+            Principal principal) {
+
+        UUID adminId = extractId(principal);
+        userService.unbanUser(userId, adminId, reason);
+        return ResponseEntity.noContent().build();
+    }
+
+
 
     private UUID extractId(Principal principal) {
         return UUID.fromString(principal.getName());

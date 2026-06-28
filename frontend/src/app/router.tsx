@@ -16,9 +16,16 @@ import {AdminReviewInspectorPage} from "@/pages/admin/AdminReviewInspectorPage.t
 import {TelemetryProvider} from '@/features/telemetry';
 import {AdminPlatformAnalyticsPage} from "@/pages/admin/AdminPlatformAnalyticsPage.tsx";
 import {SettingsPage} from "@/pages/profile/SettingsPage.tsx";
-import {OnboardingPage} from "@/pages/dashboard/OnboardingPage.tsx"; // Added import
+import {OnboardingPage} from "@/pages/dashboard/OnboardingPage.tsx";
+import {PlatformRulesPage} from "@/pages/legal/PlatformRulesPage.tsx";
+import {AdminUserRegistryPage} from "@/pages/admin/AdminUserRegistryPage.tsx"; // Added import
 
 const routes = [
+    // Public Routes
+    {
+        path: '/rules',
+        element: <PlatformRulesPage/>,
+    },
     // Guest Only Routes
     {
         element: <GuestRoute/>,
@@ -86,6 +93,10 @@ const routes = [
                             {
                                 path: '/admin/registry',
                                 element: <AdminTrackRegistryPage/>,
+                            },
+                            {
+                                path: '/admin/users/registry',
+                                element: <AdminUserRegistryPage/>,
                             },
                             {
                                 path: '/admin/registry/:id',

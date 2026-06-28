@@ -6,6 +6,7 @@ import com.indiestream.media.moderation.service.ArtistTrackResolutionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -31,6 +32,7 @@ public class TrackResolutionController {
      * Transitions track from NEEDS_REVISION directly to APPROVED.
      */
     @PostMapping("/accept-ai")
+    @PreAuthorize("hasRole('ARTIST')")
     public ResponseEntity<Void> acceptAiTags(
             @PathVariable("id") UUID trackId,
             Authentication authentication) {
@@ -46,6 +48,7 @@ public class TrackResolutionController {
      * Transitions track to IN_REVIEW for Admin assessment.
      */
     @PostMapping("/propose-tags")
+    @PreAuthorize("hasRole('ARTIST')")
     public ResponseEntity<Void> proposeCustomTags(
             @PathVariable("id") UUID trackId,
             @Valid @RequestBody TrackResolutionRequest request,
@@ -62,6 +65,7 @@ public class TrackResolutionController {
      * Protected by strict single-appeal limits and AI confidence guards.
      */
     @PostMapping("/appeal")
+    @PreAuthorize("hasRole('ARTIST')")
     public ResponseEntity<Void> appealBan(
             @PathVariable("id") UUID trackId,
             @Valid @RequestBody AppealRequest request,

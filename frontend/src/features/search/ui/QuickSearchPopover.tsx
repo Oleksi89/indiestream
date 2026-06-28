@@ -99,6 +99,8 @@ export const QuickSearchPopover = () => {
                 <input
                     ref={inputRef}
                     type="text"
+                    autoComplete="off"
+                    spellCheck="false"
                     value={inputValue}
                     onChange={handleInputChange}
                     onKeyDown={handleKeyDown}

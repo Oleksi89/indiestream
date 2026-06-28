@@ -3,7 +3,7 @@ import type {PlaybackTelemetryPayload, InteractionTelemetryPayload} from '../typ
 
 console.log('[TELEMETRY DEBUG WORKER] Worker script has booted successfully in background thread!');
 
-let apiUrl: string = 'http://localhost:8080/api/v1';
+let apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1';
 let authToken: string | null = null;
 let isFlushing = false;
 

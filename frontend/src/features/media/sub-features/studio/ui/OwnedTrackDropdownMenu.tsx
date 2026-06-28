@@ -1,4 +1,4 @@
-import {MoreHorizontal, Edit, Gavel, Sparkles, Loader2, Globe, EyeOff, Eye, Archive} from 'lucide-react';
+import {MoreHorizontal, Gavel, Sparkles, Loader2, Globe, EyeOff, Eye, Archive} from 'lucide-react';
 
 import {
     DropdownMenu,
@@ -70,12 +70,12 @@ export const OwnedTrackDropdownMenu = ({track, onOpenModal}: OwnedTrackDropdownM
                     </DropdownMenuItem>
                 )}
 
-                {permissions.canEditMetadata && (
+                {/* permissions.canEditMetadata && (
                     <DropdownMenuItem onSelect={() => onOpenModal('EDIT', track)}
                                       className="cursor-pointer focus:bg-slate-800 focus:text-white">
                         <Edit className="mr-2" size={14} aria-hidden="true"/> {dd.editMetadata}
                     </DropdownMenuItem>
-                )}
+                )*/}
 
                 {permissions.canHide && (
                     <DropdownMenuItem disabled={isToggling} onSelect={handleToggleVisibility}
