@@ -105,7 +105,7 @@ public class TimeWindowRollupWorker {
     // --- PUBLIC METHODS FOR MANUAL TRIGGERING VIA ADMIN API ---
 
     /**
-     * Executes the hourly database aggregation and dispatches Modulith events.
+     * Executes the hourly database aggregation.
      *
      * @return A map containing operation statistics for the caller.
      */

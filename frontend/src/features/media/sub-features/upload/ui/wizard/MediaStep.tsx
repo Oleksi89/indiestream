@@ -5,6 +5,7 @@ import {UploadCloud, FileAudio, Image as ImageIcon, X, ArrowLeft, ArrowRight, Lo
 import {cn} from '@/shared/lib/utils.ts';
 import toast from 'react-hot-toast';
 import {useTranslation} from '@/shared/lib/i18n/useTranslation';
+import {Link} from 'react-router-dom';
 
 export const MediaStep = () => {
     const {masterFile, coverFile, setFiles, setStep} = useUploadWizardStore();
@@ -13,6 +14,7 @@ export const MediaStep = () => {
     const [isDraggingAudio, setIsDraggingAudio] = useState(false);
     const [isDraggingCover, setIsDraggingCover] = useState(false);
     const [isTransitioning, setIsTransitioning] = useState(false);
+    const [agreedToRules, setAgreedToRules] = useState(false);
     const {t} = useTranslation();
     const ms = t.media.upload.media;
 
@@ -58,7 +60,11 @@ export const MediaStep = () => {
     const handleNext = () => {
         if (isTransitioning) return;
         if (!localMaster) {
-            toast.error('A master audio file is required to proceed.');
+            toast.error(ms.masterAudioReq);
+            return;
+        }
+        if (!agreedToRules) {
+            toast.error(ms.rulesAgreementReq);
             return;
         }
 
@@ -175,17 +181,37 @@ export const MediaStep = () => {
                 </div>
             </div>
 
-            <div className="flex justify-between pt-4 border-t border-slate-800">
-                <button type="button" onClick={() => setStep('METADATA')} disabled={isTransitioning}
-                        className="flex items-center gap-2 px-4 py-2.5 text-slate-300 hover:text-white transition-colors disabled:opacity-50">
-                    <ArrowLeft size={16} aria-hidden="true"/> {ms.back}
-                </button>
-                <button type="button" onClick={handleNext} disabled={isTransitioning}
-                        className="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 disabled:bg-violet-800 text-white px-6 py-2.5 rounded-lg font-medium transition-colors">
-                    {isTransitioning
-                        ? <Loader2 size={16} className="animate-spin" aria-hidden="true"/>
-                        : <>{ms.continueToStems} <ArrowRight size={16} aria-hidden="true"/></>}
-                </button>
+            <div className="space-y-4 pt-4 border-t border-slate-800">
+                <div className="flex items-start gap-3">
+                    <input
+                        type="checkbox"
+                        id="rules-agreement"
+                        checked={agreedToRules}
+                        onChange={(e) => setAgreedToRules(e.target.checked)}
+                        className="mt-1 w-4 h-4 rounded border-slate-700 bg-slate-900/50 text-violet-600 focus:ring-violet-500 focus:ring-offset-slate-900"
+                    />
+                    <label htmlFor="rules-agreement" className="text-sm text-slate-300 select-none cursor-pointer">
+                        {ms.rulesAgreementPrefix}{' '}
+                        <Link to="/rules" target="_blank" rel="noopener noreferrer"
+                              className="text-violet-400 hover:text-violet-300 hover:underline underline-offset-2 transition-colors">
+                            {ms.rulesLink}
+                        </Link>{' '}
+                        {ms.rulesAgreementSuffix} <span className="text-red-400">*</span>
+                    </label>
+                </div>
+
+                <div className="flex justify-between">
+                    <button type="button" onClick={() => setStep('METADATA')} disabled={isTransitioning}
+                            className="flex items-center gap-2 px-4 py-2.5 text-slate-300 hover:text-white transition-colors disabled:opacity-50">
+                        <ArrowLeft size={16} aria-hidden="true"/> {ms.back}
+                    </button>
+                    <button type="button" onClick={handleNext} disabled={isTransitioning}
+                            className="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 disabled:bg-violet-800 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-lg font-medium transition-colors">
+                        {isTransitioning
+                            ? <Loader2 size={16} className="animate-spin" aria-hidden="true"/>
+                            : <>{ms.continueToStems} <ArrowRight size={16} aria-hidden="true"/></>}
+                    </button>
+                </div>
             </div>
         </div>
     );

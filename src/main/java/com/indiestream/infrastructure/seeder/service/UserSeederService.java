@@ -66,16 +66,11 @@ public class UserSeederService {
         }
 
         try {
-            RegisterRequestDto request = new RegisterRequestDto(email, usernamePrefix, alias, SEED_PASSWORD);
+            String role =  isArtist ? "ARTIST" : "USER";
+
+            RegisterRequestDto request = new RegisterRequestDto(email, usernamePrefix, alias, SEED_PASSWORD, role);
             UserProfileResponse response = authModuleApi.register(request);
 
-            // Backdoor: Force role to ARTIST via native SQL since the public API explicitly restricts registration to USER
-            if (isArtist) {
-                jdbcTemplate.update(
-                        "UPDATE users SET role = 'ARTIST' WHERE id = :id",
-                        new MapSqlParameterSource("id", response.id())
-                );
-            }
             return response.id();
         } catch (Exception e) {
             log.error("Failed to seed user {}: {}", email, e.getMessage());

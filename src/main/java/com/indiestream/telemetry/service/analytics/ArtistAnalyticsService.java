@@ -1,7 +1,7 @@
 package com.indiestream.telemetry.service.analytics;
 
 import com.indiestream.media.api.MediaModuleApi;
-import com.indiestream.media.api.TrackMetadata;
+import com.indiestream.telemetry.config.TelemetryCacheTemplate;
 import com.indiestream.telemetry.dto.analytics.*;
 import com.indiestream.telemetry.repository.AnalyticsQueryRepository;
 import com.indiestream.telemetry.repository.projection.AggregateMetricsProjection;
@@ -10,10 +10,9 @@ import com.indiestream.telemetry.repository.projection.TrackAnalyticsMetadataPro
 import com.indiestream.telemetry.service.LivePulseService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -24,7 +23,7 @@ import java.util.stream.Collectors;
 
 /**
  * Orchestrates heavy native queries into rich analytical models for Artists.
- * Utilizes Redis caching for historical data to protect the Data Warehouse.
+ * Utilizes centralized programmatic Redis caching for historical data.
  */
 @Slf4j
 @Service
@@ -34,84 +33,92 @@ public class ArtistAnalyticsService {
     private final AnalyticsQueryRepository queryRepository;
     private final LivePulseService livePulseService;
     private final MediaModuleApi mediaModuleApi;
+    private final TelemetryCacheTemplate cacheTemplate;
 
-    // Solution to AOP Proxy bypass without field injection
-    private final ObjectProvider<ArtistAnalyticsService> selfProvider;
+    private static final Duration CACHE_TTL = Duration.ofMinutes(10);
+    private static final String CACHE_PREFIX = "analytics:historical:";
 
-    @Cacheable(value = "analytics:historical", key = "#artistId + '-overview-' + #startDate.toEpochSecond() + '-' + #endDate.toEpochSecond()")
     public ArtistOverviewDto getArtistGlobalOverview(UUID artistId, OffsetDateTime startDate, OffsetDateTime endDate) {
-        long durationSeconds = ChronoUnit.SECONDS.between(startDate, endDate);
-        OffsetDateTime prevStart = startDate.minusSeconds(durationSeconds);
-        OffsetDateTime prevEnd = startDate.minusNanos(1000000);
+        OffsetDateTime snappedStart = snapToFiveMinutes(startDate);
+        OffsetDateTime snappedEnd = snapToFiveMinutes(endDate);
+        String cacheKey = CACHE_PREFIX + "artist:" + artistId + ":" + snappedStart.toEpochSecond() + ":" + snappedEnd.toEpochSecond();
 
-        AggregateMetricsProjection current = queryRepository.getArtistGlobalMetrics(artistId, startDate, endDate);
-        AggregateMetricsProjection prev = queryRepository.getArtistGlobalMetrics(artistId, prevStart, prevEnd);
+        return cacheTemplate.getOrCompute(cacheKey, ArtistOverviewDto.class, CACHE_TTL, () -> {
+            // Using snapped boundaries for all calculations to prevent data drift
+            long durationSeconds = ChronoUnit.SECONDS.between(snappedStart, snappedEnd);
+            OffsetDateTime prevStart = snappedStart.minusSeconds(durationSeconds);
+            OffsetDateTime prevEnd = snappedStart.minusNanos(1000000);
 
-        SummaryMetricsDto summary = GrowthCalculator.buildSummary(current, prev);
-        EngagementMetricsDto engagement = GrowthCalculator.buildEngagement(current);
+            AggregateMetricsProjection current = queryRepository.getArtistGlobalMetrics(artistId, snappedStart, snappedEnd);
+            AggregateMetricsProjection prev = queryRepository.getArtistGlobalMetrics(artistId, prevStart, prevEnd);
 
-        List<TopPerformingTrackDto> topTracks = queryRepository.getTopTracksForArtist(artistId, startDate, endDate, 5)
-                .stream()
-                .map(t -> new TopPerformingTrackDto(
-                        t.trackId(), t.title(), t.coverMinioPath(), t.plays(), t.uniqueListeners(),
-                        t.plays() > 0 ? (t.skips() / (double) t.plays()) * 100.0 : 0.0,
-                        t.popularityScore()
-                )).collect(Collectors.toList());
+            SummaryMetricsDto summary = GrowthCalculator.buildSummary(current, prev);
+            EngagementMetricsDto engagement = GrowthCalculator.buildEngagement(current);
 
-        return new ArtistOverviewDto(summary, engagement, topTracks);
+            List<TopPerformingTrackDto> topTracks = queryRepository.getTopTracksForArtist(artistId, snappedStart, snappedEnd, 25)
+                    .stream()
+                    .map(t -> new TopPerformingTrackDto(
+                            t.trackId(), t.title(), t.coverMinioPath(), t.plays(), t.uniqueListeners(),
+                            t.plays() > 0 ? (t.skips() / (double) t.plays()) * 100.0 : 0.0,
+                            t.popularityScore()
+                    )).collect(Collectors.toList());
+
+            return new ArtistOverviewDto(summary, engagement, topTracks);
+        });
     }
 
     /**
-     * CACHED: Computes heavy historical track statistics.
+     * CACHED: Computes heavy historical track statistics perfectly aligned with 5-minute rollups.
      */
-    @Cacheable(value = "analytics:historical", key = "#artistId + '-' + #trackId + '-' + #startDate.toEpochSecond() + '-' + #endDate.toEpochSecond()")
     public TrackAnalyticsResponseDto getTrackHistoricalAnalytics(UUID trackId, UUID artistId, OffsetDateTime startDate, OffsetDateTime endDate) {
-        // Natively fetch metadata alongside internal scores to block public exposure
-        TrackAnalyticsMetadataProjection trackMeta = queryRepository.getTrackAnalyticsMetadata(trackId, artistId);
+        OffsetDateTime snappedStart = snapToFiveMinutes(startDate);
+        OffsetDateTime snappedEnd = snapToFiveMinutes(endDate);
+        String cacheKey = CACHE_PREFIX + "track:" + trackId + ":" + artistId + ":" + snappedStart.toEpochSecond() + ":" + snappedEnd.toEpochSecond();
 
-        long durationSeconds = ChronoUnit.SECONDS.between(startDate, endDate);
-        OffsetDateTime prevStart = startDate.minusSeconds(durationSeconds);
-        OffsetDateTime prevEnd = startDate.minusNanos(1000000);
+        return cacheTemplate.getOrCompute(cacheKey, TrackAnalyticsResponseDto.class, CACHE_TTL, () -> {
+            TrackAnalyticsMetadataProjection trackMeta = queryRepository.getTrackAnalyticsMetadata(trackId, artistId);
 
-        AggregateMetricsProjection current = queryRepository.getTrackMetrics(trackId, artistId, startDate, endDate);
-        AggregateMetricsProjection prev = queryRepository.getTrackMetrics(trackId, artistId, prevStart, prevEnd);
+            long durationSeconds = ChronoUnit.SECONDS.between(snappedStart, snappedEnd);
+            OffsetDateTime prevStart = snappedStart.minusSeconds(durationSeconds);
+            OffsetDateTime prevEnd = snappedStart.minusNanos(1000000);
 
-        SummaryMetricsDto summary = GrowthCalculator.buildSummary(current, prev);
-        EngagementMetricsDto engagement = GrowthCalculator.buildEngagement(current);
+            AggregateMetricsProjection current = queryRepository.getTrackMetrics(trackId, artistId, snappedStart, snappedEnd);
+            AggregateMetricsProjection prev = queryRepository.getTrackMetrics(trackId, artistId, prevStart, prevEnd);
 
-        List<TimeSeriesProjection> rawTimeSeries = queryRepository.getTrackTimeSeries(trackId, artistId, startDate, endDate);
-        List<TimeSeriesPointDto> continuousTimeSeries = fillMissingTimePoints(rawTimeSeries, startDate, endDate);
+            SummaryMetricsDto summary = GrowthCalculator.buildSummary(current, prev);
+            EngagementMetricsDto engagement = GrowthCalculator.buildEngagement(current);
 
-        List<AttributionMetricDto> attribution = queryRepository.getTrackAttribution(trackId, artistId, startDate, endDate)
-                .stream()
-                .map(attr -> new AttributionMetricDto(
-                        attr.sourceType(), attr.count(),
-                        current.totalPlays() > 0 ? (attr.count() / (double) current.totalPlays()) * 100.0 : 0.0
-                )).collect(Collectors.toList());
+            List<TimeSeriesProjection> rawTimeSeries = queryRepository.getTrackTimeSeries(trackId, artistId, snappedStart, snappedEnd);
+            List<TimeSeriesPointDto> continuousTimeSeries = fillMissingTimePoints(rawTimeSeries, snappedStart, snappedEnd);
 
-        // Safe calculation for percentageOfTotal
-        List<RegionStatDto> demographics = queryRepository.getTrackDemographics(trackId, artistId, startDate, endDate)
-                .stream()
-                .map(geo -> new RegionStatDto(
-                        geo.countryOrCity(), geo.listeners(),
-                        current.uniqueListeners() > 0 ? (geo.listeners() / (double) current.uniqueListeners()) * 100.0 : 0.0
-                )).collect(Collectors.toList());
+            List<AttributionMetricDto> attribution = queryRepository.getTrackAttribution(trackId, artistId, snappedStart, snappedEnd)
+                    .stream()
+                    .map(attr -> new AttributionMetricDto(
+                            attr.sourceType(), attr.count(),
+                            current.totalPlays() > 0 ? (attr.count() / (double) current.totalPlays()) * 100.0 : 0.0
+                    )).collect(Collectors.toList());
 
-        return new TrackAnalyticsResponseDto(
-                trackMeta.title(), trackMeta.coverMinioPath(), trackMeta.popularityScore(),
-                summary, engagement, continuousTimeSeries, attribution, demographics, 0
-        );
+            List<RegionStatDto> demographics = queryRepository.getTrackDemographics(trackId, artistId, snappedStart, snappedEnd)
+                    .stream()
+                    .map(geo -> new RegionStatDto(
+                            geo.countryOrCity(), geo.listeners(),
+                            current.uniqueListeners() > 0 ? (geo.listeners() / (double) current.uniqueListeners()) * 100.0 : 0.0
+                    )).collect(Collectors.toList());
+
+            return new TrackAnalyticsResponseDto(
+                    trackMeta.title(), trackMeta.coverMinioPath(), trackMeta.popularityScore(),
+                    summary, engagement, continuousTimeSeries, attribution, demographics, 0
+            );
+        });
     }
 
     /**
-     * HYBRID: Fetches the cached historical data and appends the live concurrent listener count.
+     * Fetches the cached historical data and appends the live concurrent listener count.
      * This method itself is NOT cached.
      */
     public TrackAnalyticsResponseDto getTrackAnalyticsWithRealTime(UUID trackId, UUID artistId, OffsetDateTime startDate, OffsetDateTime endDate) {
-
-        // Utilizing ObjectProvider to safely call the @Cacheable method through the Spring AOP Proxy
-        TrackAnalyticsResponseDto historical = selfProvider.getObject().getTrackHistoricalAnalytics(trackId, artistId, startDate, endDate);
-        // Fetch fresh concurrent pulse from Redis ZSET
+        // Direct internal call. The cache template handles the lookup natively.
+        TrackAnalyticsResponseDto historical = getTrackHistoricalAnalytics(trackId, artistId, startDate, endDate);
         long concurrent = livePulseService.getConcurrentListenersCount(trackId);
 
         return historical.withConcurrentListeners(concurrent);
@@ -147,5 +154,16 @@ public class ArtistAnalyticsService {
             current = isHourly ? current.plusHours(1) : current.plusDays(1);
         }
         return filled;
+    }
+
+
+    /**
+     * Normalizes the timestamp to the nearest 5-minute floor.
+     * Prevents cache fragmentation aligning with the 5-minute rollup workers.
+     */
+    private OffsetDateTime snapToFiveMinutes(OffsetDateTime dateTime) {
+        long epochSeconds = dateTime.toEpochSecond();
+        long snappedSeconds = epochSeconds - (epochSeconds % 300);
+        return OffsetDateTime.ofInstant(java.time.Instant.ofEpochSecond(snappedSeconds), dateTime.getOffset());
     }
 }

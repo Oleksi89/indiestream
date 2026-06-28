@@ -250,7 +250,7 @@ public class TelemetryRollupRepository {
             ),
             updated_active AS (
                 UPDATE tracks t
-                SET popularity_score = r.calculated_score
+                SET popularity_score = (t.popularity_score * 0.5) + r.calculated_score
                 FROM recent_stats r
                 WHERE t.id = r.track_id
                 RETURNING t.id

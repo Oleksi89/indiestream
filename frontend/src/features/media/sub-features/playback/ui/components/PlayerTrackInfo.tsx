@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState} from 'react';
 import {usePlayerStore} from '@/shared/store/playerStore';
 import {useAuthStore} from '@/shared/store/authStore';
 import {mediaApi} from '@/features/media/api/media.api';
@@ -9,11 +9,12 @@ import {useToggleLike, useUserLibrary} from '@/features/playlist/hooks/usePlayli
 import {useInteractionTracker} from '@/features/telemetry';
 import {useNotInterestedMutation} from '@/features/recommendations/hooks/useRecommendationMutations';
 import {AddToPlaylistDropdown} from '@/features/playlist/ui/AddToPlaylistDropdown';
-import {Disc3, Loader2, Heart, PlusCircle, XCircle, MoreVertical} from 'lucide-react';
+import {Disc3, Loader2, Heart, PlusCircle, XCircle, MoreVertical, Flag} from 'lucide-react';
 import {cn} from '@/shared/lib/utils';
 import type {TrackMetadataPayload} from '@/features/playlist/types';
 import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from "@/shared/ui/DropdownMenu.tsx";
 import {useTranslation} from '@/shared/lib/i18n/useTranslation';
+import {ReportDialog} from "@/shared/components/ReportDialog.tsx";
 
 interface PlayerTrackInfoProps {
     isStemsLoading: boolean;
@@ -32,6 +33,7 @@ export const PlayerTrackInfo: React.FC<PlayerTrackInfoProps> = ({isStemsLoading}
     const {mutate: markNotInterested} = useNotInterestedMutation();
     const toggleLike = useToggleLike();
     const {data: library} = useUserLibrary();
+    const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
     const trackId = currentTrack?.id;
 
@@ -137,26 +139,42 @@ export const PlayerTrackInfo: React.FC<PlayerTrackInfoProps> = ({isStemsLoading}
 
                 {/* Isolated Sub-Menu Dropdown for Recommendation Governance */}
                 {!isOwner && (
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <button
-                                aria-label={t.media.player.moreOptions}
-                                title={t.media.player.moreOptions}
-                                className="p-2 rounded-full text-slate-400 hover:bg-slate-800 hover:text-white transition-colors outline-none focus:bg-slate-800">
-                                <MoreVertical size={18} aria-hidden="true"/>
-                            </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                            className="w-48 bg-slate-900 border border-slate-800 text-slate-200 shadow-2xl">
-                            <DropdownMenuItem
-                                onClick={handleNotInterested}
-                                className="text-slate-400 hover:text-red-400 hover:bg-red-400/10 focus:text-red-400 focus:bg-red-400/10 transition-colors cursor-pointer font-medium text-xs py-2"
-                            >
-                                <XCircle className="mr-2 h-4 w-4 text-slate-500 group-hover:text-red-400" aria-hidden="true"/>
-                                <span>{t.media.contextMenu.notInterested}</span>
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                    <>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <button
+                                    aria-label={t.media.player.moreOptions}
+                                    title={t.media.player.moreOptions}
+                                    className="p-2 rounded-full text-slate-400 hover:bg-slate-800 hover:text-white transition-colors outline-none focus:bg-slate-800">
+                                    <MoreVertical size={18} aria-hidden="true"/>
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                                className="w-48 bg-slate-900 border border-slate-800 text-slate-200 shadow-2xl">
+                                <DropdownMenuItem
+                                    onClick={handleNotInterested}
+                                    className="text-slate-400 hover:text-red-400 hover:bg-red-400/10 focus:text-red-400 focus:bg-red-400/10 transition-colors cursor-pointer font-medium text-xs py-2"
+                                >
+                                    <XCircle className="mr-2 h-4 w-4 text-slate-500 group-hover:text-red-400"                                            aria-hidden="true"/>
+                                    <span>{t.media.contextMenu.notInterested}</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                    onSelect={() => setIsReportModalOpen(true)}
+                                    className="text-slate-400 hover:text-slate-200 hover:bg-slate-800 focus:text-slate-200 focus:bg-slate-800 transition-colors cursor-pointer font-medium text-xs py-2"
+                                >
+                                    <Flag className="mr-2 h-4 w-4 text-slate-500 group-hover:text-slate-400"
+                                          aria-hidden="true"/>
+                                    <span>{t.common.report.trigger}</span>
+                                </DropdownMenuItem>
+
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+
+                        <ReportDialog
+                            isOpen={isReportModalOpen}
+                            onOpenChange={setIsReportModalOpen}
+                        />
+                    </>
                 )}
             </div>
         </div>

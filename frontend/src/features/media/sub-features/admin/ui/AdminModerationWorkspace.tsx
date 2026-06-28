@@ -28,11 +28,13 @@ export const AdminModerationWorkspace = ({details, playableTrack}: AdminModerati
     const um = t.media.admin.unbanModal;
 
     // Strict Backend Finite State Machine Guards
-    const canApprove = ['IN_REVIEW', 'APPROVED', 'PUBLISHED'].includes(details.status);
+    const canApprove = ['IN_REVIEW'].includes(details.status);
     const canReject = ['IN_REVIEW'].includes(details.status);
     const canRestore = ['BANNED', 'REJECTED'].includes(details.status);
     const canSuspend = !['BANNED', 'ARCHIVED'].includes(details.status);
     const canArchive = details.status !== 'ARCHIVED';
+
+    const isArtistBanned = details.artistUsername === 'Unknown' && details.artistAlias === 'unknown';
 
     const handleUserAction = (type: 'BAN' | 'UNBAN') => async (formData: FormData) => {
         const reason = formData.get('reason')?.toString().trim();
@@ -117,21 +119,24 @@ export const AdminModerationWorkspace = ({details, playableTrack}: AdminModerati
 
                     <div className="h-px bg-slate-800 my-4"/>
 
-                    <div className="flex gap-3">
-                        <button onClick={() => {
-                            setIsBanUserModalOpen(true);
-                            setUserActionReason('');
-                        }}
-                                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white transition-colors font-medium text-sm shadow-lg shadow-red-900/20">
-                            <UserX size={16} aria-hidden="true"/> {ws.banArtist}
-                        </button>
-                        <button onClick={() => {
-                            setIsUnbanUserModalOpen(true);
-                            setUserActionReason('');
-                        }}
-                                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-colors font-medium text-sm shadow-lg shadow-emerald-900/20">
-                            <UserCheck size={16} aria-hidden="true"/> {ws.unbanArtist}
-                        </button>
+                    <div className="pt-1">
+                        {isArtistBanned ? (
+                            <button onClick={() => {
+                                setIsUnbanUserModalOpen(true);
+                                setUserActionReason('');
+                            }}
+                                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-colors font-medium text-sm shadow-lg shadow-emerald-900/20">
+                                <UserCheck size={16} aria-hidden="true"/> {ws.unbanArtist}
+                            </button>
+                        ) : (
+                            <button onClick={() => {
+                                setIsBanUserModalOpen(true);
+                                setUserActionReason('');
+                            }}
+                                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white transition-colors font-medium text-sm shadow-lg shadow-red-900/20">
+                                <UserX size={16} aria-hidden="true"/> {ws.banArtist}
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>

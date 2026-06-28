@@ -86,7 +86,7 @@ public interface PlaylistRepository extends JpaRepository<Playlist, UUID> {
      * AI CORE: Real-time Centroid Vector recalculation.
      * Executes natively in PostgreSQL using pgvector's avg() function.
      * Bypasses the JVM completely, operating in O(1) memory space regardless of playlist size.
-     * If the playlist becomes empty, AVG() inherently returns NULL, resetting it to a "Cold Start" state.
+     * If the playlist becomes empty, AVG() returns NULL.
      */
     @Modifying
     @Query(value = """

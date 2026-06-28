@@ -51,7 +51,7 @@ export interface TimeSeriesPointDto {
 
 export interface AttributionMetricDto {
     sourceType: string;
-    count: number;
+    rawCount: number;
     percentage: number;
 }
 

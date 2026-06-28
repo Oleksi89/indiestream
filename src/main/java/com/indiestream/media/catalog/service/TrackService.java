@@ -59,6 +59,11 @@ public class TrackService implements MediaModuleApi {
             throw new IllegalArgumentException("Invalid or unsupported genre provided.");
         }
 
+        // Validate max stems limit before any MinIO operations
+        if (stemFiles != null && stemFiles.length > 8) {
+            throw new IllegalArgumentException("Maximum of 8 stems allowed per track.");
+        }
+
         String bucketPath = minioStorageService.uploadTrackFile(file, artistId);
 
         String coverPath = null;

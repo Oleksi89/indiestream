@@ -10,3 +10,4 @@ logging:
     org.hibernate.SQL: warn
     org.hibernate.orm.results.mapping: warn
     org.hibernate.type.descriptor.sql.BasicBinder: warn
+    org.springframework.cache: TRACE

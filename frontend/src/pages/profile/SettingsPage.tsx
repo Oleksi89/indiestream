@@ -15,6 +15,7 @@ import {
     DialogFooter,
     DialogClose,
 } from '@/shared/ui/Dialog';
+import {ChangePasswordForm} from "@/features/auth/ui/ChangePasswordForm.tsx";
 
 export const SettingsPage: React.FC = () => {
     const user = useAuthStore(state => state.user);
@@ -73,33 +74,13 @@ export const SettingsPage: React.FC = () => {
                 </div>
             </section>
 
-            {/* Password Change Placeholder */}
+            {/* Password Change Section */}
             <section className="space-y-6">
                 <h2 className="text-xl font-semibold text-white flex items-center gap-2">
                     <Key className="text-violet-400" size={20}/> {t.settings.security.heading}
                 </h2>
                 <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
-                    <div className="space-y-4 max-w-md">
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-400">{t.settings.security.currentPassword}</label>
-                            <input type="password" placeholder={t.settings.security.passwordPlaceholder}
-                                   className="w-full bg-slate-950 border border-slate-700 rounded-md px-4 py-2 text-white focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all"/>
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-400">{t.settings.security.newPassword}</label>
-                            <input type="password" placeholder={t.settings.security.passwordPlaceholder}
-                                   className="w-full bg-slate-950 border border-slate-700 rounded-md px-4 py-2 text-white focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all"/>
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-400">{t.settings.security.confirmPassword}</label>
-                            <input type="password" placeholder={t.settings.security.passwordPlaceholder}
-                                   className="w-full bg-slate-950 border border-slate-700 rounded-md px-4 py-2 text-white focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all"/>
-                        </div>
-                        <button
-                            className="mt-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium rounded-md transition-colors">
-                            {t.settings.security.updatePassword}
-                        </button>
-                    </div>
+                    <ChangePasswordForm/>
                 </div>
             </section>
 
@@ -131,14 +112,14 @@ export const SettingsPage: React.FC = () => {
 
             {/* Danger Zone */}
             {user?.profile?.needsTasteCalibration === false && (
-            <section className="space-y-6 pt-6 border-t border-slate-800">
-                <h2 className="text-xl font-semibold text-red-400 flex items-center gap-2">
-                    <ShieldAlert size={20}/> {t.settings.dangerZone.heading}
-                </h2>
-                <div
-                    className="bg-red-500/10 border border-red-500/20 rounded-xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                    <div>
-                        <h3 className="text-white font-medium">{t.settings.dangerZone.resetTaste.title}</h3>
+                <section className="space-y-6 pt-6 border-t border-slate-800">
+                    <h2 className="text-xl font-semibold text-red-400 flex items-center gap-2">
+                        <ShieldAlert size={20}/> {t.settings.dangerZone.heading}
+                    </h2>
+                    <div
+                        className="bg-red-500/10 border border-red-500/20 rounded-xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                        <div>
+                            <h3 className="text-white font-medium">{t.settings.dangerZone.resetTaste.title}</h3>
                         <p className="text-sm text-slate-400 mt-1 max-w-xl">
                             {t.settings.dangerZone.resetTaste.description}
                         </p>

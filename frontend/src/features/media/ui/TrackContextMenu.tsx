@@ -157,7 +157,7 @@ export const TrackContextMenu: React.FC<TrackContextMenuProps> = ({children, tra
 
     const handleNotInterested = () => {
         markNotInterested(track.id);
-        toast.success(t.media.contextMenu.toastNotInterested, {icon: '🤫'});
+        toast.success(t.media.contextMenu.toastNotInterested);
     };
 
     return (

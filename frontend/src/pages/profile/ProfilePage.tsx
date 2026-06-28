@@ -4,7 +4,7 @@ import {useAuthStore} from '@/shared/store/authStore';
 import {EditProfileModal} from '@/features/profile/ui/EditProfileModal';
 import {Button} from '@/shared/ui/button';
 import {useState} from 'react';
-import {User, CalendarDays, Loader2, ImageIcon, Lock, UserX, History} from 'lucide-react';
+import {User, CalendarDays, Loader2, ImageIcon, Lock, UserX, History, Flag} from 'lucide-react';
 import {cn} from '@/shared/lib/utils';
 import {useSecureUrl} from "@/shared/hooks/useSecureUrl";
 import {profileApi} from "@/features/profile/api/profile.api";
@@ -18,6 +18,7 @@ import {PaginationControls} from '@/shared/ui/PaginationControls';
 import type {PlaylistDto} from '@/features/playlist/types';
 import {usePlayerStore} from '@/shared/store/playerStore';
 import {useTranslation} from '@/shared/lib/i18n/useTranslation';
+import {ReportDialog} from "@/shared/components/ReportDialog.tsx";
 
 type Tab = 'playlists' | 'tracks' | 'followers' | 'following' | 'history';
 
@@ -28,6 +29,7 @@ export const ProfilePage = () => {
     const {user: currentUser} = useAuthStore();
     const {playContext} = usePlayerStore();
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isReportModalOpen, setIsReportModalOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<Tab>('playlists');
     const [historyPage, setHistoryPage] = useState(0); // For pagination
     const isOwnProfile = currentUser?.username === username;
@@ -146,6 +148,20 @@ export const ProfilePage = () => {
                 )}
                 {/* Smooth blend into the dark background */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"/>
+
+                {/* Complaint button*/}
+                {!isOwnProfile && (
+                    <div className="absolute top-6 right-6 sm:top-8 sm:right-8 z-10">
+                        <button
+                            onClick={() => setIsReportModalOpen(true)}
+                            title={t.profile.page.reportUser}
+                            aria-label={t.profile.page.reportUser}
+                            className="p-2.5 rounded-full bg-black/40 hover:bg-black/70 backdrop-blur-md border border-white/10 text-white/70 hover:text-red-400 transition-all outline-none focus:ring-2 focus:ring-red-400/50 shadow-lg"
+                        >
+                            <Flag size={18} aria-hidden="true"/>
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* Profile Content Container */}
@@ -396,6 +412,8 @@ export const ProfilePage = () => {
             {isOwnProfile && (
                 <EditProfileModal isOpen={isEditModalOpen} onOpenChange={setIsEditModalOpen} user={profile}/>
             )}
+
+            <ReportDialog isOpen={isReportModalOpen} onOpenChange={setIsReportModalOpen}/>
         </div>
     );
 };

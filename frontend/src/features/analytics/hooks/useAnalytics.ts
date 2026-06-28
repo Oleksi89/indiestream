@@ -1,5 +1,5 @@
-import {useQuery, useMutation} from '@tanstack/react-query';
-import {analyticsApi} from '../api/analytics.api.ts';
+import {useQuery, useMutation, useQueryClient} from '@tanstack/react-query';
+import {analyticsApi, telemetryAdminApi} from '../api/analytics.api.ts';
 
 // Query Key Factory
 export const analyticsKeys = {
@@ -70,5 +70,44 @@ export const useListeningHistory = (page: number) => {
         queryKey: analyticsKeys.listeningHistory(page),
         queryFn: () => analyticsApi.getListeningHistory(page),
         staleTime: 2 * 60 * 1000,
+    });
+};
+
+
+export const useForceHourlyRollup = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({start, end}: { start?: string; end?: string }) =>
+            telemetryAdminApi.forceHourlyRollup(start, end),
+        onSuccess: () => {
+            queryClient.invalidateQueries(); // Invalidate all analytics data to refresh UI
+        }
+    });
+};
+
+export const useForceDailyRollup = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({start, end}: { start?: string; end?: string }) =>
+            telemetryAdminApi.forceDailyRollup(start, end),
+        onSuccess: () => {
+            queryClient.invalidateQueries();
+        }
+    });
+};
+
+export const useSyncTotals = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: () => telemetryAdminApi.syncTotals(),
+        onSuccess: () => {
+            queryClient.invalidateQueries();
+        }
+    });
+};
+
+export const useTriggerSemanticReindex = () => {
+    return useMutation({
+        mutationFn: () => telemetryAdminApi.triggerSemanticReindex(),
     });
 };
